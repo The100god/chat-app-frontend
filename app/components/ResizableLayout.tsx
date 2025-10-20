@@ -10,7 +10,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({ leftComponent, rightC
   const [leftWidth, setLeftWidth] = useState<number>(window.innerWidth * 0.4);
   const isDraggingRef = useRef<boolean>(false);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = () => {
     isDraggingRef.current = true;
     document.body.style.userSelect = "none";
 

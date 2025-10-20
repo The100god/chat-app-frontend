@@ -54,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [ pathname, router, setUser, setIsAuthenticated ]);
 
   //Check if token exist in localstorage on initial load
   useEffect(() => {
@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         router.push("/pages/login");
       }
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
   // Login function
 

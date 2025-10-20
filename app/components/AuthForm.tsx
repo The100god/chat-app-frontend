@@ -1,8 +1,9 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 'use client';
 import { useAuth } from "../context/AuthContext";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import React, { useEffect, useState } from "react";
-import {disconnectSocket, useSocket} from "../hooks/useSocket";
+import {disconnectSocket} from "../hooks/useSocket";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { floatingEmojisAtom } from "../states/States";
@@ -42,7 +43,7 @@ useEffect(() => {
   
   useEffect(()=>{
     if(varUserId){
-      const socket = useSocket(varUserId)
+      // const socket = useSocket(varUserId)
       console.log("🔗 Socket connected for user:");
       // console.log("🔗 Socket connected for user:", varUserId);
 
@@ -72,7 +73,9 @@ useEffect(() => {
         setMessage(response.data.message || "success")
         setError(null)
         
-    } catch (error:any) {
+    } catch (err)
+     {
+      const error = err as AxiosError<{ error: string }>; // <- typed
         setError(error.response?.data?.error || 'Something went wrong')
         setMessage(null)
     }
@@ -183,7 +186,7 @@ useEffect(() => {
             </a>
           ) : (
             <a href="/pages/signup" className="text-blue-500 hover:underline">
-              Don't have an account? Sign Up
+              Don`&apos;`t have an account? Sign Up
             </a>
           )}
         </p>

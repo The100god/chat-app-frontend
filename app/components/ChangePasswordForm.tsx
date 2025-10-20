@@ -1,3 +1,4 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 import { Eye, EyeClosed } from "lucide-react";
 import React, { useEffect, useState } from "react";
@@ -32,12 +33,10 @@ export default function ChangePasswordForm({
     };
   }, []);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setMessage(null);
-
 
     // Basic client-side validation
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -105,8 +104,12 @@ export default function ChangePasswordForm({
         setMessage(null);
         setError(null);
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Something went wrong");
+      }
       setTimeout(() => {
         setError(null);
       }, 3000);
@@ -213,7 +216,7 @@ export default function ChangePasswordForm({
         {loading ? "Saving..." : "Change Password"}
       </button>
       <button
-      onClick={()=>onClose()}
+        onClick={() => onClose()}
         disabled={loading}
         className="px-4 py-2 bg-red-600 hover:bg-red-700/15 text-[var(--card-foreground)] border border-[var(--background)] hover:border-red-600 cursor-pointer rounded"
       >

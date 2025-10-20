@@ -1,15 +1,23 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 // FindUser.tsx (Search and Send Friend Request)
 import React, { useEffect, useState } from "react";
-import { getSocket, useSocket } from "../hooks/useSocket";
+import { useSocket } from "../hooks/useSocket";
 import { userIdAtom } from "../states/States";
 import { useAtom } from "jotai";
+import Image from "next/image";
 
-interface Friend {
-  friendId: string;
+// interface Friend {
+//   friendId: string;
+//   username: string;
+//   profilePic: string;
+//   unreadMessagesCount: number;
+// }
+
+interface User {
+  _id: string;
   username: string;
   profilePic: string;
-  unreadMessagesCount: number;
 }
 
 let debounceTimeout: NodeJS.Timeout;
@@ -20,7 +28,8 @@ const searchUsers = async (username: string, userId: string | null) => {
   const response = await fetch(
     `${backendUrl}/api/users/search?username=${username}&userId=${userId}`
   );
-  return await response.json();
+const data = await response.json();
+  return data as User[];
 };
 
 // Function to send a friend request
@@ -42,15 +51,16 @@ const searchUsers = async (username: string, userId: string | null) => {
 
 const FindUser = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [message, setMessage] = useState("");
 
   const [userId] = useAtom(userIdAtom);
+const socket = useSocket(userId);
   useEffect(() => {
-    if (userId) {
-      useSocket(userId); // ✅ Connect and emit 'join'
+    if (!userId || !socket) {
+      return
     }
-  }, [userId]);
+  }, [userId, socket]);
 
   // const handleSearch = async () => {
   //   if (searchQuery.trim()) {
@@ -74,12 +84,12 @@ const FindUser = () => {
     }, 300);
 
     return () => clearTimeout(debounceTimeout);
-  }, [searchQuery]);
+  }, [searchQuery, userId]);
 
   const handleSendRequest = async (receiverId: string) => {
     // const result = await sendFriendRequest(socket, userId, receiverId);
     // setMessage(result);
-    const socket = getSocket(); // ✅ Get connected socket
+    // const socket = getSocket(); // ✅ Get connected socket
     if (!socket || !userId) return;
 
     socket.emit("sendFriendRequest", {
@@ -110,13 +120,13 @@ const FindUser = () => {
       {message && <p className="text-green-400 p-2">{message}</p>}
 
       <div className="flex flex-col justify-start items-start gap-4 w-full px-2 py-6">
-        {users?.map((user: any) => (
+        {users?.map((user) => (
           <div
             key={user?._id}
             className="flex flex-row justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg w-[80%] px-3 py-4"
           >
             <div className="flex flex-row justify-start items-center gap-3">
-              <img
+              <Image
                 src={user?.profilePic}
                 alt="pic"
                 className="w-8 h-8 rounded-full border-2 border-[var(--accent)]"

@@ -7,6 +7,7 @@ import {
   userIdAtom,
 } from "../states/States";
 import { useAtom } from "jotai";
+import Image from "next/image";
 
 interface Friend {
   friendId: string;
@@ -66,7 +67,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
               onClick={() => handleSelectFriend(friend)}
               className="flex items-center bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
             >
-              <img
+              <Image
                 src={friend?.profilePic || "/default-profile-pic.jpg"}
                 alt={friend?.username}
                 className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"

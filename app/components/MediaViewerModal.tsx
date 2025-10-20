@@ -8,6 +8,7 @@ import {
   Maximize2,
   X,
 } from "lucide-react";
+import Image from "next/image";
 
 interface MediaViewerModalProps {
   isOpen: boolean;
@@ -104,7 +105,7 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
               className="max-w-full max-h-[80vh] object-contain rounded-lg"
             />
           ) : (
-            <img
+            <Image
               src={media[currentIndex]}
               alt="media"
               className="max-w-full max-h-[80vh] object-contain rounded-lg"

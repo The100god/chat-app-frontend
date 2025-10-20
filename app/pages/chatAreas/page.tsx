@@ -17,6 +17,7 @@ import VoiceRecorder from "../../components/VoiceRecorder";
 import { X } from "lucide-react";
 import ChatAreaLoading from "../../components/ChatAreaLoading";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 interface Message {
   _id?: string;
@@ -41,12 +42,6 @@ interface Message {
   }[];
 }
 
-export interface Friend {
-  friendId: string;
-  username: string;
-  profilePic: string;
-  unreadMessagesCount: number;
-}
 
 const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -66,7 +61,7 @@ export default function ChatArea() {
   const [messages, setMessages] = useAtom(messageAtom);
   const [messageInput, setMessageInput] = useState<string>("");
   const [chatId, setChatId] = useState<string | null>(null);
-  const [friends, setFriends] = useAtom(friendsAtom);
+  const [friends] = useAtom(friendsAtom);
   const [isTyping, setIsTyping] = useState(false);
   const [typingFriend, setTypingFriend] = useState<string | null>(null);
   let typingTimeout: NodeJS.Timeout;
@@ -166,7 +161,7 @@ export default function ChatArea() {
     };
 
     fetchChat();
-  }, [selectedFriend, selectedGroup, chatId, socket]);
+  }, [selectedFriend, selectedGroup, chatId, socket, userId, setLoadingMessages, setMessages]);
 
   useEffect(() => {
     if (socket && selectedGroup?._id) {
@@ -198,7 +193,7 @@ export default function ChatArea() {
     return () => {
       socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, chatId, selectedFriend]);
+  }, [socket, chatId, selectedFriend, setMessages]);
 
   useEffect(() => {
     if (!socket || !selectedGroup) return;
@@ -235,7 +230,7 @@ export default function ChatArea() {
       socket.off("newGroupMessage", handleGroupMessage);
       socket.off("groupSeenUpdate", handleGroupSeenUpdate);
     };
-  }, [socket, chatId, selectedGroup]);
+  }, [socket, chatId, selectedGroup, setMessages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageInput(e.target.value);
@@ -383,7 +378,7 @@ export default function ChatArea() {
     return () => {
       socket.off("messagesReadAck", handleMessagesReadAck);
     };
-  }, [friends]);
+  }, [friends, socket, userId, setMessages]);
 
   useEffect(() => {
     if (!socket) return;
@@ -405,7 +400,7 @@ export default function ChatArea() {
     return () => {
       socket.off("groupSeenUpdate", handleSeenUpdate);
     };
-  }, [socket, selectedGroup]);
+  }, [socket, selectedGroup, setMessages]);
 
   useEffect(() => {
     if (!hasAutoScrolled && shouldScroll.current && bottomRef.current) {
@@ -416,7 +411,7 @@ export default function ChatArea() {
       // bottomRef.current.scrollIntoView({ behavior: "auto" });
       // bottomRef.current.
     }
-  }, [messages]);
+  }, [messages, hasAutoScrolled, bottomRef]);
 
   useEffect(() => {
     if (!socket || !selectedFriend) return;
@@ -475,7 +470,7 @@ export default function ChatArea() {
         receiverId: userId,
       });
     }
-  }, [chatId, selectedFriend, socket, userId, messages.length]);
+  }, [chatId, selectedFriend, socket, userId, messages, messages.length]);
 
   // Handle file input change
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -504,7 +499,7 @@ export default function ChatArea() {
       return (
         <div key={index} className="relative">
           {isImage ? (
-            <img src={url} className="w-20 h-20 object-cover rounded" />
+            <Image alt="image" src={url} className="w-20 h-20 object-cover rounded" />
           ) : isAudio ? (
             <audio src={url} controls className="w-[25vw] h-20 rounded" />
           ) : (
@@ -527,8 +522,8 @@ export default function ChatArea() {
           className="flex flex-row justify-center items-center gap-2 p-3"
         >
           {(selectedFriend || selectedGroup) && (
-            <img
-              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic}
+            <Image
+              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || ""}
               alt="image"
               className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
             />
@@ -698,7 +693,8 @@ export default function ChatArea() {
                               controls
                             />
                           ) : (
-                            <img
+                            <Image
+                            alt="image"
                               key={index}
                               src={url}
                               onClick={openModal}
@@ -734,7 +730,8 @@ export default function ChatArea() {
                           .filter((u) => u._id !== userId)
                           .slice(0, 3)
                           .map((user, i) => (
-                            <img
+                            <Image
+                            alt="image"
                               key={i}
                               src={user.profilePic}
                               title={user.username}

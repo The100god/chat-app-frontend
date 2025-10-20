@@ -1,22 +1,29 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useAtom } from "jotai";
 import { Pencil, Mail, X, Camera } from "lucide-react";
 import { floatingEmojisAtom, userAtom } from "../../states/States";
 import { motion } from "framer-motion";
-
+import Image from "next/image";
+interface User {
+  username: string;
+  email: string;
+  profilePic: string;
+  about: string;
+}
 const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const API_BASE = `${backendUrl}/api/users`;
 
 const ProfilePage: React.FC = () => {
-  const [user, setUser] = useAtom(userAtom);
+  const [user, setUser] = useAtom<User>(userAtom);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [previewModal, setPreviewModal] = useState(false);
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
 
-  const updateUser = async (updatedData: any) => {
+  const updateUser = async (updatedData: Partial<User>) => {
     try {
       const token = localStorage.getItem("chatAppToken");
       const res = await fetch(`${API_BASE}/updateProfile`, {
@@ -104,7 +111,7 @@ const ProfilePage: React.FC = () => {
       </div>
       <div className="flex flex-col justify-start items-center w-full max-w-md bg-[var(--card-foreground)] text-[var(--card)] p-4 rounded-2xl shadow-inner overflow-y-auto space-y-4">
         <div className="relative flex flex-col items-center">
-          <img
+          <Image
             src={user?.profilePic}
             alt="Profile"
             className="w-32 h-32 rounded-full object-cover border-4 border-[var(--accent)] cursor-pointer hover:scale-105 transition"
@@ -207,7 +214,7 @@ const ProfilePage: React.FC = () => {
         style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
         >
           <div className="relative">
-            <img
+            <Image
               src={user?.profilePic}
               alt="Full Profile"
               className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-lg object-contain"

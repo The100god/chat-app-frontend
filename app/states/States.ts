@@ -1,9 +1,13 @@
 "use client"
 import { atom } from "jotai";
-import { Friend } from "../pages/chatAreas/page";
 import { Group } from "../components/GroupChatPage";
 
-
+export interface Friend {
+  friendId: string;
+  username: string;
+  profilePic: string;
+  unreadMessagesCount: number;
+}
 interface Message {
     _id?: string;
     chatId?: string;
@@ -27,6 +31,7 @@ interface Message {
     }[];
   }
 
+  
   interface FloatingEmoji {
   id: number;
   emoji: string;
@@ -68,9 +73,9 @@ export const selectedFriendAtom = atom<Friend | null>(null);
 export const friendsAtom = atom<Friend[]>([]);
 
 export const selectedGroupAtom = atom<Group | null>(null);
-export const groupNameAtom = atom<String>("");
-export const groupAdminsAtom = atom<String[]>([]);
-export const groupMembersAtom = atom<String[]>([]);
+export const groupNameAtom = atom<string>("");
+export const groupAdminsAtom = atom<string[]>([]);
+export const groupMembersAtom = atom<string[]>([]);
 export const groupProfileAtom = atom<string>("");
 export const isNewGroupWindowAtom = atom<boolean>(false);
 

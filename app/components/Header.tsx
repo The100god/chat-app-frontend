@@ -26,6 +26,7 @@ import {
 import NotificationBell from "./NotificationBell";
 // import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const Header: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -124,7 +125,7 @@ const Header: React.FC = () => {
         <div className="flex items-center space-x-6">
           {/* Profile Picture */}
           <Link href="/pages/profilePage">
-            <img
+            <Image
               src={profilePic}
               alt="Profile"
               className="w-10 h-10 rounded-full cursor-pointer border-2 border-[var(--accent)] hover:opacity-80"

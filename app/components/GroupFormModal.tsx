@@ -8,6 +8,7 @@ import {
 } from "../states/States";
 import React from "react";
 import { X } from "lucide-react";
+import Image from "next/image";
 
 interface GroupFormModalProps {
   handleCreateGroupModalSubmit: () => void;
@@ -16,7 +17,7 @@ interface GroupFormModalProps {
 const GroupFormModal: React.FC<GroupFormModalProps> = ({
   handleCreateGroupModalSubmit,
 }) => {
-  const [groupName, setGroupName] = useAtom(groupNameAtom);
+  const [, setGroupName] = useAtom(groupNameAtom);
   const [groupProfile, setGroupProfile] = useAtom(groupProfileAtom); // now base64 string
   const [groupMembers, setGroupMembers] = useAtom(groupMembersAtom);
   const [friends] = useAtom(friendsAtom);
@@ -70,7 +71,7 @@ const GroupFormModal: React.FC<GroupFormModalProps> = ({
 
         <div className="flex flex-col items-center mb-4">
           {groupProfile && (
-            <img
+            <Image
               src={groupProfile}
               alt="Group Profile"
               className="w-24 h-24 rounded-full object-cover mb-2"
@@ -115,7 +116,7 @@ const GroupFormModal: React.FC<GroupFormModalProps> = ({
                   className="flex justify-between items-center bg-[var(--card)] text-[var(--foreground) hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent) transition cursor-pointer p-2 rounded-md"
                 >
                   <div className="flex flex-row gap-4 items-center">
-                    <img
+                    <Image
                       src={fnd?.profilePic}
                       alt="frend Profile"
                       className="w-8 h-8 rounded-full object-cover border-2 border-[var(--accent)]"

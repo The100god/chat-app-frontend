@@ -1,31 +1,33 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client"
 import { useEffect, useState } from "react";
 // import { Bell } from "lucide-react"; // Using Lucide Icons
-import { getSocket, useSocket } from "../hooks/useSocket";
+import { useSocket } from "../hooks/useSocket";
 import { useAtom } from "jotai";
 import { userIdAtom } from "../states/States";
-
+interface FriendRequest {
+  _id: string;
+  username: string;
+  profilePic: string;
+}
 const NotificationBell = () => {
 
 const [requestCount, setRequestCount] = useState(0);
 const [userId] = useAtom(userIdAtom);
+  const socket = useSocket(userId); // ✅ moved to top-level
+
   useEffect(() => {
-    if (!userId) return;
-
-    useSocket(userId); // 🔌 Join socket room
-
-    const socket = getSocket();
-
+    if (!userId || !socket) return;
     //Initial fetch from server via socket
     socket?.emit("getFriendRequests", { userId });
 
     // When server sends the full friend requests list
-    const handleFriendRequestsList = (data: any[]) => {
+    const handleFriendRequestsList = (data: FriendRequest[]) => {
       setRequestCount(data.length);
     };
 
     // When a new friend request is received
-    const handleNewFriendRequest = ({ senderId }: { senderId: string }) => {
+    const handleNewFriendRequest = () => {
       setRequestCount((prev) => prev + 1);
     };
 
@@ -45,7 +47,7 @@ const [userId] = useAtom(userIdAtom);
       socket?.off("friendRequestAccepted", handleRequestHandled);
       socket?.off("friendRequestDenied", handleRequestHandled);
     };
-  }, [userId]);
+  }, [userId, socket]);
 
   return (
     <div className="relative">

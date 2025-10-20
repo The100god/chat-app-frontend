@@ -1,8 +1,7 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 import React, { useEffect, useState } from "react";
 import {
-  Moon,
-  Sun,
   Bell,
   User,
   LogOut,
@@ -12,6 +11,20 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
+import Image from "next/image";
+interface SettingItemProps {
+  icon: React.ReactNode;
+  label: string;
+  action?: string;
+  onClick?: () => void;
+}
+
+interface ToggleItemProps {
+  icon: React.ReactNode;
+  label: string;
+  enabled: boolean;
+  onToggle: () => void;
+}
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -43,7 +56,7 @@ export default function SettingsPage() {
         <section>
           <h3 className="text-lg font-bold mb-3">Profile</h3>
           <div className="flex items-center gap-4 bg-[var(--card)] rounded-xl p-4">
-            <img
+            <Image
               src={user?.profilePic}
               alt="profile"
               className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent)]"
@@ -71,7 +84,6 @@ export default function SettingsPage() {
               icon={<Lock />}
               label="Change Password"
               action="Edit"
-              className="bg-[var(--card)] hover:bg-[var(--accent)]/15"
               onClick={() => setChangePasswordOpen(true)}
             />
             <SettingItem
@@ -183,7 +195,7 @@ export default function SettingsPage() {
 }
 
 // Reusable Components
-function SettingItem({ icon, label, action, onClick }: any) {
+function SettingItem({ icon, label, action, onClick }: SettingItemProps) {
   return (
     <div
       onClick={onClick}
@@ -201,7 +213,7 @@ function SettingItem({ icon, label, action, onClick }: any) {
   );
 }
 
-function ToggleItem({ icon, label, enabled, onToggle }: any) {
+function ToggleItem({ icon, label, enabled, onToggle }: ToggleItemProps) {
   return (
     <div className="flex justify-between items-center cursor-pointer bg-[var(--card)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg px-4 py-3">
       <div className="flex items-center gap-3">

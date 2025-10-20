@@ -1,8 +1,10 @@
+/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 import { useState, useEffect } from "react";
 import { useSocket } from "../hooks/useSocket";
 import { useAtom } from "jotai";
 import { userIdAtom } from "../states/States";
+import Image from "next/image";
 
 // Function to fetch pending friend requests
 // const fetchFriendRequests = async (userId: string) => {
@@ -23,8 +25,14 @@ import { userIdAtom } from "../states/States";
 //   return await response.json();
 // };
 
+interface FriendRequest {
+  _id: string;        // senderId
+  username: string;
+  profilePic: string;
+}
+
 const FriendRequests = () => {
-  const [requests, setRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [userId] = useAtom(userIdAtom);
   const socket = useSocket(userId);
@@ -56,7 +64,7 @@ const FriendRequests = () => {
     socket.emit("getFriendRequests", { userId });
 
     // 📥 Set initial list of friend requests
-    const handleFriendRequestsList = (data: any[]) => {
+    const handleFriendRequestsList = (data: FriendRequest[]) => {
       setRequests(data);
       setLoading(false);
     };
@@ -138,7 +146,7 @@ const FriendRequests = () => {
           >
             <div className="flex flex-row gap-2 items-center">
               <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">
-                <img
+                <Image
                   className="flex rounded-full border-2 border-[var(--accent)] w-full h-full"
                   src={req?.profilePic}
                   alt="pic"
