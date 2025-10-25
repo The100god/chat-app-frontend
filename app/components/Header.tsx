@@ -305,6 +305,7 @@ import {
   userAtom,
 } from "../states/States";
 import NotificationBell from "./NotificationBell";
+import Image from "next/image";
 
 const Header: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
@@ -345,7 +346,7 @@ const Header: React.FC = () => {
         {/* Left Section */}
         <div className="flex items-center space-x-6">
           <Link href="/pages/profilePage">
-            <img
+            <Image
               src={profilePic}
               alt="Profile"
               className="w-10 h-10 flex flex-nowrap rounded-full cursor-pointer border-2 border-[var(--accent)] hover:opacity-80"
@@ -478,7 +479,7 @@ const Header: React.FC = () => {
       <div className="lg:hidden flex items-center justify-between rounded-4xl px-4 py-4 bg-[var(--card)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] glow">
         <div className="flex items-center space-x-3">
           <Link href="/pages/profilePage">
-            <img
+            <Image
               src={profilePic}
               alt="Profile"
               className="w-9 h-9 rounded-full border-2 border-[var(--accent)]"
