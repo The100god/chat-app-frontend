@@ -20,7 +20,7 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
           {friends?.map((friend) => (
             <li
               key={friend?.friendId}
-              className="flex flex-row justify-between items-center bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)] w-[90%] p-2"
+              className="flex flex-row justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)] w-[90%] p-2"
             >
               <Image
                 src={friend?.profilePic || "/default-profile-pic.jpg"}

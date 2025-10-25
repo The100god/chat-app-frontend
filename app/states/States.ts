@@ -57,6 +57,7 @@ export const userAtom = atom<User>({
   profilePic: "/user.jpg",
   about: "Hey there! I’m using ChatApp 💬",
 });
+export const responsiveDeviceAtom = atom<boolean>(true);
 
 export const userIdAtom=atom<string|null>(null)
 // const [userId] = useState<string|null>(() => localStorage.getItem("userId"));

@@ -8,6 +8,7 @@ import {
   groupNameAtom,
   groupProfileAtom,
   isNewGroupWindowAtom,
+  responsiveDeviceAtom,
   selectedFriendAtom,
   selectedGroupAtom,
   userIdAtom,
@@ -38,6 +39,7 @@ const GroupChatPage = () => {
   const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [, setSelectedFriend] = useAtom(selectedFriendAtom); // clear friend
   const [groups, setGroups] = useState<Group[]>([]);
+  const [, setShowLeft] = useAtom(responsiveDeviceAtom); 
 
   // if (!userId && !socket) return null;
 
@@ -166,6 +168,7 @@ const GroupChatPage = () => {
               onClick={() => {
                 setSelectedFriend(null);
                 setSelectedGroup(g);
+                setShowLeft(false);
               }}
             >
               <Image

@@ -142,7 +142,7 @@ const FriendRequests = () => {
         requests?.map((req) => (
           <div
             key={req?._id}
-            className="flex justify-between items-center bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] cursor-pointer transition duration-200 p-2 rounded-md mb-2"
+            className="flex justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] cursor-pointer transition duration-200 p-2 rounded-md mb-2"
           >
             <div className="flex flex-row gap-2 items-center">
               <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">

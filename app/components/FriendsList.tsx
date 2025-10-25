@@ -2,6 +2,7 @@
 import React from "react";
 import {
   friendsAtom,
+  responsiveDeviceAtom,
   selectedFriendAtom,
   selectedGroupAtom,
   userIdAtom,
@@ -23,15 +24,16 @@ interface FriendsListProps {
 
 const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
-
 const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   const [, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [friends, setFriends] = useAtom(friendsAtom);
   const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [userId] = useAtom(userIdAtom);
+  const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
   const handleSelectFriend = (friend: Friend) => {
     setSelectedFriend(friend);
+    setShowLeft(false);
 
     // Sync to backend and mark messages as read
     // const userId = localStorage.getItem("userId");
@@ -61,39 +63,42 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
         <p>Loading...</p>
       ) : (
         <ul className="space-y-3">
-          {friends && friends.map((friend) => (
-            <li
-              key={friend?.friendId}
-              onClick={() => handleSelectFriend(friend)}
-              className="flex items-center bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
-            >
-              <Image
-                src={friend?.profilePic || "/default-profile-pic.jpg"}
-                alt={friend?.username}
-                className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
-              />
-              <div className="flex-1">
-                <p
-                  className={`text-sm ${
-                    friend?.unreadMessagesCount > 0
-                      ? "font-bold text-[var(--foreground)]"
-                      : "font-medium text-[var(--foreground)]"
-                  }`}
-                >
-                  {friend.username}
-                </p>
-                <div className="flex items-center text-xs mt-1">
-                  {friend?.unreadMessagesCount > 0 ? (
-                    <span className="bg-green-600 text-white px-2 py-0.5 rounded-full">
-                      {friend?.unreadMessagesCount} unread
-                    </span>
-                  ) : (
-                    <span className="text-[var(--foreground)]/50">No unread messages</span>
-                  )}
+          {friends &&
+            friends.map((friend) => (
+              <li
+                key={friend?.friendId}
+                onClick={() => handleSelectFriend(friend)}
+                className="flex items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
+              >
+                <Image
+                  src={friend?.profilePic || "/default-profile-pic.jpg"}
+                  alt={friend?.username}
+                  className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
+                />
+                <div className="flex-1">
+                  <p
+                    className={`text-sm ${
+                      friend?.unreadMessagesCount > 0
+                        ? "font-bold text-[var(--foreground)]"
+                        : "font-medium text-[var(--foreground)]"
+                    }`}
+                  >
+                    {friend.username}
+                  </p>
+                  <div className="flex items-center text-xs mt-1">
+                    {friend?.unreadMessagesCount > 0 ? (
+                      <span className="bg-green-600 text-white px-2 py-0.5 rounded-full">
+                        {friend?.unreadMessagesCount} unread
+                      </span>
+                    ) : (
+                      <span className="text-[var(--foreground)]/50">
+                        No unread messages
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            ))}
         </ul>
       )}
     </div>
