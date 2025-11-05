@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { floatingEmojisAtom } from "../states/States";
 import { Eye, EyeClosed } from "lucide-react";
+import { GoogleOAuthProvider, GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
 interface AuthFormProps {
   type: "signup" | "login";
@@ -57,21 +58,39 @@ useEffect(() => {
 
   const handleSubmit = async (e:React.FormEvent<HTMLFormElement>)=>{
     e.preventDefault()
+    setError(null);
+    setMessage(null);
 
     try {
 
         const url = type === "login"? `${backendUrl}/api/auth/login`:`${backendUrl}/api/auth/signup`
 
         const response = await axios.post(url, formData)
+        // 🧠 LOGIN FLOW
+      if (type === "login") {
         const token = response.data.token;
         const returnedUserId = response.data.userId;
-        if (token && returnedUserId){
-            login(token)
-            setVarUserId(returnedUserId)
-            localStorage.setItem("userId", returnedUserId)
+        if (token && returnedUserId) {
+          login(token);
+          setVarUserId(returnedUserId);
+          localStorage.setItem("userId", returnedUserId);
         }
-        setMessage(response.data.message || "success")
-        setError(null)
+        setMessage(response.data.message || "success");
+        setError(null);
+      }
+      // 🧠 SIGNUP FLOW (with email verification)
+      if (type === "signup") {
+        setMessage(
+          response.data.message ||
+            "Signup successful! Please check your email to verify your account before logging in."
+        );
+        setError(null);
+        setFormData({
+          username: "",
+          email: "",
+          password: "",
+        });
+      }
         
     } catch (err)
      {
@@ -80,6 +99,28 @@ useEffect(() => {
         setMessage(null)
     }
   }
+
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    try {
+      const res = await fetch(`${backendUrl}/api/auth/google-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        login(data.token);
+        setVarUserId(data.userId);
+        localStorage.setItem("chatAppToken", data.token);
+        localStorage.setItem("chatAppUser", JSON.stringify(data.user));
+        setMessage("Google login successful!");
+      } else setError(data.message);
+    } catch (error) {
+      console.error("Google Login Failed:", error);
+      setError("Google login failed.");
+    }
+  };
 
 
   return (
@@ -178,6 +219,45 @@ useEffect(() => {
             {type === "signup" ? "Sign Up" : "Login"}
           </button>
         </form>
+
+        {type === "signup" && message?.includes("verify your account") && (
+          <div className="text-center mt-3">
+            <button
+              onClick={async () => {
+                try {
+                  await axios.post(
+                    `${backendUrl}/api/auth/resend-verification`,
+                    {
+                      email: formData.email,
+                    }
+                  );
+                  setMessage("📧 Verification email resent! Check your inbox.");
+                } catch (error) {
+                  console.error(error);
+                  setError(
+                    "Failed to resend verification email. Please try again."
+                  );
+                }
+              }}
+              className="text-blue-500 hover:underline text-sm"
+            >
+              Resend verification email
+            </button>
+          </div>
+        )}
+
+        {/* Google Login Button */}
+        {(type === "signup" || type === "login") && <div className="flex flex-col items-center mt-4 space-y-3">
+          <div className="text-sm text-[var(--foreground)]">or</div>
+          <GoogleOAuthProvider
+            clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
+          >
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google Login Failed")}
+            />
+          </GoogleOAuthProvider>
+        </div>}
 
         <p className="text-center mt-4 text-sm">
           {type === "signup" ? (
