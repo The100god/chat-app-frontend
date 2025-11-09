@@ -13,7 +13,7 @@ import {
   GoogleLogin,
   CredentialResponse,
 } from "@react-oauth/google";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 interface AuthFormProps {
   type: "signup" | "login";
@@ -48,7 +48,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     const verified = searchParams.get("verified");
     if (verified === "failed") setMessage("❌ Verification link expired.");
     else if (verified === "already") setMessage("✅ Email already verified.");
-    
+
   }, [searchParams]);
 
   useEffect(() => {

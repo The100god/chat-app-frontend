@@ -1,6 +1,11 @@
-'use client';
-import AuthForm from '../../components/AuthForm';
+"use client";
+import { Suspense } from "react";
+import AuthForm from "../../components/AuthForm";
 
 export default function LoginPage() {
-  return <AuthForm type="login" />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthForm type="login" />;
+    </Suspense>
+  );
 }

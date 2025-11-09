@@ -1,7 +1,7 @@
 "use client";
 import { useAtom } from "jotai";
 import { usePathname, useRouter } from "next/navigation";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { User, userAtom } from "../states/States";
 
 interface AuthContextType {
@@ -25,16 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [user, setUser] = useAtom<User>(userAtom);
   const [, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-
-    if (token) {
-      localStorage.setItem("chatAppToken", token);
-      login(token);
-      router.replace("/"); // remove ?token=... from URL
-    }
-  }, [router]);
+  
 
   useEffect(() => {
     const token = localStorage.getItem("chatAppToken");
@@ -85,11 +76,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Login function
 
-  const login = (token: string) => {
+  const login = useCallback((token: string) => {
     localStorage.setItem("chatAppToken", token);
     setIsAuthenticated(true);
     router.push("/");
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    if (token) {
+      localStorage.setItem("chatAppToken", token);
+      login(token);
+      router.replace("/"); // remove ?token=... from URL
+    }
+  }, [router, login]);
 
   const logout = () => {
     localStorage.removeItem("chatAppToken");

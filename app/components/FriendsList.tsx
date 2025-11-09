@@ -44,7 +44,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
       setFindFriend(true);
       setFindFriendWithChat(false);
     }
-  }, [loading, friends]);
+  }, [loading, friends, setFindFriend, setFindFriendWithChat]);
 
   const handleSelectFriend = (friend: Friend) => {
     setSelectedFriend(friend);
