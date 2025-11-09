@@ -26,6 +26,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    if (token) {
+      localStorage.setItem("chatAppToken", token);
+      login(token);
+      router.replace("/"); // remove ?token=... from URL
+    }
+  }, [router]);
+
+  useEffect(() => {
     const token = localStorage.getItem("chatAppToken");
     if (!token) {
       setLoading(false);

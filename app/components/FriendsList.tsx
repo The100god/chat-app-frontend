@@ -1,6 +1,8 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import {
+  findFriendAtom,
+  findFriendWithChatAtom,
   friendsAtom,
   responsiveDeviceAtom,
   selectedFriendAtom,
@@ -30,6 +32,19 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [userId] = useAtom(userIdAtom);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
+
+  // ✅ import and use atoms for find friend redirection
+  const [, setFindFriend] = useAtom(findFriendAtom);
+  const [, setFindFriendWithChat] = useAtom(findFriendWithChatAtom);
+
+  // 🔁 Automatically redirect new users to “Find Friend”
+  useEffect(() => {
+    if (!loading && friends.length === 0) {
+      console.log("🟢 No friends found. Redirecting to Find Friend...");
+      setFindFriend(true);
+      setFindFriendWithChat(false);
+    }
+  }, [loading, friends]);
 
   const handleSelectFriend = (friend: Friend) => {
     setSelectedFriend(friend);
@@ -61,6 +76,11 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
     <div className="p-4 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
       {loading ? (
         <p>Loading...</p>
+      ) : friends.length === 0 ? (
+        <div className="text-center mt-10 text-[var(--foreground)]/70">
+          <p>No friends found 🫠</p>
+          <p className="text-sm mt-2">Redirecting to Find Friends...</p>
+        </div>
       ) : (
         <ul className="space-y-3">
           {friends &&
