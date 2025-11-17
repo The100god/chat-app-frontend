@@ -91,7 +91,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         if (token && returnedUserId) {
           login(token);
           setVarUserId(returnedUserId);
-          localStorage.setItem("userId", returnedUserId);
+          localStorage.setItem("chatAppUserId", returnedUserId);
         }
         setMessage(response.data.message || "success");
         setError(null);
@@ -284,7 +284,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             </a>
           ) : (
             <a href="/pages/signup" className="text-blue-500 hover:underline">
-              Don`&apos;`t have an account? Sign Up
+              Don&apos;t have an account? Sign Up
             </a>
           )}
         </p>

@@ -17,7 +17,7 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
         <p>Loading...</p>
       ) : (
         <ul className="space-y-3 w-full">
-          {friends?.map((friend) => (
+          {Array.isArray(friends) && friends?.map((friend) => (
             <li
               key={friend?.friendId}
               className="flex flex-row justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)] w-[90%] p-2"

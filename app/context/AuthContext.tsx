@@ -1,8 +1,14 @@
 "use client";
 import { useAtom } from "jotai";
 import { usePathname, useRouter } from "next/navigation";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { User, userAtom } from "../states/States";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { User, userAtom, userIdAtom } from "../states/States";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -24,8 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const pathname = usePathname();
   const [user, setUser] = useAtom<User>(userAtom);
   const [, setLoading] = useState<boolean>(true);
-
-  
+      const [, setUserId] = useAtom(userIdAtom);
 
   useEffect(() => {
     const token = localStorage.getItem("chatAppToken");
@@ -46,6 +51,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           profilePic: data.profilePic,
           about: data.about || "Hey there! I’m using ChatApp 💬",
         });
+
+        setUserId(data._id);     // IMPORTANT: store userId globally
+    localStorage.setItem("chatAppUserId", data._id); // optional
       })
       .catch(() => {
         localStorage.removeItem("chatAppToken");
@@ -56,7 +64,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       })
       .finally(() => setLoading(false));
-  }, [ pathname, router, setUser, setIsAuthenticated ]);
+  }, [pathname, router, setUser, setIsAuthenticated, setUserId]);
 
   //Check if token exist in localstorage on initial load
   useEffect(() => {
@@ -76,11 +84,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Login function
 
-  const login = useCallback((token: string) => {
-    localStorage.setItem("chatAppToken", token);
-    setIsAuthenticated(true);
-    router.push("/");
-  }, [router]);
+  const login = useCallback(
+    (token: string) => {
+      localStorage.setItem("chatAppToken", token);
+      setIsAuthenticated(true);
+      router.push("/");
+    },
+    [router]
+  );
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

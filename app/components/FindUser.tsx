@@ -80,7 +80,7 @@ const socket = useSocket(userId);
     debounceTimeout = setTimeout(async () => {
       const foundUsers = await searchUsers(searchQuery.trim(), userId);
       // console.log("foundUsers", foundUsers);
-      setUsers(foundUsers);
+      setUsers(Array.isArray(foundUsers) ? foundUsers : []);
     }, 300);
 
     return () => clearTimeout(debounceTimeout);
@@ -120,7 +120,7 @@ const socket = useSocket(userId);
       {message && <p className="text-green-400 p-2">{message}</p>}
 
       <div className="flex flex-col justify-start items-start gap-4 w-full px-2 py-6">
-        {users?.map((user) => (
+        {Array.isArray(users) && users?.map((user) => (
           <div
             key={user?._id}
             className="flex flex-row justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg w-[80%] px-3 py-4"

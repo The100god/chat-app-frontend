@@ -62,7 +62,7 @@ export default function LeftSection() {
   }, [userId, setFriends]);
 
   useEffect(() => {
-    const id = localStorage.getItem("userId");
+    const id = localStorage.getItem("chatAppUserId");
     if (id) {
       setUserId(id);
     }
