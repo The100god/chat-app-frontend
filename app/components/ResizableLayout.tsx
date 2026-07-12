@@ -60,6 +60,7 @@
 import { useAtom } from "jotai";
 import { useState, useRef, useEffect, ReactNode } from "react";
 import { responsiveDeviceAtom } from "../states/States";
+import { ArrowLeft } from "lucide-react";
 
 interface ResizableLayoutProps {
   leftComponent: ReactNode;
@@ -113,17 +114,17 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   if (isMobile) {
     return (
       <div className="flex flex-col h-full w-full bg-transparent relative">
-        {!showLeft && <div className="flex justify-center items-center p-2 bg-[var(--accent)] text-white w-fit h-fit absolute right-0 top-0  rounded-full">
-          <button
-            onClick={() => setShowLeft(true)}
-            className={`px-1.5 py-3 rounded-full text-sm ${
-              showLeft ? "bg-white text-black" : "bg-transparent"
-            }`}
-          >
-            Back
-          </button>
-          
-        </div>}
+        {!showLeft && (
+          <div className="absolute left-2 top-2 z-50">
+            <button
+              onClick={() => setShowLeft(true)}
+              className="p-2.5 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/85 transition rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+              title="Back"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          </div>
+        )}
 
         <div className="flex-grow overflow-hidden bg-black">
           {showLeft ? leftComponent : rightComponent}

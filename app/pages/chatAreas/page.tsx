@@ -15,7 +15,7 @@ import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
-import { X, Timer, ChevronDown } from "lucide-react";
+import { X, Timer, ChevronDown, Plus, SendHorizontal } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -105,6 +105,8 @@ export default function ChatArea() {
   const [showTimerDropdown, setShowTimerDropdown] = useState(false);
   const [, setCountdownTick] = useState(0); // forces re-render for countdown
   const timerDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
   const username =
     selectedFriend?.username ||
     selectedGroup?.groupName ||
@@ -158,7 +160,7 @@ export default function ChatArea() {
           } else {
             setMessages([]); // or handle the error gracefully
             setLoadingMessages(false);
-            console.error("Fetched messages is not an array", messagesData);
+            // console.error("Fetched messages is not an array", messagesData);
           }
         } else if (selectedGroup) {
           const res = await fetch(
@@ -587,6 +589,20 @@ export default function ChatArea() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close actions dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        actionsDropdownRef.current &&
+        !actionsDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowActionsDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // console.log("selectedFriend", selectedFriend)
   // console.log("messages", messages);
   return (
@@ -900,81 +916,161 @@ export default function ChatArea() {
             className="hidden"
             id="upload"
           />
-          <label
-            htmlFor="upload"
-            className="flex justify-center items-center cursor-pointer px-4 py-2 border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] bg-[var(--card)] rounded"
-          >
-            📷
-          </label>
 
-          {/* Voice Recorder Button */}
-          <VoiceRecorder
-            onSend={(audioFile) => {
-              setMediaFiles((prev) => [...prev, audioFile]); // Add to mediaFiles
-              setPreviewVisible(true); // Show in preview
-            }}
-          />
+          {/* Desktop-only action buttons */}
+          <div className="hidden lg:flex flex-row items-center gap-2">
+            <label
+              htmlFor="upload"
+              className="flex justify-center items-center cursor-pointer px-4 py-2 border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] bg-[var(--card)] rounded"
+            >
+              📷
+            </label>
 
+            {/* Voice Recorder Button */}
+            <VoiceRecorder
+              onSend={(audioFile) => {
+                setMediaFiles((prev) => [...prev, audioFile]); // Add to mediaFiles
+                setPreviewVisible(true); // Show in preview
+              }}
+            />
+
+            {/* Disappearing Messages Timer — only for 1-1 chats */}
+            {selectedFriend && (
+              <div className="relative" ref={timerDropdownRef}>
+                <button
+                  onClick={() => setShowTimerDropdown(!showTimerDropdown)}
+                  className={`flex items-center gap-1 cursor-pointer px-3 py-2 border-1 rounded transition-all ${disappearDuration > 0
+                    ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)]"
+                    : "border-[var(--accent)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
+                    }`}
+                  title="Set disappearing timer"
+                >
+                  <Timer size={16} />
+                  {disappearDuration > 0 && (
+                    <span className="text-xs font-semibold">{disappearDuration}h</span>
+                  )}
+                  <ChevronDown size={12} />
+                </button>
+
+                <AnimatePresence>
+                  {showTimerDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[var(--card)] border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[140px] z-50"
+                    >
+                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider">
+                        Auto-delete after
+                      </div>
+                      {DISAPPEAR_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            setDisappearDuration(opt.value);
+                            setShowTimerDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
+                            ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
+                            : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
+                            }`}
+                        >
+                          <span>⏱️ {opt.label}</span>
+                          {disappearDuration === opt.value && (
+                            <span className="text-[var(--accent)]">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile-only Action Dropdown */}
+          <div className="flex lg:hidden relative" ref={actionsDropdownRef}>
+            <button
+              onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+              className={`flex justify-center items-center cursor-pointer p-2.5 border border-[var(--accent)] rounded-lg transition-all ${showActionsDropdown
+                  ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                  : "bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
+                }`}
+              title="More actions"
+            >
+              <Plus size={20} />
+            </button>
+
+            <AnimatePresence>
+              {showActionsDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full mb-2 left-0 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[200px] z-50 flex flex-col gap-1"
+                >
+                  {/* Send Media */}
+                  <label
+                    htmlFor="upload"
+                    onClick={() => setShowActionsDropdown(false)}
+                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/10 cursor-pointer transition-all"
+                  >
+                    <span className="text-lg">📷</span>
+                    <span>Send Media</span>
+                  </label>
+
+                  {/* Voice Recorder */}
+                  <div className="flex items-center gap-3 w-full px-3 py-1.5 rounded-lg hover:bg-[var(--accent)]/10 transition-all">
+                    <VoiceRecorder
+                      onSend={(audioFile) => {
+                        setMediaFiles((prev) => [...prev, audioFile]);
+                        setPreviewVisible(true);
+                        setShowActionsDropdown(false);
+                      }}
+                    />
+                    <span className="text-sm text-[var(--foreground)]">Record Voice</span>
+                  </div>
+
+                  {/* Disappearing Messages Options */}
+                  {selectedFriend && (
+                    <div className="border-t border-[var(--accent)]/20 mt-1.5 pt-1.5">
+                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider flex items-center gap-1">
+                        <Timer size={10} /> Auto-delete messages
+                      </div>
+                      {DISAPPEAR_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => {
+                            setDisappearDuration(opt.value);
+                            setShowActionsDropdown(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
+                            ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
+                            : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
+                            }`}
+                        >
+                          <span>⏱️ {opt.label}</span>
+                          {disappearDuration === opt.value && (
+                            <span className="text-[var(--accent)]">✓</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Emoji button */}
           <div
             className="cursor-pointer px-4 py-2 text-[var(--foreground)] hover:bg-[var(--accent)]/15 border-1 border-[var(--accent)] bg-[var(--card)] rounded"
             onClick={() => setShowEmoji(!showEmoji)}
           >
             😀
           </div>
-
-          {/* Disappearing Messages Timer — only for 1-1 chats */}
-          {selectedFriend && (
-            <div className="relative" ref={timerDropdownRef}>
-              <button
-                onClick={() => setShowTimerDropdown(!showTimerDropdown)}
-                className={`flex items-center gap-1 cursor-pointer px-3 py-2 border-1 rounded transition-all ${disappearDuration > 0
-                  ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)]"
-                  : "border-[var(--accent)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
-                  }`}
-                title="Set disappearing timer"
-              >
-                <Timer size={16} />
-                {disappearDuration > 0 && (
-                  <span className="text-xs font-semibold">{disappearDuration}h</span>
-                )}
-                <ChevronDown size={12} />
-              </button>
-
-              <AnimatePresence>
-                {showTimerDropdown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[var(--card)] border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[140px] z-50"
-                  >
-                    <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider">
-                      Auto-delete after
-                    </div>
-                    {DISAPPEAR_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          setDisappearDuration(opt.value);
-                          setShowTimerDropdown(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
-                          ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
-                          : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
-                          }`}
-                      >
-                        <span>{opt.value === 0 ? "🚫 Off" : `⏱️ ${opt.label}`}</span>
-                        {disappearDuration === opt.value && (
-                          <span className="text-[var(--accent)]">✓</span>
-                        )}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          )}
 
           <textarea
             value={messageInput}
@@ -991,9 +1087,10 @@ export default function ChatArea() {
           />
           <button
             onClick={sendMessage}
-            className="ml-2 bg-[var(--accent)] text-[var(--card-foreground)] px-4 py-2 rounded-md cursor-pointer hover:opacity-90 transition"
+            className="ml-2 bg-[var(--accent)] text-[var(--card-foreground)] p-3 rounded-full cursor-pointer hover:opacity-90 transition-all flex items-center justify-center"
+            title="Send"
           >
-            Send
+            <SendHorizontal size={18} />
           </button>
         </div>
       )}
