@@ -8,7 +8,7 @@ export const useSocket = (
 ): Socket<DefaultEventsMap, DefaultEventsMap> | null => {
   if (!socket && userId) {
     socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000");
-    console.log("socketconnect", socket)
+    // console.log("socketconnect", socket)
     socket.emit("join", userId);
   }
   if (userId && socket) {

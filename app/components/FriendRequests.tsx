@@ -50,14 +50,14 @@ const FriendRequests = () => {
 
     // ✅ Friend Request Accepted
     const handleAccepted = ({ receiverId }: { receiverId: string }) => {
-      console.log("✅ Your friend request was accepted by", receiverId);
+      // console.log("✅ Your friend request was accepted by", receiverId);
       // Remove from sent requests
       setSentRequests((prev) => prev.filter((req) => req._id !== receiverId));
     };
 
     // ❌ Friend Request Denied
     const handleDenied = ({ receiverId }: { receiverId: string }) => {
-      console.log("❌ Your friend request was denied by", receiverId);
+      // console.log("❌ Your friend request was denied by", receiverId);
       // Remove from sent requests
       setSentRequests((prev) => prev.filter((req) => req._id !== receiverId));
     };

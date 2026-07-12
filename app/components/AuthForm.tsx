@@ -76,7 +76,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
           : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/signup`;
 
       const response = await axios.post(url, formData);
-      console.log("Response:", response);
+      // console.log("Response:", response);
       // 🧠 LOGIN FLOW
       if (type === "login") {
         const token = response.data.token;

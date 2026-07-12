@@ -38,7 +38,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   // 🔁 Automatically redirect new users to “Find Friend”
   useEffect(() => {
     if (!loading && friends.length === 0) {
-      console.log("🟢 No friends found. Redirecting to Find Friend...");
+      // console.log("🟢 No friends found. Redirecting to Find Friend...");
       setFindFriend(true);
       setFindFriendWithChat(false);
     }
@@ -50,7 +50,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
 
     // Sync to backend and mark messages as read
     // const userId = localStorage.getItem("userId");
-    console.log("ids");
+    // console.log("ids");
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/mark-read`, {
         method: "PUT",

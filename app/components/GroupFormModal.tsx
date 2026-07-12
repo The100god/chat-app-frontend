@@ -41,7 +41,7 @@ const GroupFormModal: React.FC<GroupFormModalProps> = ({
     };
     reader.readAsDataURL(file);
   };
-  console.log("groupMembers", groupMembers)
+  // console.log("groupMembers", groupMembers)
   const handleToggleMember = (friendId: string) => {
     setGroupMembers((prev) =>
       prev.includes(friendId)
