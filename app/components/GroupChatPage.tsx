@@ -159,7 +159,7 @@ const GroupChatPage = () => {
               }}
             >
               <Image
-                src={g?.groupProfilePic || "/default-group-pic.jpg"}
+                src={g?.groupProfilePic || "/user.jpg"}
                 alt="Group"
                 className="w-12 h-12 rounded-full border-2 border-[var(--accent)] object-cover"
                 width={48}
