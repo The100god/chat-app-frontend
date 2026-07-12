@@ -1,10 +1,9 @@
 "use client";
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { useSocket } from "../../hooks/useSocket";
+import React, { useEffect, useRef, useState } from "react";
+import { connectSocket } from "../../hooks/useSocket";
 import { useAtom } from "jotai";
 import {
   floatingEmojisAtom,
-  friendsAtom,
   loadingMessageAtom,
   messageAtom,
   selectedFriendAtom,
@@ -12,6 +11,7 @@ import {
   userIdAtom,
   disappearDurationAtom,
 } from "../../states/States";
+import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
@@ -77,7 +77,7 @@ export default function ChatArea() {
   //   ? localStorage.getItem("userId")
   //   : null;
   const [userId] = useAtom(userIdAtom);
-  const socket = useSocket(userId);
+  const socket = connectSocket(userId);
   // const hasMounted = useRef(false);
   const shouldScroll = useRef(true);
   const [showMediaModal, setShowMediaModal] = useState(false);
@@ -88,7 +88,6 @@ export default function ChatArea() {
   const [messages, setMessages] = useAtom(messageAtom);
   const [messageInput, setMessageInput] = useState<string>("");
   const [chatId, setChatId] = useState<string | null>(null);
-  const [friends, setFriends] = useAtom(friendsAtom);
   const [isTyping, setIsTyping] = useState(false);
   const [typingFriend, setTypingFriend] = useState<string | null>(null);
   let typingTimeout: NodeJS.Timeout;
@@ -193,7 +192,7 @@ export default function ChatArea() {
     };
 
     fetchChat();
-  }, [selectedFriend, selectedGroup, socket, userId]);
+  }, [selectedFriend, selectedGroup, socket, userId, setLoadingMessages, setChatId, setMessages]);
 
   useEffect(() => {
     if (socket && selectedGroup?._id) {
@@ -225,7 +224,7 @@ export default function ChatArea() {
     return () => {
       socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, chatId, selectedFriend]);
+  }, [socket, chatId, setMessages]);
 
   useEffect(() => {
     if (!socket || !selectedGroup) return;
@@ -262,7 +261,7 @@ export default function ChatArea() {
       socket.off("newGroupMessage", handleGroupMessage);
       socket.off("groupSeenUpdate", handleGroupSeenUpdate);
     };
-  }, [socket, chatId, selectedGroup]);
+  }, [socket, selectedGroup, setMessages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageInput(e.target.value);
@@ -420,7 +419,7 @@ export default function ChatArea() {
     return () => {
       socket.off("messagesReadAck", handleMessagesReadAck);
     };
-  }, [socket, userId]);
+  }, [socket, userId, setMessages]);
 
   useEffect(() => {
     if (!socket) return;
@@ -442,7 +441,7 @@ export default function ChatArea() {
     return () => {
       socket.off("groupSeenUpdate", handleSeenUpdate);
     };
-  }, [socket, selectedGroup]);
+  }, [socket, selectedGroup, setMessages]);
 
   useEffect(() => {
     if (!hasAutoScrolled && shouldScroll.current && bottomRef.current) {
@@ -453,7 +452,7 @@ export default function ChatArea() {
       // bottomRef.current.scrollIntoView({ behavior: "auto" });
       // bottomRef.current.
     }
-  }, [messages]);
+  }, [messages, hasAutoScrolled, setHasAutoScrolled]);
 
   useEffect(() => {
     if (!socket || !selectedFriend) return;
@@ -477,7 +476,7 @@ export default function ChatArea() {
       socket.off("typing", handleTyping);
       socket.off("stopTyping", handleStopTyping);
     };
-  }, [socket, selectedFriend]);
+  }, [socket, selectedFriend, setTypingFriend]);
 
   useEffect(() => {
     if (
@@ -512,7 +511,7 @@ export default function ChatArea() {
         receiverId: userId,
       });
     }
-  }, [chatId, selectedFriend, socket, userId, messages.length]);
+  }, [chatId, selectedFriend, socket, userId, messages]);
 
   // Handle file input change
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -541,7 +540,8 @@ export default function ChatArea() {
       return (
         <div key={index} className="relative">
           {isImage ? (
-            <img src={url} className="w-20 h-20 object-cover rounded" />
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} className="w-20 h-20 object-cover rounded" alt="Preview" />
           ) : isAudio ? (
             <audio src={url} controls className="w-[25vw] h-20 rounded" />
           ) : (
@@ -571,7 +571,7 @@ export default function ChatArea() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [messages]);
+  }, [messages, setMessages, setCountdownTick]);
 
   // Close timer dropdown when clicking outside
   useEffect(() => {
@@ -599,10 +599,12 @@ export default function ChatArea() {
           className="flex flex-row justify-center items-center gap-2 p-3"
         >
           {(selectedFriend || selectedGroup) && (
-            <img
-              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic}
-              alt="image"
+            <Image
+              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
+              alt="avatar"
               className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
+              width={30}
+              height={30}
             />
           )}
 
@@ -781,10 +783,12 @@ export default function ChatArea() {
                               controls
                             />
                           ) : (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               key={index}
                               src={url}
                               onClick={openModal}
+                              alt="attachment"
                               className="w-24 h-24 rounded cursor-pointer border border-[var(--accent)]"
                             />
                           );
@@ -824,11 +828,14 @@ export default function ChatArea() {
                           .filter((u) => u._id !== userId)
                           .slice(0, 3)
                           .map((user, i) => (
-                            <img
+                            <Image
                               key={i}
-                              src={user.profilePic}
+                              src={user.profilePic || "/user.jpg"}
                               title={user.username}
+                              alt="Seen by avatar"
                               className="w-4 h-4 rounded-full border border-[var(--accent)]"
+                              width={16}
+                              height={16}
                             />
                           ))}
                         {msg.seenBy.length > 4 && (

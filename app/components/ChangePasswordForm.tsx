@@ -1,4 +1,5 @@
 "use client";
+
 import { Eye, EyeClosed } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
@@ -103,8 +104,12 @@ export default function ChangePasswordForm({
         setMessage(null);
         setError(null);
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message || "Something went wrong");
+      } else {
+        setError("Something went wrong");
+      }
       setTimeout(() => {
         setError(null);
       }, 3000);

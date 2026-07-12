@@ -1,16 +1,18 @@
 "use client";
 // FindUser.tsx (Search and Send Friend Request)
 import React, { useEffect, useState } from "react";
-import { getSocket, useSocket } from "../hooks/useSocket";
+import { getSocket, connectSocket } from "../hooks/useSocket";
 import { userIdAtom } from "../states/States";
 import { useAtom } from "jotai";
+import Image from "next/image";
 
-interface Friend {
-  friendId: string;
+interface UserSearchResult {
+  _id: string;
   username: string;
   profilePic: string;
-  unreadMessagesCount: number;
 }
+
+
 
 let debounceTimeout: NodeJS.Timeout;
 // Function to search users by username
@@ -23,14 +25,14 @@ const searchUsers = async (username: string, userId: string | null) => {
 
 const FindUser = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [message, setMessage] = useState("");
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
 
   const [userId] = useAtom(userIdAtom);
   useEffect(() => {
     if (userId) {
-      useSocket(userId); // ✅ Connect and emit 'join'
+      connectSocket(userId); // Connect and emit 'join'
     }
   }, [userId]);
 
@@ -68,7 +70,7 @@ const FindUser = () => {
     }, 300);
 
     return () => clearTimeout(debounceTimeout);
-  }, [searchQuery]);
+  }, [searchQuery, userId]);
 
   const handleSendRequest = async (receiverId: string) => {
     const socket = getSocket(); // ✅ Get connected socket
@@ -104,7 +106,7 @@ const FindUser = () => {
       {message && <p className="text-green-400 p-2">{message}</p>}
 
       <div className="flex flex-col justify-start items-start gap-4 w-full px-2 py-6">
-        {Array.isArray(users) && users?.map((user: any) => {
+        {Array.isArray(users) && users?.map((user) => {
           const isRequested = requestedIds.has(user._id);
           return (
             <div
@@ -112,10 +114,12 @@ const FindUser = () => {
               className="flex flex-row justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg w-[80%] px-3 py-4"
             >
               <div className="flex flex-row justify-start items-center gap-3">
-                <img
-                  src={user?.profilePic}
+                <Image
+                  src={user?.profilePic || "/default-profile-pic.jpg"}
                   alt="pic"
                   className="w-8 h-8 rounded-full border-2 border-[var(--accent)]"
+                  width={32}
+                  height={32}
                 />
                 <p>{user?.username}</p>
               </div>

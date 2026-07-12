@@ -3,7 +3,7 @@ import { DefaultEventsMap } from "@socket.io/component-emitter";
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap> | null = null;
 
-export const useSocket = (
+export const connectSocket = (
   userId: string | null
 ): Socket<DefaultEventsMap, DefaultEventsMap> | null => {
   if (!socket && userId) {

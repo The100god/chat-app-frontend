@@ -104,6 +104,7 @@ const MediaViewerModal: React.FC<MediaViewerModalProps> = ({
               className="max-w-full max-h-[80vh] object-contain rounded-lg"
             />
           ) : (
+            // eslint-disable-next-line @next/next/no-img-element
             <img
               src={media[currentIndex]}
               alt="media"

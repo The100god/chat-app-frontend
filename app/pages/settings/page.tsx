@@ -1,8 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import {
-  Moon,
-  Sun,
   Bell,
   User,
   LogOut,
@@ -10,6 +8,7 @@ import {
   Trash2,
   ChevronRight,
 } from "lucide-react";
+import Image from "next/image";
 import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
 
@@ -81,7 +80,7 @@ export default function SettingsPage() {
         const data = await res.json();
         alert(data.message || "Failed to delete account");
       }
-    } catch (err) {
+    } catch {
       alert("Something went wrong. Please try again.");
     } finally {
       setDeleting(false);
@@ -106,11 +105,13 @@ export default function SettingsPage() {
                 {getInitials(user?.username)}
               </div>
             ) : (
-              <img
-                src={user?.profilePic}
+              <Image
+                src={user?.profilePic || "/user.jpg"}
                 alt="profile"
                 className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent)]"
                 onError={() => setImageError(true)}
+                width={64}
+                height={64}
               />
             )}
             <div className="flex flex-col">
@@ -317,11 +318,19 @@ export default function SettingsPage() {
 }
 
 // Reusable Components
-function SettingItem({ icon, label, action, onClick }: any) {
+interface SettingItemProps {
+  icon: React.ReactNode;
+  label: string;
+  action?: string;
+  className?: string;
+  onClick?: () => void;
+}
+
+function SettingItem({ icon, label, action, onClick, className }: SettingItemProps) {
   return (
     <div
       onClick={onClick}
-      className="flex justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg px-4 py-3 cursor-pointer"
+      className={`flex justify-between items-center text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg px-4 py-3 cursor-pointer ${className || "bg-[var(--card)] hover:bg-[var(--accent)]/15"}`}
     >
       <div className="flex items-center gap-3">
         <div className="text-lime-400">{icon}</div>
@@ -335,7 +344,14 @@ function SettingItem({ icon, label, action, onClick }: any) {
   );
 }
 
-function ToggleItem({ icon, label, enabled, onToggle }: any) {
+interface ToggleItemProps {
+  icon: React.ReactNode;
+  label: string;
+  enabled: boolean;
+  onToggle: () => void;
+}
+
+function ToggleItem({ icon, label, enabled, onToggle }: ToggleItemProps) {
   return (
     <div className="flex justify-between items-center cursor-pointer bg-[var(--card)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg px-4 py-3">
       <div className="flex items-center gap-3">

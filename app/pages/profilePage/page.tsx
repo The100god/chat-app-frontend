@@ -2,8 +2,9 @@
 import React, { useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { Pencil, Mail, X, Camera } from "lucide-react";
-import { floatingEmojisAtom, userAtom } from "../../states/States";
+import { floatingEmojisAtom, userAtom, User } from "../../states/States";
 import { motion } from "framer-motion";
+import Image from "next/image";
 
 const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users`;
 
@@ -38,7 +39,7 @@ const ProfilePage: React.FC = () => {
     );
   };
 
-  const updateUser = async (updatedData: any) => {
+  const updateUser = async (updatedData: Partial<User>) => {
     try {
       const token = localStorage.getItem("chatAppToken");
       const res = await fetch(`${API_BASE}/updateProfile`, {
@@ -131,12 +132,14 @@ const ProfilePage: React.FC = () => {
               {getInitials(user?.username)}
             </div>
           ) : (
-            <img
-              src={user?.profilePic}
+            <Image
+              src={user?.profilePic || "/user.jpg"}
               alt="Profile"
               className="w-32 h-32 rounded-full object-cover border-4 border-[var(--accent)] cursor-pointer hover:scale-105 transition"
               onClick={() => setPreviewModal(true)}
               onError={() => setImageError(true)}
+              width={128}
+              height={128}
             />
           )}
           <label
@@ -236,6 +239,7 @@ const ProfilePage: React.FC = () => {
           style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
         >
           <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={user?.profilePic}
               alt="Full Profile"

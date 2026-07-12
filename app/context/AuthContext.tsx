@@ -1,7 +1,7 @@
 "use client";
 import { useAtom } from "jotai";
 import { usePathname, useRouter } from "next/navigation";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, userAtom, userIdAtom } from "../states/States";
 import { apiFetch } from "../utils/apiFetch";
 
@@ -26,6 +26,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [, setLoading] = useState<boolean>(true);
   const [, setUserId] = useAtom(userIdAtom);
 
+  const login = useCallback((token: string, userId?: string) => {
+    localStorage.setItem("chatAppToken", token);
+    if (userId) {
+      setUserId(userId);
+      localStorage.setItem("chatAppUserId", userId);
+    }
+
+    setIsAuthenticated(true);
+    router.push("/");
+  }, [router, setUserId]);
+
+  const logout = useCallback(() => {
+    localStorage.removeItem("chatAppToken");
+    setIsAuthenticated(false);
+    setUser({} as User);
+    router.push("/pages/login");
+  }, [router, setUser]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
@@ -35,15 +53,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       login(token);
       router.replace("/"); // remove ?token=... from URL
     }
-  }, [router]);
+  }, [router, login]);
 
+  const hasCheckedRef = useRef(false);
   useEffect(() => {
+    if (hasCheckedRef.current) return;
     const token = localStorage.getItem("chatAppToken");
     if (!token) {
       setLoading(false);
       return;
     }
 
+    hasCheckedRef.current = true;
     //
     apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`)
       .then(async (res) => {
@@ -67,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [pathname, router, setUser, setUserId]);
 
   //Check if token exist in localstorage on initial load
   useEffect(() => {
@@ -83,27 +104,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         router.push("/pages/login");
       }
     }
-  }, [pathname]);
+  }, [pathname, router]);
 
-  // Login function
 
-  const login = (token: string, userId?: string) => {
-    localStorage.setItem("chatAppToken", token);
-    if (userId) {
-      setUserId(userId);
-      localStorage.setItem("chatAppUserId", userId);
-    }
-
-    setIsAuthenticated(true);
-    router.push("/");
-  };
-
-  const logout = () => {
-    localStorage.removeItem("chatAppToken");
-    setIsAuthenticated(false);
-    setUser({} as User);
-    router.push("/pages/login");
-  };
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, user, login, logout }}>

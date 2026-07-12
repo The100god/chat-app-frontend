@@ -1,4 +1,4 @@
-"use Client";
+"use client";
 import React, { useEffect, useState } from "react";
 import GroupFormModal from "./GroupFormModal";
 import { useAtom } from "jotai";
@@ -13,20 +13,21 @@ import {
   selectedGroupAtom,
   userIdAtom,
 } from "../states/States";
-import { useSocket } from "../hooks/useSocket";
+import { connectSocket } from "../hooks/useSocket";
+import Image from "next/image";
 
 export interface Group {
   _id: string;
-  groupName: String;
+  groupName: string;
   groupProfilePic: string;
-  groupMember: String[]; // or User[] if you're populating
-  admins: String[];
-  superAdmin: String | null;
+  groupMember: string[]; // or User[] if you're populating
+  admins: string[];
+  superAdmin: string | null;
 }
 
 const GroupChatPage = () => {
   const [userId] = useAtom(userIdAtom);
-  const socket = useSocket(userId);
+  const socket = connectSocket(userId);
   const [isNewGroupWindow, setIsNewGroupWindow] = useAtom(isNewGroupWindowAtom);
   const [groupName, setGroupName] = useAtom(groupNameAtom);
   const [groupAdmins, setGroupAdmins] = useAtom(groupAdminsAtom);
@@ -38,7 +39,7 @@ const GroupChatPage = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
-  if (!userId && !socket) return null;
+
 
   const handleCreateGroupModalSubmit = async () => {
     try {
@@ -60,15 +61,6 @@ const GroupChatPage = () => {
       const groupDataRes = await groupData.json(); // parse it
 
       if (groupData.ok) {
-        const newGroup = {
-          _id: groupDataRes._id,
-          groupName,
-          groupProfilePic: groupProfile,
-          groupMember: groupMembers,
-          admins: groupAdmins,
-          superAdmin: userId,
-        };
-
         // setGroups((prev)=>[...prev, newGroup]);
 
         socket?.emit("createGroup", {
@@ -136,6 +128,8 @@ const GroupChatPage = () => {
       socket.off("newGroupCreated", handleNewGroup);
     };
   }, [socket]);
+  if (!userId && !socket) return null;
+
   // console.log("groups", groups);
   return (
     <div className="flex p-2 flex-col space-y-5 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
@@ -157,19 +151,21 @@ const GroupChatPage = () => {
           groups?.map((g, i) => (
             <div
               key={i}
-              className="flex items-center space-x-4 p-3 bg-[var(--card)] text-[var(--foreground) rounded-md shadow-sm hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent) transition cursor-pointer"
+              className="flex items-center space-x-4 p-3 bg-[var(--card)] text-[var(--foreground)] rounded-md shadow-sm hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] transition cursor-pointer"
               onClick={() => {
                 setSelectedFriend(null);
                 setSelectedGroup(g);
                 setShowLeft(false);
               }}
             >
-              <img
-                src={g?.groupProfilePic}
+              <Image
+                src={g?.groupProfilePic || "/default-group-pic.jpg"}
                 alt="Group"
                 className="w-12 h-12 rounded-full border-2 border-[var(--accent)] object-cover"
+                width={48}
+                height={48}
               />
-              <span className="text-lg text-[var(--foreground)]] font-medium">{g?.groupName}</span>
+              <span className="text-lg text-[var(--foreground)] font-medium">{g?.groupName}</span>
             </div>
           ))}
       </div>

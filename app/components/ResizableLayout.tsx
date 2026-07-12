@@ -83,7 +83,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   }, []);
 
   // 🖱️ Resize handler (for desktop only)
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleMouseDown = () => {
     if (isMobile) return; // disable dragging on mobile
     isDraggingRef.current = true;
     document.body.style.userSelect = "none";

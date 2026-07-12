@@ -279,6 +279,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   FaUserFriends,
   FaBell,
@@ -345,10 +346,12 @@ const Header: React.FC = () => {
         {/* Left Section */}
         <div className="flex items-center space-x-6">
           <Link href="/pages/profilePage">
-            <img
-              src={profilePic}
+            <Image
+              src={profilePic || "/user.jpg"}
               alt="Profile"
               className="w-10 h-10 flex flex-nowrap rounded-full cursor-pointer border-2 border-[var(--accent)] hover:opacity-80"
+              width={40}
+              height={40}
             />
           </Link>
           <div
@@ -478,10 +481,12 @@ const Header: React.FC = () => {
       <div className="lg:hidden flex items-center justify-between rounded-4xl px-4 py-4 bg-[var(--card)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] glow">
         <div className="flex items-center space-x-3">
           <Link href="/pages/profilePage">
-            <img
-              src={profilePic}
+            <Image
+              src={profilePic || "/user.jpg"}
               alt="Profile"
               className="w-9 h-9 rounded-full border-2 border-[var(--accent)]"
+              width={36}
+              height={36}
             />
           </Link>
           <span

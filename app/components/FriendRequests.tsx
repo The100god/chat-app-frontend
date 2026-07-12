@@ -1,17 +1,24 @@
 "use client";
 import { useState, useEffect } from "react";
 import ScaleTN from "./ScaleTN";
-import { useSocket } from "../hooks/useSocket";
+import { connectSocket } from "../hooks/useSocket";
 import { useAtom } from "jotai";
 import { userIdAtom } from "../states/States";
+import Image from "next/image";
+
+interface FriendRequest {
+  _id: string;
+  username: string;
+  profilePic: string;
+}
 
 const FriendRequests = () => {
-  const [requests, setRequests] = useState<any[]>([]);
-  const [sentRequests, setSentRequests] = useState<any[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [sentRequests, setSentRequests] = useState<FriendRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<"received" | "sent">("received");
   const [userId] = useAtom(userIdAtom);
-  const socket = useSocket(userId);
+  const socket = connectSocket(userId);
 
   useEffect(() => {
     if (!userId || !socket) return;
@@ -21,13 +28,13 @@ const FriendRequests = () => {
     socket.emit("getSentFriendRequestsDetailed", { userId });
 
     // 📥 Set initial list of incoming friend requests
-    const handleFriendRequestsList = (data: any[]) => {
+    const handleFriendRequestsList = (data: FriendRequest[]) => {
       setRequests(data);
       setLoading(false);
     };
 
     // 📥 Set initial list of sent (outgoing) friend requests
-    const handleSentRequestsList = (data: any[]) => {
+    const handleSentRequestsList = (data: FriendRequest[]) => {
       setSentRequests(data);
     };
 
@@ -63,7 +70,7 @@ const FriendRequests = () => {
     };
 
     // When we send a new request, add it to sent list in real-time
-    const handleFriendRequestSent = ({ receiverId }: { receiverId: string }) => {
+    const handleFriendRequestSent = () => {
       // Re-fetch sent requests for fresh data
       socket.emit("getSentFriendRequestsDetailed", { userId });
     };
@@ -119,21 +126,19 @@ const FriendRequests = () => {
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => setActiveTab("received")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${
-            activeTab === "received"
-              ? "bg-[var(--accent)] text-[var(--background)]"
-              : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
-          }`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${activeTab === "received"
+            ? "bg-[var(--accent)] text-[var(--background)]"
+            : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
+            }`}
         >
           Received {requests.length > 0 && `(${requests.length})`}
         </button>
         <button
           onClick={() => setActiveTab("sent")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${
-            activeTab === "sent"
-              ? "bg-[var(--accent)] text-[var(--background)]"
-              : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
-          }`}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${activeTab === "sent"
+            ? "bg-[var(--accent)] text-[var(--background)]"
+            : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
+            }`}
         >
           Sent {sentRequests.length > 0 && `(${sentRequests.length})`}
         </button>
@@ -154,10 +159,12 @@ const FriendRequests = () => {
               >
                 <div className="flex flex-row gap-2 items-center">
                   <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">
-                    <img
+                    <Image
                       className="flex rounded-full border-2 border-[var(--accent)] w-full h-full"
-                      src={req?.profilePic}
+                      src={req?.profilePic || "/default-profile-pic.jpg"}
                       alt="pic"
+                      width={32}
+                      height={32}
                     />
                   </span>
                   <p>{req?.username}</p>
@@ -195,10 +202,12 @@ const FriendRequests = () => {
               >
                 <div className="flex flex-row gap-2 items-center">
                   <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">
-                    <img
+                    <Image
                       className="flex rounded-full border-2 border-[var(--accent)] w-full h-full object-cover"
-                      src={req?.profilePic}
+                      src={req?.profilePic || "/default-profile-pic.jpg"}
                       alt="pic"
+                      width={32}
+                      height={32}
                     />
                   </span>
                   <div className="flex flex-col">

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
+import Image from "next/image";
 import ScaleTN from "./ScaleTN";
 import {
   findFriendAtom,
@@ -42,7 +43,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
       setFindFriend(true);
       setFindFriendWithChat(false);
     }
-  }, [loading, friends]);
+  }, [loading, friends, setFindFriend, setFindFriendWithChat]);
 
   const handleSelectFriend = (friend: Friend) => {
     setSelectedFriend(friend);
@@ -87,10 +88,12 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
               onClick={() => handleSelectFriend(friend)}
               className="flex items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
             >
-              <img
+              <Image
                 src={friend?.profilePic || "/default-profile-pic.jpg"}
-                alt={friend?.username}
+                alt={friend?.username || "Friend profile picture"}
                 className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
+                width={48}
+                height={48}
               />
               <div className="flex-1">
                 <p

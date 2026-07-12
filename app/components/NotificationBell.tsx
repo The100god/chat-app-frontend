@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react";
 // import { Bell } from "lucide-react"; // Using Lucide Icons
-import { getSocket, useSocket } from "../hooks/useSocket";
+import { getSocket, connectSocket } from "../hooks/useSocket";
 import { useAtom } from "jotai";
 import { userIdAtom } from "../states/States";
 
@@ -12,7 +12,7 @@ const [userId] = useAtom(userIdAtom);
   useEffect(() => {
     if (!userId) return;
 
-    useSocket(userId); // 🔌 Join socket room
+    connectSocket(userId); // 🔌 Join socket room
 
     const socket = getSocket();
 
@@ -20,12 +20,12 @@ const [userId] = useAtom(userIdAtom);
     socket?.emit("getFriendRequests", { userId });
 
     // When server sends the full friend requests list
-    const handleFriendRequestsList = (data: any[]) => {
+    const handleFriendRequestsList = (data: unknown[]) => {
       setRequestCount(data.length);
     };
 
     // When a new friend request is received
-    const handleNewFriendRequest = ({ senderId }: { senderId: string }) => {
+    const handleNewFriendRequest = () => {
       setRequestCount((prev) => prev + 1);
     };
 

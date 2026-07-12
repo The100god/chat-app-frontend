@@ -1,9 +1,10 @@
+//@typescript-eslint/no-unused-vars
 "use client";
 import { useAuth } from "../context/AuthContext";
 
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { disconnectSocket, useSocket } from "../hooks/useSocket";
+import { disconnectSocket } from "../hooks/useSocket";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { floatingEmojisAtom } from "../states/States";
@@ -46,7 +47,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
 
   useEffect(() => {
     if (varUserId) {
-      const socket = useSocket(varUserId);
+      // const socket = useSocket(varUserId);
       console.log("🔗 Socket connected for user:");
       // console.log("🔗 Socket connected for user:", varUserId);
 
@@ -103,17 +104,25 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
           "Signup successful! Please check your email to verify your account before logging in."
         );
       }
-    } catch (error: any) {
-      setError(
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        "Something went wrong"
-      );
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        setError(
+          error.response?.data?.message ||
+          error.response?.data?.error ||
+          "Something went wrong"
+        );
+      } else {
+        setError("Something went wrong");
+      }
       setMessage(null);
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse: any) => {
+  interface GoogleCredentialResponse {
+    credential?: string;
+  }
+
+  const handleGoogleSuccess = async (credentialResponse: GoogleCredentialResponse) => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/google-login`, {
         method: "POST",
@@ -242,7 +251,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
                     }
                   );
                   setMessage("📧 Verification email resent! Check your inbox.");
-                } catch (err) {
+                } catch {
                   setError(
                     "Failed to resend verification email. Please try again."
                   );
@@ -274,7 +283,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             </a>
           ) : (
             <a href="/pages/signup" className="text-blue-500 hover:underline">
-              Don't have an account? Sign Up
+              {"Don't have an account? Sign Up"}
             </a>
           )}
         </p>

@@ -22,7 +22,7 @@ export async function apiFetch(
 
   if (res.ok) return res;
 
-  let data: any = null;
+  let data: { code?: string } | null = null;
   try {
     data = await res.clone().json();
   } catch {}

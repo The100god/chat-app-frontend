@@ -1,13 +1,10 @@
 "use client";
-import FriendRequests from "../../components/FriendRequests";
 import FriendsList from "../../components/FriendsList";
 
 interface AllFriendsListProps {
   loading: boolean;
 }
 
-const FriendListPage: React.FC<AllFriendsListProps> = ({loading}) => {
+export default function FriendListPage({loading}: AllFriendsListProps) {
   return <FriendsList loading={loading}/>;
-};
-
-export default FriendListPage;
+}

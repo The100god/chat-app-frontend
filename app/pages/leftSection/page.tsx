@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useAtom } from "jotai";
 import {
@@ -19,12 +19,12 @@ import {
 // import AllFriends from "../../components/AllFriends";
 // import FriendRequests from "../../components/FriendRequests";
 // import GroupChatPage from "../../components/GroupChatPage";
-import { useSocket } from "../../hooks/useSocket";
-import FindFriend from "../findFriends/page";
-import FindAllFriend from "../findAllFriend/page";
-import FriendRequestPage from "../friendRequestPage/page";
-import FriendListPage from "../friendListPage/page";
-import GroupChat from "../groupChatPage/page";
+import { connectSocket } from "../../hooks/useSocket";
+import FindFriend from "../findFriends/FindFriend";
+import FindAllFriend from "../findAllFriend/FindAllFriend";
+import FriendRequestPage from "../friendRequestPage/FriendRequestPage";
+import FriendListPage from "../friendListPage/FriendListPage";
+import GroupChat from "../groupChatPage/GroupChat";
 
 interface Friend {
   friendId: string;
@@ -46,9 +46,9 @@ export default function LeftSection() {
   // const [user, setUser] = useAtom(userAtom);
   const [userId, setUserId] = useAtom(userIdAtom);
   // const [userId, setUserId] = useAtom(() => localStorage.getItem("userId"));
-  const socket = useSocket(userId);
+  const socket = connectSocket(userId);
   // Fetch friends data from backend
-  const fetchFriends = async () => {
+  const fetchFriends = useCallback(async () => {
     try {
       const token = localStorage.getItem("chatAppToken");
       const response = await fetch(
@@ -67,21 +67,21 @@ export default function LeftSection() {
       console.error("Error fetching friends:", error);
       setLoading(false);
     }
-  };
+  }, [userId, setFriends]);
 
   useEffect(() => {
     const id = localStorage.getItem("chatAppUserId");
     if (id) {
       setUserId(id);
     }
-  }, []);
+  }, [setUserId]);
 
   // Run fetchFriends when the component mounts
   useEffect(() => {
     if (isAuthenticated && userId) {
       fetchFriends();
     }
-  }, [isAuthenticated, userId]);
+  }, [isAuthenticated, userId, fetchFriends]);
 
   // Listen to real-time updates from socket
   useEffect(() => {
@@ -119,7 +119,7 @@ export default function LeftSection() {
       socket.off("unreadMessageCountUpdated", handleUnseenCountUpdate);
       // socket.off("update_unseen_count", handleUnseenCountUpdate);
     };
-  }, [socket]);
+  }, [socket, userId, setFriends]);
 
   useEffect(() => {
     setFriendsCounts((prev) => {
@@ -128,7 +128,7 @@ export default function LeftSection() {
       }
       return prev;
     });
-  }, [friends]);
+  }, [friends, setFriendsCounts]);
 
   // useEffect(() => {
 

@@ -12,8 +12,6 @@ interface AllFriendsListProps {
   loading: boolean;
 }
 
-const FindAllFriend: React.FC<AllFriendsListProps> = ({friends, loading}) => {
+export default function FindAllFriend({friends, loading}: AllFriendsListProps) {
   return <AllFriends friends={friends} loading={loading} />;
-};
-
-export default FindAllFriend;
+}

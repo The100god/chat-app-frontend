@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import ScaleTN from "./ScaleTN";
+import Image from "next/image";
 
 interface Friend {
   friendId: string;
@@ -26,10 +27,13 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
               key={friend?.friendId}
               className="flex flex-row justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)] w-[90%] p-2"
             >
-              <img
+              <Image
+
                 src={friend?.profilePic || "/default-profile-pic.jpg"}
                 alt={friend?.username}
                 className="w-12 h-12 rounded-full mr-3 border-2 border-[var(--accent)]"
+                width={48}
+                height={48}
               />
               <div className="flex-1">
                 <p className="text-lg font-medium">{friend?.username}</p>

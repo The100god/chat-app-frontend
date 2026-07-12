@@ -71,9 +71,9 @@ export const selectedFriendAtom = atom<Friend | null>(null);
 export const friendsAtom = atom<Friend[]>([]);
 
 export const selectedGroupAtom = atom<Group | null>(null);
-export const groupNameAtom = atom<String>("");
-export const groupAdminsAtom = atom<String[]>([]);
-export const groupMembersAtom = atom<String[]>([]);
+export const groupNameAtom = atom<string>("");
+export const groupAdminsAtom = atom<string[]>([]);
+export const groupMembersAtom = atom<string[]>([]);
 export const groupProfileAtom = atom<string>("");
 export const isNewGroupWindowAtom = atom<boolean>(false);
 
