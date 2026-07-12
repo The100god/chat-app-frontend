@@ -8,6 +8,7 @@ interface Message {
     _id?: string;
     chatId?: string;
     groupId?: string;
+    uploading?: boolean;
     sender?:
       | {
           _id: string;

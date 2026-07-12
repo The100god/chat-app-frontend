@@ -15,7 +15,7 @@ import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
-import { X, Timer, ChevronDown, Plus, SendHorizontal } from "lucide-react";
+import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2 } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -23,6 +23,7 @@ interface Message {
   _id?: string;
   chatId?: string;
   groupId?: string;
+  uploading?: boolean;
   sender?:
   | {
     _id: string;
@@ -211,14 +212,25 @@ export default function ChatArea() {
       if (message.chatId !== chatId) return; // Only if it's the open chat
       setMessages((prev) => {
         const alreadyExists = prev.some((m) => m._id === message._id);
-        if (!alreadyExists) {
-          return [...prev, message];
+        if (alreadyExists) return prev;
+
+        const localIndex = prev.findIndex(
+          (m) =>
+            m._id?.startsWith("local-") &&
+            ((typeof m.sender === "string" && m.sender === userId) ||
+              (typeof m.sender === "object" && m.sender?._id === userId)) &&
+            m.content === message.content &&
+            m.media?.length === message.media?.length
+        );
+
+        if (localIndex !== -1) {
+          const updated = [...prev];
+          updated[localIndex] = message;
+          return updated;
         }
-        return prev;
+
+        return [...prev, message];
       });
-      // if (message.chatId === chatId) {
-      //   setMessages((prev) => [...prev, message]);
-      // }
     };
 
     socket.on("newMessage", handleNewMessage);
@@ -226,7 +238,7 @@ export default function ChatArea() {
     return () => {
       socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, chatId, setMessages]);
+  }, [socket, chatId, userId, setMessages]);
 
   useEffect(() => {
     if (!socket || !selectedGroup) return;
@@ -236,10 +248,24 @@ export default function ChatArea() {
       if (message.groupId === selectedGroup._id) {
         setMessages((prev) => {
           const alreadyExists = prev.some((m) => m._id === message._id);
-          if (!alreadyExists) {
-            return [...prev, message];
+          if (alreadyExists) return prev;
+
+          const localIndex = prev.findIndex(
+            (m) =>
+              m._id?.startsWith("local-") &&
+              ((typeof m.sender === "string" && m.sender === userId) ||
+                (typeof m.sender === "object" && m.sender?._id === userId)) &&
+              m.content === message.content &&
+              m.media?.length === message.media?.length
+          );
+
+          if (localIndex !== -1) {
+            const updated = [...prev];
+            updated[localIndex] = message;
+            return updated;
           }
-          return prev;
+
+          return [...prev, message];
         });
       }
     };
@@ -263,7 +289,7 @@ export default function ChatArea() {
       socket.off("newGroupMessage", handleGroupMessage);
       socket.off("groupSeenUpdate", handleGroupSeenUpdate);
     };
-  }, [socket, selectedGroup, setMessages]);
+  }, [socket, selectedGroup, userId, setMessages]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageInput(e.target.value);
@@ -306,6 +332,28 @@ export default function ChatArea() {
     setMediaFiles([]);
     setPreviewVisible(false);
     setShowEmoji(false);
+
+    const localId = `local-${Date.now()}`;
+    if (mediaFilesToSend.length > 0) {
+      const optimisticMessage: Message = {
+        _id: localId,
+        chatId: chatId || undefined,
+        groupId: selectedGroup?._id || undefined,
+        sender: {
+          _id: userId,
+          username: "Me",
+          profilePic: "",
+        },
+        content: textToSend,
+        media: mediaFilesToSend.map((file) => URL.createObjectURL(file) + "#" + file.type),
+        createdAt: new Date().toISOString(),
+        isRead: false,
+        seenBy: [],
+        uploading: true,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+    }
 
     // Convert media files to base64
     const convertToBase64 = (file: File): Promise<string> =>
@@ -356,6 +404,21 @@ export default function ChatArea() {
       // console.log("saveMessage", savedMessage);
 
       setLoadingMessages(false);
+
+      if (mediaFilesToSend.length > 0) {
+        setMessages((prev) =>
+          prev.map((m) => (m._id === localId ? savedMessage : m))
+        );
+      } else {
+        setMessages((prev) => {
+          const alreadyExists = prev.some((m) => m._id === savedMessage._id);
+          if (!alreadyExists) {
+            return [...prev, savedMessage];
+          }
+          return prev;
+        });
+      }
+
       // console.log("socketSelectedGroup", selectedGroup);
       socket.emit(
         selectedGroup ? "sendGroupMessage" : "sendMessage",
@@ -376,6 +439,9 @@ export default function ChatArea() {
       );
     } catch (err) {
       console.error("Error sending message:", err);
+      if (mediaFilesToSend.length > 0) {
+        setMessages((prev) => prev.filter((m) => m._id !== localId));
+      }
     }
   };
 
@@ -445,6 +511,13 @@ export default function ChatArea() {
 
     const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
       bottomRef.current?.scrollIntoView({ behavior });
+      // Staggered timeouts to ensure it scrolls down even if images/elements finish layout late
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior });
+      }, 50);
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior });
+      }, 150);
     };
 
     if (shouldScroll.current) {
@@ -777,68 +850,82 @@ export default function ChatArea() {
                     }}
                   >
                     {msg.media && msg.media?.length > 0 && (
-                      <div
-                        className={`grid ${msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                          } gap-2`}
-                        onClick={(e) => {
-                          // Find the index of the clicked child
-                          const target = e.target as HTMLMediaElement;
-                          const children = Array.from(e.currentTarget.children);
-                          const index = children.findIndex(
-                            (child) => child === target.closest("video, img")
-                          );
-                          // console.log("index", index)
-                          if (index !== -1) {
-                            setModalMedia(msg.media || []);
-                            setCurrentMediaIndex(index);
-                            setShowMediaModal(true);
-                          }
-                        }}
-                      >
-                        {(msg.media || []).slice(0, 3).map((url, index) => {
-                          const openModal = () => {
-                            setModalMedia(msg.media || []);
-                            setCurrentMediaIndex(index);
-                            setShowMediaModal(true);
-                          };
-
-                          return url.endsWith(".mp4") ? (
-                            <video
-                              key={index}
-                              src={url}
-                              onClick={openModal}
-                              className="w-24 h-24 cursor-pointer rounded-md border border-[var(--accent)]"
-                            // controls
-                            />
-                          ) : url.endsWith(".webm") ? (
-                            <audio
-                              key={index}
-                              src={url}
-                              className="w-[15vw]"
-                              controls
-                            />
-                          ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              key={index}
-                              src={url}
-                              onClick={openModal}
-                              alt="attachment"
-                              className="w-24 h-24 rounded cursor-pointer border border-[var(--accent)]"
-                            />
-                          );
-                        })}
-
-                        {(msg.media?.length || 0) > 3 && (
-                          <div
-                            onClick={() => {
-                              setModalMedia(msg.media || []);
-                              setCurrentMediaIndex(3);
+                      <div className="relative">
+                        <div
+                          className={`grid ${msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                            } gap-2`}
+                          onClick={(e) => {
+                            // Find the index of the clicked child
+                            const target = e.target as HTMLMediaElement;
+                            const children = Array.from(e.currentTarget.children);
+                            const index = children.findIndex(
+                              (child) => child === target.closest("video, img")
+                            );
+                            if (index !== -1) {
+                              setModalMedia((msg.media || []).map((u) => u.split("#")[0]));
+                              setCurrentMediaIndex(index);
                               setShowMediaModal(true);
-                            }}
-                            className="w-24 h-24 flex items-center justify-center bg-[var(--background)] bg-opacity-60 text-[var(--foreground)] rounded cursor-pointer"
-                          >
-                            +{(msg.media?.length || 0) - 3}
+                            }
+                          }}
+                        >
+                          {(msg.media || []).slice(0, 3).map((url, index) => {
+                            const cleanUrl = url.split("#")[0];
+                            const openModal = () => {
+                              setModalMedia((msg.media || []).map((u) => u.split("#")[0]));
+                              setCurrentMediaIndex(index);
+                              setShowMediaModal(true);
+                            };
+
+                            const isBlob = url.startsWith("blob:");
+                            const isVideo = isBlob
+                              ? url.includes("video")
+                              : (url.endsWith(".mp4") || url.endsWith(".mov") || url.endsWith(".avi") || url.endsWith(".mkv"));
+                            const isAudio = isBlob
+                              ? url.includes("audio")
+                              : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a"));
+
+                            return isVideo ? (
+                              <video
+                                key={index}
+                                src={cleanUrl}
+                                onClick={openModal}
+                                className="w-24 h-24 cursor-pointer rounded-md border border-[var(--accent)] object-cover"
+                              />
+                            ) : isAudio ? (
+                              <audio
+                                key={index}
+                                src={cleanUrl}
+                                className="w-[15vw]"
+                                controls
+                              />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                key={index}
+                                src={cleanUrl}
+                                onClick={openModal}
+                                alt="attachment"
+                                className="w-24 h-24 rounded cursor-pointer border border-[var(--accent)] object-cover"
+                              />
+                            );
+                          })}
+
+                          {(msg.media?.length || 0) > 3 && (
+                            <div
+                              onClick={() => {
+                                setModalMedia((msg.media || []).map((u) => u.split("#")[0]));
+                                setCurrentMediaIndex(3);
+                                setShowMediaModal(true);
+                              }}
+                              className="w-24 h-24 flex items-center justify-center bg-[var(--background)] bg-opacity-60 text-[var(--foreground)] rounded cursor-pointer"
+                            >
+                              +{(msg.media?.length || 0) - 3}
+                            </div>
+                          )}
+                        </div>
+                        {msg.uploading && (
+                          <div className="absolute inset-0 bg-black/45 rounded-md flex items-center justify-center z-10 pointer-events-none">
+                            <Loader2 className="animate-spin text-white" size={24} />
                           </div>
                         )}
                       </div>
@@ -929,8 +1016,10 @@ export default function ChatArea() {
         <div className="flex flex-row items-center justify-center mt-4 gap-2">
           <input
             type="file"
+            name="media"
+            aria-label="Upload media"
             multiple
-            accept="image/*,video/*"
+            accept="image/*,video/*,audio/*"
             onChange={handleFileSelect}
             className="hidden"
             id="upload"
@@ -940,6 +1029,8 @@ export default function ChatArea() {
           <div className="hidden lg:flex flex-row items-center gap-2">
             <label
               htmlFor="upload"
+              title="Send Media"
+              aria-label="Send media"
               className="flex justify-center items-center cursor-pointer px-4 py-2 border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] bg-[var(--card)] rounded"
             >
               📷
