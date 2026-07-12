@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useSocket } from "../../hooks/useSocket";
 import { useAtom } from "jotai";
 import {
@@ -10,31 +10,32 @@ import {
   selectedFriendAtom,
   selectedGroupAtom,
   userIdAtom,
+  disappearDurationAtom,
 } from "../../states/States";
 import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
-import { X } from "lucide-react";
-import ChatAreaLoading from "../../components/ChatAreaLoading";
-import { motion } from "framer-motion";
-import Image from "next/image";
+import { X, Timer, ChevronDown } from "lucide-react";
+import ScaleTN from "../../components/ScaleTN";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Message {
   _id?: string;
   chatId?: string;
   groupId?: string;
   sender?:
-    | {
-        _id: string;
-        username: string;
-        profilePic: string;
-      }
-    | string;
+  | {
+    _id: string;
+    username: string;
+    profilePic: string;
+  }
+  | string;
   receiver?: string | object;
   content?: string;
   media?: string[]; // not [string]
   createdAt?: string;
   isRead?: boolean;
+  expiresAt?: string | null;
   seenBy?: {
     _id: string;
     username: string;
@@ -42,8 +43,34 @@ interface Message {
   }[];
 }
 
+// Disappearing message timer options (hours)
+const DISAPPEAR_OPTIONS = [
+  { label: "1h", value: 1 },
+  { label: "4h", value: 4 },
+  { label: "8h", value: 8 },
+  { label: "12h", value: 12 },
+  { label: "24h", value: 24 },
+];
 
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+// Helper: format remaining time for countdown
+function formatCountdown(expiresAt: string): string {
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  if (diff <= 0) return "Expired";
+  const totalSeconds = Math.floor(diff / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `⏳ ${hours}h ${minutes}m`;
+  if (minutes > 0) return `⏳ ${minutes}m ${seconds}s`;
+  return `⏳ ${seconds}s`;
+}
+
+export interface Friend {
+  friendId: string;
+  username: string;
+  profilePic: string;
+  unreadMessagesCount: number;
+}
 
 export default function ChatArea() {
   // const userId = localStorage.getItem("userId")
@@ -61,7 +88,7 @@ export default function ChatArea() {
   const [messages, setMessages] = useAtom(messageAtom);
   const [messageInput, setMessageInput] = useState<string>("");
   const [chatId, setChatId] = useState<string | null>(null);
-  const [friends] = useAtom(friendsAtom);
+  const [friends, setFriends] = useAtom(friendsAtom);
   const [isTyping, setIsTyping] = useState(false);
   const [typingFriend, setTypingFriend] = useState<string | null>(null);
   let typingTimeout: NodeJS.Timeout;
@@ -74,6 +101,11 @@ export default function ChatArea() {
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
   //group
   const [selectedGroup] = useAtom(selectedGroupAtom);
+  // Disappearing messages
+  const [disappearDuration, setDisappearDuration] = useAtom(disappearDurationAtom);
+  const [showTimerDropdown, setShowTimerDropdown] = useState(false);
+  const [, setCountdownTick] = useState(0); // forces re-render for countdown
+  const timerDropdownRef = useRef<HTMLDivElement | null>(null);
   const username =
     selectedFriend?.username ||
     selectedGroup?.groupName ||
@@ -102,7 +134,7 @@ export default function ChatArea() {
       setHasAutoScrolled(false); // allow auto-scroll for new friend
       try {
         if (selectedFriend) {
-          const res = await fetch(`${backendUrl}/api/chat`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/chat`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify([userId, selectedFriend?.friendId]),
@@ -112,13 +144,13 @@ export default function ChatArea() {
           setChatId(data._id);
           // console.log("data", data._id);
 
-          if (socket && chatId) {
-            // console.log("Joining chat room:", chatId);
-            socket.emit("join", chatId);
+          if (socket && data._id) {
+            // console.log("Joining chat room:", data._id);
+            socket.emit("join", data._id);
           }
 
           const messagesRes = await fetch(
-            `${backendUrl}/api/message/${data._id}`
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/${data._id}`
           );
           const messagesData = await messagesRes.json();
           if (messagesData.length > 0) {
@@ -131,7 +163,7 @@ export default function ChatArea() {
           }
         } else if (selectedGroup) {
           const res = await fetch(
-            `${backendUrl}/api/groups/group-message/${selectedGroup._id}`
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/group-message/${selectedGroup._id}`
           );
           const messagesData = await res.json();
           setChatId(selectedGroup._id);
@@ -161,7 +193,7 @@ export default function ChatArea() {
     };
 
     fetchChat();
-  }, [selectedFriend, selectedGroup, chatId, socket, userId, setLoadingMessages, setMessages]);
+  }, [selectedFriend, selectedGroup, socket, userId]);
 
   useEffect(() => {
     if (socket && selectedGroup?._id) {
@@ -193,7 +225,7 @@ export default function ChatArea() {
     return () => {
       socket.off("newMessage", handleNewMessage);
     };
-  }, [socket, chatId, selectedFriend, setMessages]);
+  }, [socket, chatId, selectedFriend]);
 
   useEffect(() => {
     if (!socket || !selectedGroup) return;
@@ -230,7 +262,7 @@ export default function ChatArea() {
       socket.off("newGroupMessage", handleGroupMessage);
       socket.off("groupSeenUpdate", handleGroupSeenUpdate);
     };
-  }, [socket, chatId, selectedGroup, setMessages]);
+  }, [socket, chatId, selectedGroup]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageInput(e.target.value);
@@ -279,6 +311,7 @@ export default function ChatArea() {
         mediaFiles.map((file) => convertToBase64(file))
       );
       // console.log("media", mediaBase64);
+      // Include disappearDuration for 1-1 chats (0 = permanent)
       const newMessage = {
         chatId,
         senderId: userId,
@@ -286,6 +319,7 @@ export default function ChatArea() {
         content: messageInput.trim(),
         media: mediaBase64,
         isRead: false,
+        disappearDuration: selectedFriend ? disappearDuration : 0,
       };
       // setMessages((prev) => [
       //   ...prev,
@@ -298,19 +332,19 @@ export default function ChatArea() {
 
       // console.log("selectedGroup._id", selectedGroup?._id);
       const endpoint = selectedGroup
-        ? `${backendUrl}/api/groups/send-group-message`
-        : `${backendUrl}/api/message`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/send-group-message`
+        : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message`;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           selectedGroup
             ? {
-                groupId: selectedGroup._id,
-                senderId: userId,
-                content: messageInput.trim(),
-                media: mediaBase64,
-              }
+              groupId: selectedGroup._id,
+              senderId: userId,
+              content: messageInput.trim(),
+              media: mediaBase64,
+            }
             : newMessage
         ),
       });
@@ -325,18 +359,18 @@ export default function ChatArea() {
         selectedGroup ? "sendGroupMessage" : "sendMessage",
         selectedGroup
           ? {
-              groupId: selectedGroup._id,
-              senderId: userId,
-              content: savedMessage.content,
-              media: savedMessage.media,
-            }
+            groupId: selectedGroup._id,
+            senderId: userId,
+            content: savedMessage.content,
+            media: savedMessage.media,
+          }
           : {
-              chatId: savedMessage.chatId,
-              senderId: savedMessage.sender?._id,
-              receiverId: savedMessage.receiver,
-              media: savedMessage.media,
-              content: savedMessage.content,
-            }
+            chatId: savedMessage.chatId,
+            senderId: savedMessage.sender?._id,
+            receiverId: savedMessage.receiver,
+            media: savedMessage.media,
+            content: savedMessage.content,
+          }
       );
 
       // Update local message state
@@ -355,22 +389,30 @@ export default function ChatArea() {
     const handleMessagesReadAck = ({
       chatId: ackChatId,
       readerId,
+      updatedMessages,
     }: {
       chatId: string;
       readerId: string;
+      updatedMessages?: Message[];
     }) => {
       if (readerId === userId) return;
-      // Mark messages as read locally if they were sent by current user
-      setMessages((prevMessages) =>
-        prevMessages?.map((msg) => {
-          const isSenderCurrentUser =
-            (typeof msg?.sender === "string" && msg?.sender === userId) ||
-            (typeof msg?.sender === "object" && msg?.sender?._id === userId);
-          return isSenderCurrentUser && msg?.chatId === ackChatId
-            ? { ...msg, isRead: true }
-            : msg;
-        })
-      );
+
+      // If the server sent back updated messages (with expiresAt set), use them
+      if (updatedMessages && updatedMessages.length > 0) {
+        setMessages(updatedMessages);
+      } else {
+        // Fallback: just mark as read locally
+        setMessages((prevMessages) =>
+          prevMessages?.map((msg) => {
+            const isSenderCurrentUser =
+              (typeof msg?.sender === "string" && msg?.sender === userId) ||
+              (typeof msg?.sender === "object" && msg?.sender?._id === userId);
+            return isSenderCurrentUser && msg?.chatId === ackChatId
+              ? { ...msg, isRead: true }
+              : msg;
+          })
+        );
+      }
     };
 
     socket.on("messagesReadAck", handleMessagesReadAck);
@@ -378,7 +420,7 @@ export default function ChatArea() {
     return () => {
       socket.off("messagesReadAck", handleMessagesReadAck);
     };
-  }, [friends, socket, userId, setMessages]);
+  }, [socket, userId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -400,7 +442,7 @@ export default function ChatArea() {
     return () => {
       socket.off("groupSeenUpdate", handleSeenUpdate);
     };
-  }, [socket, selectedGroup, setMessages]);
+  }, [socket, selectedGroup]);
 
   useEffect(() => {
     if (!hasAutoScrolled && shouldScroll.current && bottomRef.current) {
@@ -411,7 +453,7 @@ export default function ChatArea() {
       // bottomRef.current.scrollIntoView({ behavior: "auto" });
       // bottomRef.current.
     }
-  }, [messages, hasAutoScrolled, bottomRef]);
+  }, [messages]);
 
   useEffect(() => {
     if (!socket || !selectedFriend) return;
@@ -470,7 +512,7 @@ export default function ChatArea() {
         receiverId: userId,
       });
     }
-  }, [chatId, selectedFriend, socket, userId, messages, messages.length]);
+  }, [chatId, selectedFriend, socket, userId, messages.length]);
 
   // Handle file input change
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -499,7 +541,7 @@ export default function ChatArea() {
       return (
         <div key={index} className="relative">
           {isImage ? (
-            <Image alt="image" src={url} className="w-20 h-20 object-cover rounded" />
+            <img src={url} className="w-20 h-20 object-cover rounded" />
           ) : isAudio ? (
             <audio src={url} controls className="w-[25vw] h-20 rounded" />
           ) : (
@@ -509,6 +551,41 @@ export default function ChatArea() {
       );
     });
   };
+
+  // Auto-remove expired messages from local state
+  useEffect(() => {
+    const hasExpiring = messages.some((m) => m.expiresAt);
+    if (!hasExpiring) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setMessages((prev) => {
+        const filtered = prev.filter(
+          (m) => !m.expiresAt || new Date(m.expiresAt).getTime() > now
+        );
+        // Only update if something was actually removed
+        return filtered.length !== prev.length ? filtered : prev;
+      });
+      // Force countdown re-render
+      setCountdownTick((t) => t + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [messages]);
+
+  // Close timer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        timerDropdownRef.current &&
+        !timerDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowTimerDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // console.log("selectedFriend", selectedFriend)
   // console.log("messages", messages);
@@ -522,17 +599,12 @@ export default function ChatArea() {
           className="flex flex-row justify-center items-center gap-2 p-3"
         >
           {(selectedFriend || selectedGroup) && (
-            <Image
-              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || ""}
+            <img
+              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic}
               alt="image"
               className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
             />
           )}
-          {/* <h2 className="flex justify-center items-center text-lg font-semibold">
-            {selectedFriend
-              ? `${selectedFriend.username}`
-              : "Select a friend to chat"}
-          </h2> */}
 
           <h2 className="flex justify-center items-center text-xl font-semibold space-x-1 text-[var(--foreground)]">
             {selectedFriend || selectedGroup ? (
@@ -560,6 +632,23 @@ export default function ChatArea() {
               <span className="text-[var(--muted)]">{username}</span>
             )}
           </h2>
+
+          {/* Disappearing messages indicator — only for 1-1 chats */}
+          {selectedFriend && disappearDuration > 0 && (
+            <span className="ml-2 text-xs px-2 py-1 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-1">
+              <Timer size={12} />
+              {disappearDuration}h
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Disappearing messages banner — only for 1-1 chats */}
+      {!loadingMessages && selectedFriend && disappearDuration > 0 && (
+        <div className="flex items-center justify-center gap-2 py-1.5 px-3 mx-2 mb-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+          <span className="text-xs text-[var(--accent)]">
+            🔒 Messages will disappear {disappearDuration}h after being seen
+          </span>
         </div>
       )}
       {!loadingMessages ? (
@@ -652,9 +741,8 @@ export default function ChatArea() {
                   >
                     {msg.media && msg.media?.length > 0 && (
                       <div
-                        className={`grid ${
-                          msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                        } gap-2`}
+                        className={`grid ${msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"
+                          } gap-2`}
                         onClick={(e) => {
                           // Find the index of the clicked child
                           const target = e.target as HTMLMediaElement;
@@ -683,7 +771,7 @@ export default function ChatArea() {
                               src={url}
                               onClick={openModal}
                               className="w-24 h-24 cursor-pointer rounded-md border border-[var(--accent)]"
-                              // controls
+                            // controls
                             />
                           ) : url.endsWith(".webm") ? (
                             <audio
@@ -693,8 +781,7 @@ export default function ChatArea() {
                               controls
                             />
                           ) : (
-                            <Image
-                            alt="image"
+                            <img
                               key={index}
                               src={url}
                               onClick={openModal}
@@ -718,6 +805,13 @@ export default function ChatArea() {
                       </div>
                     )}
                     {msg.content}
+                    {/* Disappearing message countdown */}
+                    {msg.expiresAt && (
+                      <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70" style={{ color: isSentByUser ? 'var(--card-foreground)' : 'var(--foreground)' }}>
+                        <Timer size={10} />
+                        <span>{formatCountdown(msg.expiresAt)}</span>
+                      </div>
+                    )}
                     {isSentByUser && msg.isRead && selectedFriend && (
                       <span className="text-xs absolute right-0 bottom-0 text-[var(--muted)] ml-2">
                         👀
@@ -730,8 +824,7 @@ export default function ChatArea() {
                           .filter((u) => u._id !== userId)
                           .slice(0, 3)
                           .map((user, i) => (
-                            <Image
-                            alt="image"
+                            <img
                               key={i}
                               src={user.profilePic}
                               title={user.username}
@@ -758,7 +851,7 @@ export default function ChatArea() {
         </div>
       ) : (
         <div className="h-[100%] bg-[var(--muted)] p-4 rounded-lg flex items-center justify-center text-[var(--foreground)] text-sm">
-          <ChatAreaLoading />
+          <ScaleTN variant="chat" />
         </div>
       )}
       {!loadingMessages &&
@@ -822,6 +915,60 @@ export default function ChatArea() {
             😀
           </div>
 
+          {/* Disappearing Messages Timer — only for 1-1 chats */}
+          {selectedFriend && (
+            <div className="relative" ref={timerDropdownRef}>
+              <button
+                onClick={() => setShowTimerDropdown(!showTimerDropdown)}
+                className={`flex items-center gap-1 cursor-pointer px-3 py-2 border-1 rounded transition-all ${disappearDuration > 0
+                  ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)]"
+                  : "border-[var(--accent)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
+                  }`}
+                title="Set disappearing timer"
+              >
+                <Timer size={16} />
+                {disappearDuration > 0 && (
+                  <span className="text-xs font-semibold">{disappearDuration}h</span>
+                )}
+                <ChevronDown size={12} />
+              </button>
+
+              <AnimatePresence>
+                {showTimerDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[var(--card)] border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[140px] z-50"
+                  >
+                    <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider">
+                      Auto-delete after
+                    </div>
+                    {DISAPPEAR_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          setDisappearDuration(opt.value);
+                          setShowTimerDropdown(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
+                          ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
+                          : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
+                          }`}
+                      >
+                        <span>{opt.value === 0 ? "🚫 Off" : `⏱️ ${opt.label}`}</span>
+                        {disappearDuration === opt.value && (
+                          <span className="text-[var(--accent)]">✓</span>
+                        )}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           <textarea
             value={messageInput}
             onChange={handleInputChange}
@@ -835,19 +982,6 @@ export default function ChatArea() {
             placeholder="Type a message..."
             rows={1}
           />
-          {/* <input
-            type="text"
-            value={messageInput}
-            onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault(); // prevent line break
-                sendMessage();
-              }
-            }}
-            className="flex-1 px-4 py-2 rounded-md bg-gray-800 text-white outline-none"
-            placeholder="Type your message..."
-          /> */}
           <button
             onClick={sendMessage}
             className="ml-2 bg-[var(--accent)] text-[var(--card-foreground)] px-4 py-2 rounded-md cursor-pointer hover:opacity-90 transition"

@@ -1,29 +1,44 @@
-/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { Pencil, Mail, X, Camera } from "lucide-react";
 import { floatingEmojisAtom, userAtom } from "../../states/States";
 import { motion } from "framer-motion";
-import Image from "next/image";
-interface User {
-  username: string;
-  email: string;
-  profilePic: string;
-  about: string;
-}
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
-const API_BASE = `${backendUrl}/api/users`;
+const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users`;
 
 const ProfilePage: React.FC = () => {
-  const [user, setUser] = useAtom<User>(userAtom);
+  const [user, setUser] = useAtom(userAtom);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [previewModal, setPreviewModal] = useState(false);
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
+  const [imageError, setImageError] = useState(false);
 
-  const updateUser = async (updatedData: Partial<User>) => {
+  useEffect(() => {
+    setImageError(false);
+  }, [user?.profilePic]);
+
+  const getInitials = (name?: string) => {
+    if (!name) return "";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length > 1) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const isImageNotFound = (pic?: string) => {
+    if (!pic) return true;
+    return (
+      pic === "/user.jpg" ||
+      pic.includes("default-profile-pic") ||
+      pic.includes("encrypted-tbn0.gstatic.com") ||
+      pic.trim() === ""
+    );
+  };
+
+  const updateUser = async (updatedData: any) => {
     try {
       const token = localStorage.getItem("chatAppToken");
       const res = await fetch(`${API_BASE}/updateProfile`, {
@@ -111,12 +126,19 @@ const ProfilePage: React.FC = () => {
       </div>
       <div className="flex flex-col justify-start items-center w-full max-w-md bg-[var(--card-foreground)] text-[var(--card)] p-4 rounded-2xl shadow-inner overflow-y-auto space-y-4">
         <div className="relative flex flex-col items-center">
-          <Image
-            src={user?.profilePic}
-            alt="Profile"
-            className="w-32 h-32 rounded-full object-cover border-4 border-[var(--accent)] cursor-pointer hover:scale-105 transition"
-            onClick={() => setPreviewModal(true)}
-          />
+          {isImageNotFound(user?.profilePic) || imageError ? (
+            <div className="w-32 h-32 rounded-full flex items-center justify-center bg-gradient-to-tr from-[var(--primary)] to-[var(--accent)] text-white font-bold text-4xl border-4 border-[var(--accent)] select-none shadow-inner">
+              {getInitials(user?.username)}
+            </div>
+          ) : (
+            <img
+              src={user?.profilePic}
+              alt="Profile"
+              className="w-32 h-32 rounded-full object-cover border-4 border-[var(--accent)] cursor-pointer hover:scale-105 transition"
+              onClick={() => setPreviewModal(true)}
+              onError={() => setImageError(true)}
+            />
+          )}
           <label
             htmlFor="changeProfile"
             className="absolute bottom-0 right-0 bg-[var(--accent)] hover:opacity-90 transition text-sm px-3 py-3 rounded-full cursor-pointer"
@@ -171,9 +193,9 @@ const ProfilePage: React.FC = () => {
             </>
           )}
         </div>
-         <div className="text-pretty text-[var(--card)] mb-6">
-                Personalize your profile to make it feel like home.
-              </div>
+        <div className="text-pretty text-[var(--card)] mb-6">
+          Personalize your profile to make it feel like home.
+        </div>
 
         {/* About Field */}
         <div className="flex flex-col items-center w-full mb-4 text-center">
@@ -211,10 +233,10 @@ const ProfilePage: React.FC = () => {
       {/* Profile Image Modal */}
       {previewModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
-        style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
+          style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
         >
           <div className="relative">
-            <Image
+            <img
               src={user?.profilePic}
               alt="Full Profile"
               className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-lg object-contain"

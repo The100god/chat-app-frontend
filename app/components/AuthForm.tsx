@@ -1,25 +1,19 @@
-/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 import { useAuth } from "../context/AuthContext";
-import axios, { AxiosError } from "axios";
+
+import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { disconnectSocket } from "../hooks/useSocket";
+import { disconnectSocket, useSocket } from "../hooks/useSocket";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { floatingEmojisAtom } from "../states/States";
 import { Eye, EyeClosed } from "lucide-react";
-import {
-  GoogleOAuthProvider,
-  GoogleLogin,
-  CredentialResponse,
-} from "@react-oauth/google";
+import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useSearchParams } from "next/navigation";
 
 interface AuthFormProps {
   type: "signup" | "login";
 }
-
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   const [formData, setFormData] = useState<{
@@ -37,8 +31,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   const { login } = useAuth();
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
   const [seePassword, setSeePassword] = useState(false);
+  // const router = useRouter();
   const searchParams = useSearchParams();
-
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
@@ -48,12 +42,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     const verified = searchParams.get("verified");
     if (verified === "failed") setMessage("❌ Verification link expired.");
     else if (verified === "already") setMessage("✅ Email already verified.");
-
   }, [searchParams]);
 
   useEffect(() => {
     if (varUserId) {
-      // const socket = useSocket(varUserId)
+      const socket = useSocket(varUserId);
       console.log("🔗 Socket connected for user:");
       // console.log("🔗 Socket connected for user:", varUserId);
 
@@ -71,7 +64,6 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     });
   };
 
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -80,10 +72,11 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     try {
       const url =
         type === "login"
-          ? `${backendUrl}/api/auth/login`
-          : `${backendUrl}/api/auth/signup`;
+          ? `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/login`
+          : `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/signup`;
 
       const response = await axios.post(url, formData);
+      console.log("Response:", response);
       // 🧠 LOGIN FLOW
       if (type === "login") {
         const token = response.data.token;
@@ -98,29 +91,31 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
       }
       // 🧠 SIGNUP FLOW (with email verification)
       if (type === "signup") {
+        // const token = response.data.token;
+        // if (token) {
+        //   // login(token);
+        //   console.log("Signup token:", token);
+        //   router.push("/pages/login");
+        // }
+
         setMessage(
           response.data.message ||
-            "Signup successful! Please check your email to verify your account before logging in."
+          "Signup successful! Please check your email to verify your account before logging in."
         );
-        setError(null);
-        setFormData({
-          username: "",
-          email: "",
-          password: "",
-        });
       }
-    } catch (err) {
-      const error = err as AxiosError<{ error: string }>; // <- typed
-      setError(error.response?.data?.error || "Something went wrong");
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Something went wrong"
+      );
       setMessage(null);
     }
   };
 
-  const handleGoogleSuccess = async (
-    credentialResponse: CredentialResponse
-  ) => {
+  const handleGoogleSuccess = async (credentialResponse: any) => {
     try {
-      const res = await fetch(`${backendUrl}/api/auth/google-login`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/google-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: credentialResponse.credential }),
@@ -235,21 +230,19 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             {type === "signup" ? "Sign Up" : "Login"}
           </button>
         </form>
-
         {type === "signup" && message?.includes("verify your account") && (
           <div className="text-center mt-3">
             <button
               onClick={async () => {
                 try {
                   await axios.post(
-                    `${backendUrl}/api/auth/resend-verification`,
+                    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/resend-verification`,
                     {
                       email: formData.email,
                     }
                   );
                   setMessage("📧 Verification email resent! Check your inbox.");
-                } catch (error) {
-                  console.error(error);
+                } catch (err) {
                   setError(
                     "Failed to resend verification email. Please try again."
                   );
@@ -261,21 +254,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             </button>
           </div>
         )}
-
         {/* Google Login Button */}
-        {(type === "signup" || type === "login") && (
-          <div className="flex flex-col items-center mt-4 space-y-3">
-            <div className="text-sm text-[var(--foreground)]">or</div>
-            <GoogleOAuthProvider
-              clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
-            >
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => setError("Google Login Failed")}
-              />
-            </GoogleOAuthProvider>
-          </div>
-        )}
+        {(type === "signup" || type === "login") && <div className="flex flex-col items-center mt-4 space-y-3">
+          <div className="text-sm text-[var(--foreground)]">or</div>
+          <GoogleOAuthProvider
+            clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!}
+          >
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google Login Failed")}
+            />
+          </GoogleOAuthProvider>
+        </div>}
 
         <p className="text-center mt-4 text-sm">
           {type === "signup" ? (
@@ -284,7 +274,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             </a>
           ) : (
             <a href="/pages/signup" className="text-blue-500 hover:underline">
-              Don&apos;t have an account? Sign Up
+              Don't have an account? Sign Up
             </a>
           )}
         </p>

@@ -14,18 +14,15 @@ import {
   userIdAtom,
 } from "../states/States";
 import { useSocket } from "../hooks/useSocket";
-import Image from "next/image";
 
 export interface Group {
   _id: string;
-  groupName: string;
+  groupName: String;
   groupProfilePic: string;
-  groupMember: string[]; // or User[] if you're populating
-  admins: string[];
-  superAdmin: string | null;
+  groupMember: String[]; // or User[] if you're populating
+  admins: String[];
+  superAdmin: String | null;
 }
-
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const GroupChatPage = () => {
   const [userId] = useAtom(userIdAtom);
@@ -39,9 +36,9 @@ const GroupChatPage = () => {
   const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [, setSelectedFriend] = useAtom(selectedFriendAtom); // clear friend
   const [groups, setGroups] = useState<Group[]>([]);
-  const [, setShowLeft] = useAtom(responsiveDeviceAtom); 
+  const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
-  // if (!userId && !socket) return null;
+  if (!userId && !socket) return null;
 
   const handleCreateGroupModalSubmit = async () => {
     try {
@@ -52,22 +49,25 @@ const GroupChatPage = () => {
         admins: [...groupAdmins, userId],
         superAdmin: userId,
       };
-      const groupData = await fetch(`${backendUrl}/api/groups/create-group`, {
-        method: "Post",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(groupDataVariables),
-      });
+      const groupData = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/create-group`,
+        {
+          method: "Post",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(groupDataVariables),
+        }
+      );
       const groupDataRes = await groupData.json(); // parse it
 
       if (groupData.ok) {
-        // const newGroup = {
-        //   _id: groupDataRes._id,
-        //   groupName,
-        //   groupProfilePic: groupProfile,
-        //   groupMember: groupMembers,
-        //   admins: groupAdmins,
-        //   superAdmin: userId,
-        // };
+        const newGroup = {
+          _id: groupDataRes._id,
+          groupName,
+          groupProfilePic: groupProfile,
+          groupMember: groupMembers,
+          admins: groupAdmins,
+          superAdmin: userId,
+        };
 
         // setGroups((prev)=>[...prev, newGroup]);
 
@@ -104,11 +104,11 @@ const GroupChatPage = () => {
   };
 
   useEffect(() => {
-    if (!userId) return;
-
     const fetchGroups = async () => {
       try {
-        const response = await fetch(`${backendUrl}/api/groups/${userId}`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/${userId}`
+        );
         const allGroups = await response.json();
         // console.log("All Groups:", allGroups);
         // You can store this in state if needed
@@ -137,13 +137,6 @@ const GroupChatPage = () => {
     };
   }, [socket]);
   // console.log("groups", groups);
-  if (!userId || !socket) {
-    return (
-      <div className="flex items-center justify-center h-full text-gray-500">
-        Connecting...
-      </div>
-    );
-  }
   return (
     <div className="flex p-2 flex-col space-y-5 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
       <div
@@ -171,14 +164,12 @@ const GroupChatPage = () => {
                 setShowLeft(false);
               }}
             >
-              <Image
+              <img
                 src={g?.groupProfilePic}
                 alt="Group"
                 className="w-12 h-12 rounded-full border-2 border-[var(--accent)] object-cover"
               />
-              <span className="text-lg text-[var(--foreground)] font-medium">
-                {g?.groupName}
-              </span>
+              <span className="text-lg text-[var(--foreground)]] font-medium">{g?.groupName}</span>
             </div>
           ))}
       </div>

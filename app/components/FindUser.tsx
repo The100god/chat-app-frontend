@@ -1,73 +1,57 @@
-/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 // FindUser.tsx (Search and Send Friend Request)
 import React, { useEffect, useState } from "react";
-import { useSocket } from "../hooks/useSocket";
+import { getSocket, useSocket } from "../hooks/useSocket";
 import { userIdAtom } from "../states/States";
 import { useAtom } from "jotai";
-import Image from "next/image";
 
-// interface Friend {
-//   friendId: string;
-//   username: string;
-//   profilePic: string;
-//   unreadMessagesCount: number;
-// }
-
-interface User {
-  _id: string;
+interface Friend {
+  friendId: string;
   username: string;
   profilePic: string;
+  unreadMessagesCount: number;
 }
 
 let debounceTimeout: NodeJS.Timeout;
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
-
 // Function to search users by username
 const searchUsers = async (username: string, userId: string | null) => {
   const response = await fetch(
-    `${backendUrl}/api/users/search?username=${username}&userId=${userId}`
+    `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users/search?username=${username}&userId=${userId}`
   );
-const data = await response.json();
-  return data as User[];
+  return await response.json();
 };
-
-// Function to send a friend request
-// const sendFriendRequest = async (socket:any, senderId: string|null, receiverId: string) => {
-//   if (!senderId) return;
-//   // Emit real-time event to receiver
-//   socket.emit("sendFriendRequest", { senderId, receiverId });
-//   const response = await fetch("http://localhost:5000/api/friends/send-request", {
-//     method: "POST",
-//     headers: {
-//       "Content-Type": "application/json",
-//     },
-//     body: JSON.stringify({ senderId, receiverId }),
-//   });
-
-//   const data = await response.json();
-//   return data.message;
-// };
 
 const FindUser = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
 
   const [userId] = useAtom(userIdAtom);
-const socket = useSocket(userId);
   useEffect(() => {
-    if (!userId || !socket) {
-      return
+    if (userId) {
+      useSocket(userId); // ✅ Connect and emit 'join'
     }
-  }, [userId, socket]);
+  }, [userId]);
 
-  // const handleSearch = async () => {
-  //   if (searchQuery.trim()) {
-  //     const foundUsers = await searchUsers(searchQuery);
-  //     setUsers(foundUsers);
-  //   }
-  // };
+  // Fetch already-sent requests on mount so we can pre-mark them
+  useEffect(() => {
+    if (!userId) return;
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.emit("getSentFriendRequests", { userId });
+
+    const handleSentRequests = (sentIds: string[]) => {
+      setRequestedIds(new Set(sentIds));
+    };
+
+    socket.on("sentFriendRequestsList", handleSentRequests);
+
+    return () => {
+      socket.off("sentFriendRequestsList", handleSentRequests);
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -84,12 +68,10 @@ const socket = useSocket(userId);
     }, 300);
 
     return () => clearTimeout(debounceTimeout);
-  }, [searchQuery, userId]);
+  }, [searchQuery]);
 
   const handleSendRequest = async (receiverId: string) => {
-    // const result = await sendFriendRequest(socket, userId, receiverId);
-    // setMessage(result);
-    // const socket = getSocket(); // ✅ Get connected socket
+    const socket = getSocket(); // ✅ Get connected socket
     if (!socket || !userId) return;
 
     socket.emit("sendFriendRequest", {
@@ -97,6 +79,8 @@ const socket = useSocket(userId);
       receiverId,
     });
 
+    // Immediately mark as requested in UI
+    setRequestedIds((prev) => new Set(prev).add(receiverId));
     setMessage("Friend request sent!");
   };
 
@@ -120,27 +104,34 @@ const socket = useSocket(userId);
       {message && <p className="text-green-400 p-2">{message}</p>}
 
       <div className="flex flex-col justify-start items-start gap-4 w-full px-2 py-6">
-        {Array.isArray(users) && users?.map((user) => (
-          <div
-            key={user?._id}
-            className="flex flex-row justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg w-[80%] px-3 py-4"
-          >
-            <div className="flex flex-row justify-start items-center gap-3">
-              <Image
-                src={user?.profilePic}
-                alt="pic"
-                className="w-8 h-8 rounded-full border-2 border-[var(--accent)]"
-              />
-              <p>{user?.username}</p>
-            </div>
-            <button
-              className="flex justify-center items-center w-fit h-fit bg-green-600 hover:bg-green-500 px-3 py-1 cursor-pointer rounded-lg text-white text-sm font-medium"
-              onClick={() => handleSendRequest(user._id)}
+        {Array.isArray(users) && users?.map((user: any) => {
+          const isRequested = requestedIds.has(user._id);
+          return (
+            <div
+              key={user?._id}
+              className="flex flex-row justify-between items-center bg-[var(--card)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-lg w-[80%] px-3 py-4"
             >
-              Make Friend
-            </button>
-          </div>
-        ))}
+              <div className="flex flex-row justify-start items-center gap-3">
+                <img
+                  src={user?.profilePic}
+                  alt="pic"
+                  className="w-8 h-8 rounded-full border-2 border-[var(--accent)]"
+                />
+                <p>{user?.username}</p>
+              </div>
+              <button
+                className={`flex justify-center items-center w-fit h-fit px-3 py-1 rounded-lg text-sm font-medium transition ${isRequested
+                    ? "bg-yellow-600/80 text-white cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-500 cursor-pointer text-white"
+                  }`}
+                onClick={() => !isRequested && handleSendRequest(user._id)}
+                disabled={isRequested}
+              >
+                {isRequested ? "Requested ✓" : "Make Friend"}
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

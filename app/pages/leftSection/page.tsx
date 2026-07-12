@@ -1,13 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useAtom } from "jotai";
 import {
   allFriendsAtom,
   findFriendAtom,
   findFriendWithChatAtom,
-  Friend,
   friendsAtom,
   friendsCountsAtom,
   friendsRequestsAtom,
@@ -22,19 +21,21 @@ import {
 // import GroupChatPage from "../../components/GroupChatPage";
 import { useSocket } from "../../hooks/useSocket";
 import FindFriend from "../findFriends/page";
-// import FindAllFriend from "../findAllFriend/page";
+import FindAllFriend from "../findAllFriend/page";
 import FriendRequestPage from "../friendRequestPage/page";
-// import FriendListPage from "../friendListPage/page";
+import FriendListPage from "../friendListPage/page";
 import GroupChat from "../groupChatPage/page";
-import AllFriends from "../../components/AllFriends";
-import FriendsList from "../../components/FriendsList";
 
-
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
+interface Friend {
+  friendId: string;
+  username: string;
+  profilePic: string;
+  unreadMessagesCount: number;
+}
 
 export default function LeftSection() {
   const { isAuthenticated } = useAuth();
-  const [friends, setFriends] = useAtom<Friend[]>(friendsAtom);
+  const [friends, setFriends] = useAtom(friendsAtom);
   const [loading, setLoading] = useState<boolean>(true);
   const [findFriend] = useAtom(findFriendAtom);
   const [friendsRequests] = useAtom(friendsRequestsAtom);
@@ -47,33 +48,40 @@ export default function LeftSection() {
   // const [userId, setUserId] = useAtom(() => localStorage.getItem("userId"));
   const socket = useSocket(userId);
   // Fetch friends data from backend
-  const fetchFriends = useCallback(async () => {
+  const fetchFriends = async () => {
     try {
+      const token = localStorage.getItem("chatAppToken");
       const response = await fetch(
-        `${backendUrl}/api/friends/get-friends/${userId}`
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/friends/get-friends/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const data = await response.json();
+      // console.log(data)
       setFriends(data);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching friends:", error);
-      setLoading(true);
+      setLoading(false);
     }
-  }, [userId, setFriends]);
+  };
 
   useEffect(() => {
     const id = localStorage.getItem("chatAppUserId");
     if (id) {
       setUserId(id);
     }
-  }, [setUserId]);
+  }, []);
 
   // Run fetchFriends when the component mounts
   useEffect(() => {
     if (isAuthenticated && userId) {
       fetchFriends();
     }
-  }, [isAuthenticated, userId, fetchFriends]);
+  }, [isAuthenticated, userId]);
 
   // Listen to real-time updates from socket
   useEffect(() => {
@@ -111,7 +119,7 @@ export default function LeftSection() {
       socket.off("unreadMessageCountUpdated", handleUnseenCountUpdate);
       // socket.off("update_unseen_count", handleUnseenCountUpdate);
     };
-  }, [socket, userId, setFriends]);
+  }, [socket]);
 
   useEffect(() => {
     setFriendsCounts((prev) => {
@@ -120,7 +128,7 @@ export default function LeftSection() {
       }
       return prev;
     });
-  }, [friends, setFriendsCounts]);
+  }, [friends]);
 
   // useEffect(() => {
 
@@ -152,6 +160,7 @@ export default function LeftSection() {
   //       .catch((err) => console.error("Error fetching user:", err));
   //   };
 
+
   //   fetchUserProfile();
 
   // }, [isAuthenticated]);
@@ -167,9 +176,9 @@ export default function LeftSection() {
       {/* {findFriend && <FindUser />} */}
       {/* {allFriends && <AllFriends friends={friends} loading={loading} />} */}
       {friendsRequests && <FriendRequestPage />}
-      {allFriends && <AllFriends friends={friends} loading={loading} />}
+      {allFriends && <FindAllFriend friends={friends} loading={loading} />}
       {groupChatOpen && <GroupChat />}
-      {findFriendWithChat && <FriendsList loading={loading} />}
+      {findFriendWithChat && <FriendListPage loading={loading} />}
       {/* {findFriend ? (
         <FindUser />
       ) : friendsRequests ? (

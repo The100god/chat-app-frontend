@@ -1,9 +1,6 @@
-/* eslint "@typescript-eslint/no-explicit-any": "error" */
 "use client";
 import { Eye, EyeClosed } from "lucide-react";
 import React, { useEffect, useState } from "react";
-
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export default function ChangePasswordForm({
   onClose,
@@ -20,7 +17,7 @@ export default function ChangePasswordForm({
   const [seeNewPassword, setSeeNewPassword] = useState(false);
   const [seeCurrentPassword, setSeeCurrentPassword] = useState(false);
 
-  const API_BASE = `${backendUrl}/api/users`; // change if required
+  const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users`; // change if required
 
   useEffect(() => {
     return () => {
@@ -33,10 +30,12 @@ export default function ChangePasswordForm({
     };
   }, []);
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setMessage(null);
+
 
     // Basic client-side validation
     if (!currentPassword || !newPassword || !confirmPassword) {
@@ -104,12 +103,8 @@ export default function ChangePasswordForm({
         setMessage(null);
         setError(null);
       }, 3000);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Something went wrong");
-      }
+    } catch (err: any) {
+      setError(err.message || "Something went wrong");
       setTimeout(() => {
         setError(null);
       }, 3000);

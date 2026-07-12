@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect } from "react";
+import ScaleTN from "./ScaleTN";
 import {
   findFriendAtom,
   findFriendWithChatAtom,
@@ -10,7 +11,6 @@ import {
   userIdAtom,
 } from "../states/States";
 import { useAtom } from "jotai";
-import Image from "next/image";
 
 interface Friend {
   friendId: string;
@@ -24,8 +24,6 @@ interface FriendsListProps {
   loading: boolean;
 }
 
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
-
 const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   const [, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [friends, setFriends] = useAtom(friendsAtom);
@@ -36,10 +34,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   // ✅ import and use atoms for find friend redirection
   const [, setFindFriend] = useAtom(findFriendAtom);
   const [, setFindFriendWithChat] = useAtom(findFriendWithChatAtom);
-
   const safeFriends = Array.isArray(friends) ? friends : [];
-
-
   // 🔁 Automatically redirect new users to “Find Friend”
   useEffect(() => {
     if (!loading && friends.length === 0) {
@@ -47,7 +42,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
       setFindFriend(true);
       setFindFriendWithChat(false);
     }
-  }, [loading, friends, setFindFriend, setFindFriendWithChat]);
+  }, [loading, friends]);
 
   const handleSelectFriend = (friend: Friend) => {
     setSelectedFriend(friend);
@@ -57,7 +52,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
     // const userId = localStorage.getItem("userId");
     console.log("ids");
     if (userId) {
-      fetch(`${backendUrl}/api/message/mark-read`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/mark-read`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -78,8 +73,8 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   return (
     <div className="p-4 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
       {loading ? (
-        <p>Loading...</p>
-      ) : safeFriends.length === 0 ? (
+        <ScaleTN rows={5} />
+      ) : safeFriends.length < 1 ? (
         <div className="text-center mt-10 text-[var(--foreground)]/70">
           <p>No friends found 🫠</p>
           <p className="text-sm mt-2">Redirecting to Find Friends...</p>
@@ -87,40 +82,37 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
       ) : (
         <ul className="space-y-3">
           {safeFriends && safeFriends.map((friend) => (
-              <li
-                key={friend?.friendId}
-                onClick={() => handleSelectFriend(friend)}
-                className="flex items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
-              >
-                <Image
-                  src={friend?.profilePic || "/default-profile-pic.jpg"}
-                  alt={friend?.username}
-                  className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
-                />
-                <div className="flex-1">
-                  <p
-                    className={`text-sm ${
-                      friend?.unreadMessagesCount > 0
-                        ? "font-bold text-[var(--foreground)]"
-                        : "font-medium text-[var(--foreground)]"
+            <li
+              key={friend?.friendId}
+              onClick={() => handleSelectFriend(friend)}
+              className="flex items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
+            >
+              <img
+                src={friend?.profilePic || "/default-profile-pic.jpg"}
+                alt={friend?.username}
+                className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
+              />
+              <div className="flex-1">
+                <p
+                  className={`text-sm ${friend?.unreadMessagesCount > 0
+                      ? "font-bold text-[var(--foreground)]"
+                      : "font-medium text-[var(--foreground)]"
                     }`}
-                  >
-                    {friend.username}
-                  </p>
-                  <div className="flex items-center text-xs mt-1">
-                    {friend?.unreadMessagesCount > 0 ? (
-                      <span className="bg-green-600 text-white px-2 py-0.5 rounded-full">
-                        {friend?.unreadMessagesCount} unread
-                      </span>
-                    ) : (
-                      <span className="text-[var(--foreground)]/50">
-                        No unread messages
-                      </span>
-                    )}
-                  </div>
+                >
+                  {friend.username}
+                </p>
+                <div className="flex items-center text-xs mt-1">
+                  {friend?.unreadMessagesCount > 0 ? (
+                    <span className="bg-green-600 text-white px-2 py-0.5 rounded-full">
+                      {friend?.unreadMessagesCount} unread
+                    </span>
+                  ) : (
+                    <span className="text-[var(--foreground)]/50">No unread messages</span>
+                  )}
                 </div>
-              </li>
-            ))}
+              </div>
+            </li>
+          ))}
         </ul>
       )}
     </div>

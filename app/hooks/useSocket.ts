@@ -2,13 +2,12 @@ import { default as io, Socket } from "socket.io-client";
 import { DefaultEventsMap } from "@socket.io/component-emitter";
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap> | null = null;
-const backendUrl = process.env.NEXT_PUBLIC_API_URL;
 
 export const useSocket = (
   userId: string | null
 ): Socket<DefaultEventsMap, DefaultEventsMap> | null => {
   if (!socket && userId) {
-    socket = io(`${backendUrl}`);
+    socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000");
     console.log("socketconnect", socket)
     socket.emit("join", userId);
   }

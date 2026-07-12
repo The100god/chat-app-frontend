@@ -44,8 +44,8 @@ export default function VoiceRecorder({ onSend }: VoiceRecorderProps) {
       <button
         onClick={recording ? stopRecording : startRecording}
         className={`p-2 rounded-full ${
-          recording ? "bg-red-500 animate-pulse" : "bg-[var(--card)]"
-        } text-white border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 transition`}
+          recording ? "bg-red-500 animate-pulse text-white" : "bg-[var(--card)] text-[var(--foreground)]"
+        } border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 transition`}
         title={recording ? "Stop Recording" : "Start Recording"}
       >
         {recording ? <FaStop className=" cursor-pointer"/> : <FaMicrophone className=" cursor-pointer"/>}

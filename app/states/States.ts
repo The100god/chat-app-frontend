@@ -1,13 +1,9 @@
 "use client"
 import { atom } from "jotai";
+import { Friend } from "../pages/chatAreas/page";
 import { Group } from "../components/GroupChatPage";
 
-export interface Friend {
-  friendId: string;
-  username: string;
-  profilePic: string;
-  unreadMessagesCount: number;
-}
+
 interface Message {
     _id?: string;
     chatId?: string;
@@ -24,6 +20,7 @@ interface Message {
     media?: string[]; // not [string]
     createdAt?: string;
     isRead?: boolean;
+    expiresAt?: string | null;
     seenBy?: {
       _id: string;
       username: string;
@@ -31,7 +28,6 @@ interface Message {
     }[];
   }
 
-  
   interface FloatingEmoji {
   id: number;
   emoji: string;
@@ -55,8 +51,9 @@ export const userAtom = atom<User>({
   username: "User-X",
   email: "user@example.com",
   profilePic: "/user.jpg",
-  about: "Hey there! I’m using ChatApp 💬",
+  about: "Hey there! I'm using ChatApp 💬",
 });
+
 export const responsiveDeviceAtom = atom<boolean>(true);
 
 export const userIdAtom=atom<string|null>(null)
@@ -74,11 +71,15 @@ export const selectedFriendAtom = atom<Friend | null>(null);
 export const friendsAtom = atom<Friend[]>([]);
 
 export const selectedGroupAtom = atom<Group | null>(null);
-export const groupNameAtom = atom<string>("");
-export const groupAdminsAtom = atom<string[]>([]);
-export const groupMembersAtom = atom<string[]>([]);
+export const groupNameAtom = atom<String>("");
+export const groupAdminsAtom = atom<String[]>([]);
+export const groupMembersAtom = atom<String[]>([]);
 export const groupProfileAtom = atom<string>("");
 export const isNewGroupWindowAtom = atom<boolean>(false);
+
+// Disappearing messages — tracks the selected timer for the next message
+// Values in hours: 1, 4, 8, 12, 24 (default 24h)
+export const disappearDurationAtom = atom<number>(24);
 
 const emojiSet = [
   "💬", "✨", "🔥", "💫", "💖", "🌈",
@@ -95,4 +96,4 @@ export const floatingEmojisAtom = atom<FloatingEmoji[]>(() => {
     y: Math.random() * 100, // random y%
     size: Math.random() * 2 + 1.1, // random scale
   }));
-});
+});
