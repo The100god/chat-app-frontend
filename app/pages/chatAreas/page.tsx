@@ -298,6 +298,15 @@ export default function ChatArea() {
     )
       return;
 
+    const textToSend = messageInput.trim();
+    const mediaFilesToSend = [...mediaFiles];
+
+    // Clear input field and media previews instantly!
+    setMessageInput("");
+    setMediaFiles([]);
+    setPreviewVisible(false);
+    setShowEmoji(false);
+
     // Convert media files to base64
     const convertToBase64 = (file: File): Promise<string> =>
       new Promise((resolve, reject) => {
@@ -309,7 +318,7 @@ export default function ChatArea() {
 
     try {
       const mediaBase64 = await Promise.all(
-        mediaFiles.map((file) => convertToBase64(file))
+        mediaFilesToSend.map((file) => convertToBase64(file))
       );
       // console.log("media", mediaBase64);
       // Include disappearDuration for 1-1 chats (0 = permanent)
@@ -317,19 +326,11 @@ export default function ChatArea() {
         chatId,
         senderId: userId,
         receiverId: selectedFriend?.friendId,
-        content: messageInput.trim(),
+        content: textToSend,
         media: mediaBase64,
         isRead: false,
         disappearDuration: selectedFriend ? disappearDuration : 0,
       };
-      // setMessages((prev) => [
-      //   ...prev,
-      //   {
-      //     ...newMessage,
-      //     sender: userId,
-      //     _id: `local-${Date.now()}`, // temporary until real _id from backend
-      //   },
-      // ]);
 
       // console.log("selectedGroup._id", selectedGroup?._id);
       const endpoint = selectedGroup
@@ -343,7 +344,7 @@ export default function ChatArea() {
             ? {
               groupId: selectedGroup._id,
               senderId: userId,
-              content: messageInput.trim(),
+              content: textToSend,
               media: mediaBase64,
             }
             : newMessage
@@ -373,12 +374,6 @@ export default function ChatArea() {
             content: savedMessage.content,
           }
       );
-
-      // Update local message state
-      setMediaFiles([]);
-      setPreviewVisible(false);
-      setMessageInput("");
-      setShowEmoji(false);
     } catch (err) {
       console.error("Error sending message:", err);
     }
@@ -446,15 +441,39 @@ export default function ChatArea() {
   }, [socket, selectedGroup, setMessages]);
 
   useEffect(() => {
-    if (!hasAutoScrolled && shouldScroll.current && bottomRef.current) {
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-        setHasAutoScrolled(true); // prevent future auto-scrolls
-      }, 100);
-      // bottomRef.current.scrollIntoView({ behavior: "auto" });
-      // bottomRef.current.
+    if (!messages || messages.length === 0) return;
+
+    const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
+      bottomRef.current?.scrollIntoView({ behavior });
+    };
+
+    if (shouldScroll.current) {
+      scrollToBottom("auto");
+      shouldScroll.current = false;
+      setHasAutoScrolled(false);
+      return;
     }
-  }, [messages, hasAutoScrolled, setHasAutoScrolled]);
+
+    const container = chatContainerRef.current;
+    if (!container) {
+      scrollToBottom("smooth");
+      return;
+    }
+
+    const isNearBottom =
+      container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+
+    const lastMessage = messages[messages.length - 1];
+    const isMyMessage =
+      lastMessage &&
+      ((typeof lastMessage.sender === "string" && lastMessage.sender === userId) ||
+        (typeof lastMessage.sender === "object" && lastMessage.sender?._id === userId));
+
+    if (isNearBottom || isMyMessage) {
+      scrollToBottom("smooth");
+      setHasAutoScrolled(false);
+    }
+  }, [messages, userId, setHasAutoScrolled]);
 
   useEffect(() => {
     if (!socket || !selectedFriend) return;
@@ -670,25 +689,25 @@ export default function ChatArea() {
         </div>
       )}
       {!loadingMessages ? (
-        <div
-          ref={chatContainerRef}
-          className="h-[85%] bg-[var(--background)] p-2 rounded-md shadow-inner overflow-y-auto space-y-2"
-          onScroll={() => {
-            if (chatContainerRef.current) {
-              const el = chatContainerRef.current;
-              const nearBottom =
-                el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-              if (!nearBottom) {
-                setHasAutoScrolled(true); // User scrolled up
-              }
-            }
-          }}
-        >
+        <div className="h-[85%] bg-[var(--background)] p-2 rounded-md shadow-inner space-y-2">
           <div
+            ref={chatContainerRef}
             onClick={() => {
               setShowEmoji(false);
             }}
-            className=" relative h-full bg-[var(--muted)] p-4 rounded-lg shadow-inner overflow-y-auto space-y-2"
+            onScroll={() => {
+              if (chatContainerRef.current) {
+                const el = chatContainerRef.current;
+                const nearBottom =
+                  el.scrollHeight - el.scrollTop - el.clientHeight < 150;
+                if (!nearBottom) {
+                  setHasAutoScrolled(true); // User scrolled up
+                } else {
+                  setHasAutoScrolled(false); // User is at bottom
+                }
+              }
+            }}
+            className="relative h-full bg-[var(--muted)] p-4 rounded-lg shadow-inner overflow-y-auto space-y-2"
           >
             {/* 🌸 Floating faint emojis */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
