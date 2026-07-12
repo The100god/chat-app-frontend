@@ -8,7 +8,7 @@ import { disconnectSocket } from "../hooks/useSocket";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { floatingEmojisAtom } from "../states/States";
-import { Eye, EyeClosed } from "lucide-react";
+import { Eye, EyeClosed, Loader2 } from "lucide-react";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useSearchParams } from "next/navigation";
 
@@ -32,11 +32,14 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   const { login } = useAuth();
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
   const [seePassword, setSeePassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   // const router = useRouter();
   const searchParams = useSearchParams();
+  const [mounted, setMounted] = useState(false);
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -69,7 +72,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     e.preventDefault();
     setError(null);
     setMessage(null);
-
+    setLoading(true);
     try {
       const url =
         type === "login"
@@ -83,7 +86,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         const token = response.data.token;
         const returnedUserId = response.data.userId;
         if (token && returnedUserId) {
-          login(token);
+          login(token, returnedUserId);
           setVarUserId(returnedUserId);
           localStorage.setItem("chatAppUserId", returnedUserId);
         }
@@ -115,6 +118,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         setError("Something went wrong");
       }
       setMessage(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -123,6 +128,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
   }
 
   const handleGoogleSuccess = async (credentialResponse: GoogleCredentialResponse) => {
+    setLoading(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/auth/google-login`, {
         method: "POST",
@@ -132,7 +138,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
 
       const data = await res.json();
       if (res.ok) {
-        login(data.token);
+        login(data.token, data.userId);
         setVarUserId(data.userId);
         localStorage.setItem("chatAppToken", data.token);
         localStorage.setItem("chatAppUser", JSON.stringify(data.user));
@@ -141,6 +147,8 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     } catch (error) {
       console.error("Google Login Failed:", error);
       setError("Google login failed.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -148,7 +156,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
     <div className="flex relative justify-center items-center min-h-screen bg-[var(--background)] text-[var(--foreground)] overflow-hidden">
       {/* 🌸 Floating faint emojis */}
       <div className="fixed inset-0 overflow-hidden bg-transparent pointer-events-none z-0">
-        {floatingEmojis.map((e) => (
+        {mounted && floatingEmojis.map((e) => (
           <motion.span
             key={e.id}
             initial={{ opacity: 0.05, y: 0 }}
@@ -191,7 +199,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
               value={formData.username}
               onChange={handleChange}
               required
-              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)]"
+              disabled={loading}
+              suppressHydrationWarning
+              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)] disabled:opacity-50"
             />
           )}
 
@@ -202,7 +212,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             value={formData.email}
             onChange={handleChange}
             required
-            className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)]"
+            disabled={loading}
+            suppressHydrationWarning
+            className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)] disabled:opacity-50"
           />
 
           <div className="flex items-center gap-2 w-full">
@@ -213,7 +225,9 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)]"
+              disabled={loading}
+              suppressHydrationWarning
+              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)] disabled:opacity-50"
             />
             <span className="flex justify-center items-center p-2 cursor-pointer border hover:border-[var(--accent)] rounded">
               {!seePassword ? (
@@ -234,9 +248,20 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
 
           <button
             type="submit"
-            className="w-full cursor-pointer bg-[var(--accent)] text-[var(--card-foreground)] py-2 rounded hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] transition"
+            disabled={loading}
+            suppressHydrationWarning
+            className={`w-full cursor-pointer bg-[var(--accent)] text-[var(--card-foreground)] py-2 rounded hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] transition flex items-center justify-center gap-2 ${
+              loading ? "opacity-70 cursor-not-allowed" : ""
+            }`}
           >
-            {type === "signup" ? "Sign Up" : "Login"}
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin animate-infinite duration-1000" size={18} />
+                <span>{type === "signup" ? "Signing Up..." : "Logging In..."}</span>
+              </>
+            ) : (
+              type === "signup" ? "Sign Up" : "Login"
+            )}
           </button>
         </form>
         {type === "signup" && message?.includes("verify your account") && (

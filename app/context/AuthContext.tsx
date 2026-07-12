@@ -8,7 +8,7 @@ import { apiFetch } from "../utils/apiFetch";
 interface AuthContextType {
   isAuthenticated: boolean;
   user: User;
-  login: (token: string) => void;
+  login: (token: string, userId?: string) => void;
   logout: () => void;
 }
 
@@ -66,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     hasCheckedRef.current = true;
     //
-    apiFetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/me`)
+    apiFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users/me`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Unauthorized");
         const data = await res.json();
