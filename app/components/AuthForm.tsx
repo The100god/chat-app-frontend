@@ -191,7 +191,7 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         {message && <p className="text-green-500 mb-4">{message}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {type === "signup" && (
+          {(type === "signup" || type === "login") && (
             <input
               type="text"
               name="username"
@@ -205,17 +205,19 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
             />
           )}
 
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            disabled={loading}
-            suppressHydrationWarning
-            className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)] disabled:opacity-50"
-          />
+          {type === "signup" && (
+            <input
+              type="email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              disabled={loading}
+              suppressHydrationWarning
+              className="w-full p-2 border rounded focus:outline-none focus:ring focus:border-[var(--accent)] disabled:opacity-50"
+            />
+          )}
 
           <div className="flex items-center gap-2 w-full">
             <input
