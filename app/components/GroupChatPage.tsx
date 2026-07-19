@@ -16,13 +16,22 @@ import {
 import { connectSocket } from "../hooks/useSocket";
 import Image from "next/image";
 
+export interface GroupMember {
+  _id: string;
+  username: string;
+  profilePic: string;
+  about?: string;
+  email?: string;
+}
+
 export interface Group {
   _id: string;
   groupName: string;
   groupProfilePic: string;
-  groupMember: string[]; // or User[] if you're populating
-  admins: string[];
-  superAdmin: string | null;
+  description?: string;
+  groupMember: GroupMember[];
+  admins: GroupMember[];
+  superAdmin: GroupMember | string | null;
 }
 
 const GroupChatPage = () => {
@@ -34,7 +43,7 @@ const GroupChatPage = () => {
   const [groupMembers, setGroupMembers] = useAtom(groupMembersAtom);
   const [groupProfile, setGroupProfile] = useAtom(groupProfileAtom);
 
-  const [, setSelectedGroup] = useAtom(selectedGroupAtom);
+  const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [, setSelectedFriend] = useAtom(selectedFriendAtom); // clear friend
   const [groups, setGroups] = useState<Group[]>([]);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
@@ -119,15 +128,57 @@ const GroupChatPage = () => {
     if (!socket) return;
 
     const handleNewGroup = (group: Group) => {
-      setGroups((prev) => [...prev, group]);
+      setGroups((prev) => {
+        const exists = prev.some((g) => g._id === group._id);
+        if (exists) return prev;
+        return [...prev, group];
+      });
+    };
+
+    const handleGroupUpdated = (updatedGroup: Group) => {
+      setGroups((prev) =>
+        prev.map((g) => (g._id === updatedGroup._id ? updatedGroup : g))
+      );
+      if (selectedGroup?._id === updatedGroup._id) {
+        setSelectedGroup(updatedGroup);
+      }
+    };
+
+    const handleGroupDeleted = ({ groupId }: { groupId: string }) => {
+      setGroups((prev) => prev.filter((g) => g._id !== groupId));
+      if (selectedGroup?._id === groupId) {
+        setSelectedGroup(null);
+      }
+    };
+
+    const handleRemovedFromGroup = ({ groupId }: { groupId: string }) => {
+      setGroups((prev) => prev.filter((g) => g._id !== groupId));
+      if (selectedGroup?._id === groupId) {
+        setSelectedGroup(null);
+      }
+    };
+
+    const handleLeftGroup = ({ groupId }: { groupId: string }) => {
+      setGroups((prev) => prev.filter((g) => g._id !== groupId));
+      if (selectedGroup?._id === groupId) {
+        setSelectedGroup(null);
+      }
     };
 
     socket.on("newGroupCreated", handleNewGroup);
+    socket.on("groupUpdated", handleGroupUpdated);
+    socket.on("groupDeleted", handleGroupDeleted);
+    socket.on("removedFromGroup", handleRemovedFromGroup);
+    socket.on("leftGroup", handleLeftGroup);
 
     return () => {
       socket.off("newGroupCreated", handleNewGroup);
+      socket.off("groupUpdated", handleGroupUpdated);
+      socket.off("groupDeleted", handleGroupDeleted);
+      socket.off("removedFromGroup", handleRemovedFromGroup);
+      socket.off("leftGroup", handleLeftGroup);
     };
-  }, [socket]);
+  }, [socket, selectedGroup, setSelectedGroup]);
   if (!userId && !socket) return null;
 
   // console.log("groups", groups);

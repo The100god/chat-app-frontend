@@ -15,6 +15,7 @@ import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
+import GroupInfoModal from "../../components/GroupInfoModal";
 import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2 } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
@@ -108,7 +109,8 @@ export default function ChatArea() {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const [floatingEmojis] = useAtom(floatingEmojisAtom);
   //group
-  const [selectedGroup] = useAtom(selectedGroupAtom);
+  const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   // Disappearing messages
   const [disappearDuration, setDisappearDuration] = useAtom(disappearDurationAtom);
   const [showTimerDropdown, setShowTimerDropdown] = useState(false);
@@ -163,13 +165,13 @@ export default function ChatArea() {
             `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/${data._id}`
           );
           const messagesData = await messagesRes.json();
-          if (messagesData.length > 0) {
+          if (Array.isArray(messagesData)) {
             setMessages(messagesData);
             setLoadingMessages(false);
           } else {
             setMessages([]); // or handle the error gracefully
             setLoadingMessages(false);
-            // console.error("Fetched messages is not an array", messagesData);
+            console.error("Fetched messages is not an array", messagesData);
           }
         } else if (selectedGroup) {
           const res = await fetch(
@@ -185,7 +187,7 @@ export default function ChatArea() {
             });
           }
 
-          if (messagesData.length > 0) {
+          if (Array.isArray(messagesData)) {
             setMessages(messagesData);
             setLoadingMessages(false);
           } else {
@@ -211,6 +213,42 @@ export default function ChatArea() {
       // console.log("🔗 Joined group socket room:", selectedGroup._id);
     }
   }, [selectedGroup, socket]);
+
+  useEffect(() => {
+    if (!socket || !selectedGroup) return;
+
+    const handleGroupUpdated = (updatedGroup: any) => {
+      if (updatedGroup._id === selectedGroup._id) {
+        setSelectedGroup(updatedGroup);
+      }
+    };
+
+    const handleGroupDeleted = ({ groupId }: { groupId: string }) => {
+      if (groupId === selectedGroup._id) {
+        setSelectedGroup(null);
+        setShowGroupInfo(false);
+        alert("This group has been deleted by an admin.");
+      }
+    };
+
+    const handleRemovedFromGroup = ({ groupId }: { groupId: string }) => {
+      if (groupId === selectedGroup._id) {
+        setSelectedGroup(null);
+        setShowGroupInfo(false);
+        alert("You have been removed from this group.");
+      }
+    };
+
+    socket.on("groupUpdated", handleGroupUpdated);
+    socket.on("groupDeleted", handleGroupDeleted);
+    socket.on("removedFromGroup", handleRemovedFromGroup);
+
+    return () => {
+      socket.off("groupUpdated", handleGroupUpdated);
+      socket.off("groupDeleted", handleGroupDeleted);
+      socket.off("removedFromGroup", handleRemovedFromGroup);
+    };
+  }, [socket, selectedGroup, setSelectedGroup]);
 
   // Receive new messages via Socket.IO
   useEffect(() => {
@@ -711,8 +749,13 @@ export default function ChatArea() {
         <div
           onClick={() => {
             setShowEmoji(false);
+            if (selectedGroup) {
+              setShowGroupInfo(true);
+            }
           }}
-          className="flex flex-row justify-center items-center gap-2 p-3"
+          className={`flex flex-row justify-center items-center gap-2 p-3 ${
+            selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15 px-4 py-1.5 rounded-xl transition duration-200" : ""
+          }`}
         >
           {(selectedFriend || selectedGroup) && (
             <Image
@@ -1218,6 +1261,10 @@ export default function ChatArea() {
         onClose={() => setShowMediaModal(false)}
         media={modalMedia}
         initialIndex={currentMediaIndex}
+      />
+      <GroupInfoModal
+        isOpen={showGroupInfo}
+        onClose={() => setShowGroupInfo(false)}
       />
     </div>
   );

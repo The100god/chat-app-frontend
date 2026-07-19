@@ -154,7 +154,7 @@ export default function LeftSection() {
   //           username: data.username,
   //           email: data.email,
   //           profilePic: data.profilePic,
-  //           about: data.about || "Hey there! I’m using ChatApp 💬",
+  //           about: data.about || "Hey there! I’m using Chugli 💬",
   //         });
   //       })
   //       .catch((err) => console.error("Error fetching user:", err));
