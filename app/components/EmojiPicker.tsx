@@ -15,6 +15,7 @@ const EmojiPicker: React.FC<Props> = ({ onEmojiClick }) => {
         theme={Theme.AUTO}
         height={350}
         emojiStyle={EmojiStyle.FACEBOOK}
+        autoFocusSearch={false}
       />
     </div>
   );

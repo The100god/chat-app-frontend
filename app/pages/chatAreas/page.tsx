@@ -85,6 +85,14 @@ export default function ChatArea() {
   const [modalMedia, setModalMedia] = useState<string[]>([]);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
   const [showEmoji, setShowEmoji] = useState(false);
+
+  useEffect(() => {
+    if (showEmoji) {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }
+  }, [showEmoji]);
   const [selectedFriend] = useAtom(selectedFriendAtom);
   const [messages, setMessages] = useAtom(messageAtom);
   const [messageInput, setMessageInput] = useState<string>("");
@@ -698,7 +706,7 @@ export default function ChatArea() {
   // console.log("selectedFriend", selectedFriend)
   // console.log("messages", messages);
   return (
-    <div className="flex flex-col bg-[var(--background)] h-full p-2 pb-5 rounded-md overflow-y-auto">
+    <div className="flex flex-col bg-[var(--background)] h-full p-2 pb-5 rounded-md overflow-hidden">
       {!loadingMessages && (
         <div
           onClick={() => {
@@ -762,7 +770,7 @@ export default function ChatArea() {
         </div>
       )}
       {!loadingMessages ? (
-        <div className="h-[85%] bg-[var(--background)] p-2 rounded-md shadow-inner space-y-2">
+        <div className="flex-1 min-h-0 bg-[var(--background)] p-2 rounded-md shadow-inner space-y-2">
           <div
             ref={chatContainerRef}
             onClick={() => {
@@ -979,7 +987,7 @@ export default function ChatArea() {
           </div>
         </div>
       ) : (
-        <div className="h-[100%] bg-[var(--muted)] p-4 rounded-lg flex items-center justify-center text-[var(--foreground)] text-sm">
+        <div className="flex-1 min-h-0 bg-[var(--muted)] p-4 rounded-lg flex items-center justify-center text-[var(--foreground)] text-sm">
           <ScaleTN variant="chat" />
         </div>
       )}
@@ -1004,13 +1012,6 @@ export default function ChatArea() {
             </div>
           </div>
         )}
-      {!loadingMessages && showEmoji && (
-        <div className="flex relative left-0 top-16">
-          <EmojiPicker
-            onEmojiClick={(emoji) => setMessageInput((prev) => prev + emoji)}
-          />
-        </div>
-      )}
 
       {!loadingMessages && (selectedFriend || selectedGroup) && (
         <div className="flex flex-row items-center justify-center mt-4 gap-2">
@@ -1175,16 +1176,24 @@ export default function ChatArea() {
           </div>
 
           {/* Emoji button */}
-          <div
-            className="cursor-pointer px-4 py-2 text-[var(--foreground)] hover:bg-[var(--accent)]/15 border-1 border-[var(--accent)] bg-[var(--card)] rounded"
-            onClick={() => setShowEmoji(!showEmoji)}
-          >
-            😀
+          <div className="relative">
+            <div
+              className="cursor-pointer px-4 py-2 text-[var(--foreground)] hover:bg-[var(--accent)]/15 border-1 border-[var(--accent)] bg-[var(--card)] rounded"
+              onClick={() => setShowEmoji(!showEmoji)}
+            >
+              😀
+            </div>
+            {showEmoji && (
+              <EmojiPicker
+                onEmojiClick={(emoji) => setMessageInput((prev) => prev + emoji)}
+              />
+            )}
           </div>
 
           <textarea
             value={messageInput}
             onChange={handleInputChange}
+            onFocus={() => setShowEmoji(false)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault(); // Prevent newline
