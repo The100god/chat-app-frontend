@@ -4,6 +4,8 @@ import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import Header from "./components/Header";
 
+import AppLockWrapper from "./components/AppLockWrapper";
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -31,10 +33,11 @@ export default function RootLayout({
       >
         
         <AuthProvider>
-        
-        <Header />
-        {children}
-          </AuthProvider>
+          <AppLockWrapper>
+            <Header />
+            {children}
+          </AppLockWrapper>
+        </AuthProvider>
       </body>
     </html>
   );

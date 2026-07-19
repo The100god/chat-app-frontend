@@ -7,10 +7,14 @@ import {
   Lock,
   Trash2,
   ChevronRight,
+  ShieldCheck,
+  Fingerprint,
+  Smartphone,
 } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
+import { isMobilePWA, hashPin } from "../../components/AppLockWrapper";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -21,6 +25,17 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  // App Lock State
+  const [appLockModalOpen, setAppLockModalOpen] = useState(false);
+  const [appLockTimeout, setAppLockTimeout] = useState(0);
+  const [lockSetupStep, setLockSetupStep] = useState<'menu' | 'enter_pin' | 'confirm_pin' | 'bio_prompt'>('menu');
+  const [setupTimeoutVal, setSetupTimeoutVal] = useState(0);
+  const [pinInput, setPinInput] = useState("");
+  const [pinConfirmInput, setPinConfirmInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [bioSupported, setBioSupported] = useState(false);
+  const [desktopNoticeOpen, setDesktopNoticeOpen] = useState(false);
 
   useEffect(() => {
     setImageError(false);
@@ -51,11 +66,151 @@ export default function SettingsPage() {
     localStorage.setItem("chatTheme", theme);
   };
   const handleNotificationToggle = () => setNotifications(!notifications);
+
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
     setMode(savedTheme);
+
+    const savedTimeout = Number(localStorage.getItem("chugliAppLockTimeout")) || 0;
+    setAppLockTimeout(savedTimeout);
   }, []);
+
+  const getAppLockStatusText = () => {
+    if (appLockTimeout === 0) return "No Lock";
+    if (appLockTimeout === -1) return "Immediately";
+    if (appLockTimeout === 10) return "10s";
+    if (appLockTimeout === 30) return "30s";
+    if (appLockTimeout === 300) return "5 min";
+    if (appLockTimeout === 1800) return "30 min";
+    return "No Lock";
+  };
+
+  const handleAppLockClick = () => {
+    setLockSetupStep('menu');
+    setPinInput("");
+    setPinConfirmInput("");
+    setPinError("");
+    setAppLockModalOpen(true);
+  };
+
+  const handleSelectTimeout = (timeoutVal: number) => {
+    if (timeoutVal === 0) {
+      localStorage.removeItem("chugliAppLockTimeout");
+      localStorage.removeItem("chugliAppLockPin");
+      localStorage.removeItem("chugliAppLockBioId");
+      setAppLockTimeout(0);
+      setAppLockModalOpen(false);
+      alert("✅ App Lock disabled successfully!");
+    } else {
+      setSetupTimeoutVal(timeoutVal);
+      setLockSetupStep('enter_pin');
+      setPinInput("");
+      setPinConfirmInput("");
+      setPinError("");
+    }
+  };
+
+  const handleDialPadPress = (val: string, step: 'enter_pin' | 'confirm_pin') => {
+    if (step === 'enter_pin') {
+      if (pinInput.length >= 4) return;
+      const newPin = pinInput + val;
+      setPinInput(newPin);
+      setPinError("");
+      if (newPin.length === 4) {
+        setLockSetupStep('confirm_pin');
+      }
+    } else {
+      if (pinConfirmInput.length >= 4) return;
+      const newPin = pinConfirmInput + val;
+      setPinConfirmInput(newPin);
+      setPinError("");
+      if (newPin.length === 4) {
+        if (pinInput === newPin) {
+          saveLockSettings(newPin);
+        } else {
+          setPinError("PINs do not match. Restarting setup.");
+          setPinInput("");
+          setPinConfirmInput("");
+          setLockSetupStep('enter_pin');
+        }
+      }
+    }
+  };
+
+  const handleDialPadDelete = (step: 'enter_pin' | 'confirm_pin') => {
+    if (step === 'enter_pin') {
+      setPinInput(pinInput.slice(0, -1));
+    } else {
+      setPinConfirmInput(pinConfirmInput.slice(0, -1));
+    }
+  };
+
+  const saveLockSettings = async (finalPin: string) => {
+    const hashed = await hashPin(finalPin);
+    localStorage.setItem("chugliAppLockPin", hashed);
+    localStorage.setItem("chugliAppLockTimeout", String(setupTimeoutVal));
+    setAppLockTimeout(setupTimeoutVal);
+
+    if (window.PublicKeyCredential) {
+      try {
+        const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (available) {
+          setBioSupported(true);
+          setLockSetupStep('bio_prompt');
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    alert("✅ App Lock enabled successfully!");
+    setAppLockModalOpen(false);
+  };
+
+  const handleEnableBiometrics = async () => {
+    try {
+      if (!window.PublicKeyCredential) return;
+      const challenge = new Uint8Array(16);
+      crypto.getRandomValues(challenge);
+      const userId = new Uint8Array(16);
+      crypto.getRandomValues(userId);
+
+      const credential = await navigator.credentials.create({
+        publicKey: {
+          challenge,
+          rp: { name: "Chugli Chat" },
+          user: {
+            id: userId,
+            name: "chugli-user",
+            displayName: "Chugli User",
+          },
+          pubKeyCredParams: [
+            { type: "public-key", alg: -7 },
+            { type: "public-key", alg: -257 }
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: "platform",
+            userVerification: "required"
+          },
+          timeout: 60000
+        }
+      }) as PublicKeyCredential;
+
+      if (credential) {
+        const rawId = new Uint8Array(credential.rawId);
+        const hexId = Array.from(rawId).map(b => b.toString(16).padStart(2, '0')).join('');
+        localStorage.setItem("chugliAppLockBioId", hexId);
+        alert("✅ Biometrics enabled successfully!");
+      }
+    } catch (err) {
+      console.warn("Biometric registration cancelled or failed:", err);
+      alert("Could not enable biometric login. PIN fallback will be used.");
+    } finally {
+      setAppLockModalOpen(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "DELETE") return;
@@ -146,6 +301,21 @@ export default function SettingsPage() {
               action="Visible"
               onClick={() => alert("Coming soon!")}
             />
+            <div className="relative">
+              <SettingItem
+                icon={<ShieldCheck />}
+                label="App Lock"
+                action={getAppLockStatusText()}
+                className="bg-[var(--card)] hover:bg-[var(--accent)]/15"
+                onClick={handleAppLockClick}
+              />
+              {!isMobilePWA() && (
+                <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-medium select-none pointer-events-none">
+                  <Smartphone className="w-3 h-3" />
+                  <span>PWA Mobile Only</span>
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
@@ -309,6 +479,198 @@ export default function SettingsPage() {
                 }`}
             >
               {deleting ? "Deleting..." : "Delete My Account"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* App Lock Setup Modal */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center transition-opacity ${appLockModalOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+      >
+        <div className="bg-[var(--background)] border border-[var(--accent)] p-6 rounded-xl shadow-2xl w-full max-w-sm mx-4 select-none text-[var(--foreground)]">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <ShieldCheck className="text-[var(--accent)]" /> Setup App Lock
+            </h2>
+            <button
+              onClick={() => setAppLockModalOpen(false)}
+              className="text-[var(--foreground)] text-2xl cursor-pointer hover:text-red-500 transition"
+            >
+              &times;
+            </button>
+          </div>
+
+          {/* Step 1: Select Timeout */}
+          {lockSetupStep === 'menu' && (
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--foreground)]/75">
+                Choose after how long of being idle or in the background Chugli should require authentication:
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: "No Lock (Disable)", val: 0 },
+                  { label: "Immediately", val: -1 },
+                  { label: "10 seconds", val: 10 },
+                  { label: "30 seconds", val: 30 },
+                  { label: "5 minutes", val: 300 },
+                  { label: "30 minutes", val: 1800 },
+                ].map((opt) => (
+                  <button
+                    key={opt.val}
+                    onClick={() => handleSelectTimeout(opt.val)}
+                    className={`py-3 px-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                      appLockTimeout === opt.val
+                        ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)]"
+                        : "bg-[var(--card)] border-[var(--foreground)]/10 hover:border-[var(--accent)]"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 & 3: Enter and Confirm PIN using Dialpad */}
+          {(lockSetupStep === 'enter_pin' || lockSetupStep === 'confirm_pin') && (
+            <div className="flex flex-col items-center">
+              <p className="text-sm text-[var(--foreground)]/80 text-center mb-4">
+                {lockSetupStep === 'enter_pin'
+                  ? "Create a 4-digit security PIN for this device:"
+                  : "Confirm your 4-digit security PIN:"}
+              </p>
+
+              {/* Pin Indicators */}
+              <div className="flex gap-4 mb-6">
+                {[0, 1, 2, 3].map((index) => {
+                  const active =
+                    lockSetupStep === 'enter_pin'
+                      ? pinInput.length > index
+                      : pinConfirmInput.length > index;
+                  return (
+                    <div
+                      key={index}
+                      className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${
+                        active
+                          ? "bg-[var(--accent)] border-[var(--accent)] scale-110 shadow-[0_0_8px_var(--accent)]"
+                          : "border-gray-600 bg-transparent"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Error Message */}
+              {pinError && <p className="text-red-500 text-sm font-semibold mb-4">{pinError}</p>}
+
+              {/* Setup Dial Pad */}
+              <div className="grid grid-cols-3 gap-4 w-full max-w-[220px] mb-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                  <button
+                    key={num}
+                    onClick={() => handleDialPadPress(num.toString(), lockSetupStep)}
+                    className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold hover:bg-[var(--accent)]/20 active:scale-95 transition cursor-pointer"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <div />
+                <button
+                  onClick={() => handleDialPadPress("0", lockSetupStep)}
+                  className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold hover:bg-[var(--accent)]/20 active:scale-95 transition cursor-pointer"
+                >
+                  0
+                </button>
+                <button
+                  onClick={() => handleDialPadDelete(lockSetupStep)}
+                  className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center hover:bg-red-500/20 active:scale-95 transition cursor-pointer text-gray-300"
+                >
+                  ⌫
+                </button>
+              </div>
+
+              <button
+                onClick={() => setLockSetupStep('menu')}
+                className="mt-2 text-sm text-[var(--accent)] hover:underline cursor-pointer"
+              >
+                Back to Options
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: Biometric Setup Request */}
+          {lockSetupStep === 'bio_prompt' && (
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 bg-[var(--accent)]/10 rounded-full flex items-center justify-center border border-[var(--accent)]">
+                  <Fingerprint className="w-8 h-8 text-[var(--accent)]" />
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-[var(--foreground)]">Enable Biometric Login?</h3>
+              <p className="text-sm text-[var(--foreground)]/70">
+                Your device supports biometric verification. Would you like to enable FaceID, TouchID, or fingerprint verification to unlock Chugli instantly?
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    alert("✅ App Lock setup completed (PIN only).");
+                    setAppLockModalOpen(false);
+                  }}
+                  className="flex-1 py-2 rounded-md bg-[var(--card)] border border-[var(--foreground)]/10 hover:bg-[var(--foreground)]/5 text-sm font-semibold transition cursor-pointer"
+                >
+                  PIN Only
+                </button>
+                <button
+                  onClick={handleEnableBiometrics}
+                  className="flex-1 py-2 rounded-md bg-[var(--accent)] text-[var(--background)] hover:bg-[var(--accent)]/90 text-sm font-semibold transition cursor-pointer"
+                >
+                  Enable Biometrics
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop warning popup */}
+      <div
+        className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center transition-opacity ${desktopNoticeOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+      >
+        <div className="bg-[var(--background)] border border-yellow-500/30 p-6 rounded-xl shadow-2xl w-full max-w-sm mx-4 text-center text-[var(--foreground)]">
+          <div className="flex justify-center mb-4">
+            <div className="w-12 h-12 bg-yellow-500/10 rounded-full flex items-center justify-center border border-yellow-500/20 text-yellow-500">
+              <Smartphone className="w-6 h-6" />
+            </div>
+          </div>
+          <h2 className="text-xl font-bold mb-2">Mobile App Feature</h2>
+          <p className="text-sm text-[var(--foreground)]/70 mb-5 leading-relaxed">
+            App Lock is designed specifically for **installed mobile apps (PWA)** to protect your chats on iOS or Android. 
+            <br /><br />
+            To use it:
+            1. Open Chugli in your mobile browser.
+            2. Choose **"Install Chugli"** from the menu.
+            3. Open the app from your home screen and configure the App Lock settings.
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setDesktopNoticeOpen(false);
+                setLockSetupStep('menu');
+                setPinInput("");
+                setPinConfirmInput("");
+                setPinError("");
+                setAppLockModalOpen(true);
+              }}
+              className="flex-1 py-2 rounded-md bg-[var(--card)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)]/10 text-xs font-semibold transition cursor-pointer"
+            >
+              Setup Anyway (Preview)
+            </button>
+            <button
+              onClick={() => setDesktopNoticeOpen(false)}
+              className="flex-1 py-2 rounded-md bg-[var(--accent)] text-[var(--background)] hover:bg-[var(--accent)]/95 text-xs font-semibold transition cursor-pointer"
+            >
+              Got it
             </button>
           </div>
         </div>
