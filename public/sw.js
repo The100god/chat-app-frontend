@@ -5,6 +5,7 @@ const urlsToCache = [
 ];
 
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(urlsToCache).catch((err) => {
@@ -14,9 +15,22 @@ self.addEventListener("install", (event) => {
   );
 });
 
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("fetch", (event) => {
   // Let the browser handle web socket connections and non-HTTP requests normally
   if (!event.request.url.startsWith("http")) return;
+
+  // Do not intercept or cache development HMR resources, socket connections, or API endpoints
+  if (
+    event.request.url.includes("/_next/") ||
+    event.request.url.includes("webpack") ||
+    event.request.url.includes("/api/")
+  ) {
+    return;
+  }
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
