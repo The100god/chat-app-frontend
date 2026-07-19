@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
@@ -48,6 +48,36 @@ const Header: React.FC = () => {
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallable, setIsInstallable] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallable(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt as any);
+
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstallable(false);
+    }
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt as any);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      setDeferredPrompt(null);
+      setIsInstallable(false);
+    }
+  };
 
   if (!isAuthenticated) return null;
 
@@ -185,6 +215,29 @@ const Header: React.FC = () => {
 
         {/* Right Section */}
         <div className="flex items-center gap-2 space-x-4">
+          {isInstallable && (
+            <button
+              onClick={handleInstallClick}
+              className="flex items-center cursor-pointer space-x-2 bg-[var(--accent)] hover:opacity-95 border-2 border-black text-white px-3 py-2 rounded-lg shadow-md transition"
+              title="Install ChatApp"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                ></path>
+              </svg>
+              <span className="text-sm font-semibold">Install App</span>
+            </button>
+          )}
           <Link href="/pages/settings" className="hover:text-[var(--accent)]">
             <FaCog
               className="hover:rotate-90 transition duration-200"
@@ -340,6 +393,32 @@ const Header: React.FC = () => {
               <FaUsers />
               <span>Groups</span>
             </button>
+
+            {isInstallable && (
+              <button
+                onClick={() => {
+                  handleInstallClick();
+                  setMenuOpen(false);
+                }}
+                className="flex items-center space-x-2 text-[var(--accent)] font-semibold"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                  ></path>
+                </svg>
+                <span>Install App</span>
+              </button>
+            )}
 
             <Link
               href="/pages/settings"
