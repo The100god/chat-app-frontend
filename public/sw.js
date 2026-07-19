@@ -27,33 +27,34 @@ self.addEventListener("fetch", (event) => {
   if (
     event.request.url.includes("/_next/") ||
     event.request.url.includes("webpack") ||
-    event.request.url.includes("/api/")
+    event.request.url.includes("/api/") ||
+    event.request.url.includes("/socket.io/")
   ) {
     return;
   }
 
+  // Network First Strategy: Try network, fallback to cache
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        // Check if we received a valid response
+    fetch(event.request)
+      .then((response) => {
         if (!response || response.status !== 200 || response.type !== "basic") {
           return response;
         }
 
-        // Cache the dynamically fetched response for offline viewing (except API calls)
-        const isApiCall = event.request.url.includes("/api/");
-        if (!isApiCall) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
 
         return response;
-      });
-    })
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Let it fail if offline and not in cache
+        });
+      })
   );
 });

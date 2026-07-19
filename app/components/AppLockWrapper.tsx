@@ -38,7 +38,7 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
   const lastActiveTimeRef = useRef<number>(Date.now());
   const isPwaMobileActive = useRef<boolean>(false);
 
-  // Initialize checks
+  // Initialize checks & page unload listener
   useEffect(() => {
     isPwaMobileActive.current = isMobilePWA();
 
@@ -51,11 +51,29 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
 
     const savedTimeout = Number(localStorage.getItem("chugliAppLockTimeout")) || 0;
     const savedPinHash = localStorage.getItem("chugliAppLockPin");
+    const lastActive = Number(localStorage.getItem("chugliAppLockLastActive")) || 0;
 
-    // Lock immediately on fresh launch if App Lock is enabled
+    // Check if lock should be active on launch based on timeout
     if (isPwaMobileActive.current && savedTimeout !== 0 && savedPinHash) {
-      setIsLocked(true);
+      if (savedTimeout === -1) {
+        setIsLocked(true);
+      } else if (savedTimeout > 0) {
+        const elapsed = (Date.now() - lastActive) / 1000;
+        if (lastActive === 0 || elapsed >= savedTimeout) {
+          setIsLocked(true);
+        }
+      }
     }
+
+    // Save active time when user closes or reloads page
+    const saveLastActive = () => {
+      localStorage.setItem("chugliAppLockLastActive", String(Date.now()));
+    };
+
+    window.addEventListener("beforeunload", saveLastActive);
+    return () => {
+      window.removeEventListener("beforeunload", saveLastActive);
+    };
   }, []);
 
   // Biometric authentication trigger
@@ -117,10 +135,12 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
 
       if (document.visibilityState === "hidden") {
         lastActiveTimeRef.current = Date.now();
+        localStorage.setItem("chugliAppLockLastActive", String(Date.now()));
       } else if (document.visibilityState === "visible") {
         if (isLocked) return;
 
-        const elapsed = (Date.now() - lastActiveTimeRef.current) / 1000;
+        const lastActive = Number(localStorage.getItem("chugliAppLockLastActive")) || lastActiveTimeRef.current;
+        const elapsed = (Date.now() - lastActive) / 1000;
         if (savedTimeout === -1) {
           // Lock Immediately
           setIsLocked(true);
