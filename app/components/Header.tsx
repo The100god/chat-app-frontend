@@ -219,7 +219,7 @@ const Header: React.FC = () => {
             <button
               onClick={handleInstallClick}
               className="flex items-center cursor-pointer space-x-2 bg-[var(--accent)] hover:opacity-95 border-2 border-black text-white px-3 py-2 rounded-lg shadow-md transition"
-              title="Install ChatApp"
+              title="Install Chugli"
             >
               <svg
                 className="w-5 h-5"

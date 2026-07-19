@@ -1,4 +1,4 @@
-const CACHE_NAME = "chatapp-cache-v1";
+const CACHE_NAME = "chugli-cache-v1";
 const urlsToCache = [
   "/",
   "/user.jpg"

@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           username: data.username,
           email: data.email,
           profilePic: data.profilePic,
-          about: data.about || "Hey there! I’m using ChatApp 💬",
+          about: data.about || "Hey there! I’m using Chugli 💬",
         });
         setUserId(data._id); // 🔥 IMPORTANT: store userId globally
         localStorage.setItem("chatAppUserId", data._id); // optional

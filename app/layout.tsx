@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Chat app",
-  description: 'Built with Next.js, TypeScript, and Tailwind CSS',
+  title: "Chugli",
+  description: 'Chugli - Built with Next.js, TypeScript, and Tailwind CSS',
 };
 
 export default function RootLayout({

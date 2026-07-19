@@ -2,9 +2,9 @@ import { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ChatApp",
-    short_name: "ChatApp",
-    description: "A premium real-time chat application",
+    name: "Chugli",
+    short_name: "Chugli",
+    description: "Chugli - A real-time chat application",
     start_url: "/",
     display: "standalone",
     background_color: "#0a0a0a",

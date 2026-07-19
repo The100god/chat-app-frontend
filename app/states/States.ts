@@ -52,7 +52,7 @@ export const userAtom = atom<User>({
   username: "User-X",
   email: "user@example.com",
   profilePic: "/user.jpg",
-  about: "Hey there! I'm using ChatApp 💬",
+  about: "Hey there! I'm using Chugli 💬",
 });
 
 export const responsiveDeviceAtom = atom<boolean>(true);

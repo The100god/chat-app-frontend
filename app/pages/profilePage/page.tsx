@@ -213,7 +213,7 @@ const ProfilePage: React.FC = () => {
                 />
               ) : (
                 <span className="text-lg text-[var(--background)]">
-                  {user?.about || "Hey there! I’m using ChatApp 💬 "}
+                  {user?.about || "Hey there! I’m using Chugli 💬 "}
                 </span>
               )}
             </span>
