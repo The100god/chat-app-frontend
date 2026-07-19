@@ -16,6 +16,14 @@ export async function hashPin(pin: string): Promise<string> {
 // Check if running on mobile standalone PWA
 export function isMobilePWA(): boolean {
   if (typeof window === "undefined") return false;
+
+  // Bypass PWA mobile restriction on localhost for local testing
+  const isLocalDev =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.hostname.startsWith("192.168.");
+  if (isLocalDev) return true;
+
   const isPwa = window.matchMedia("(display-mode: standalone)").matches || (window.navigator as any).standalone === true;
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   return isPwa && isMobile;
