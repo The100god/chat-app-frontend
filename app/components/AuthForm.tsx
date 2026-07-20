@@ -93,19 +93,18 @@ const AuthForm: React.FC<AuthFormProps> = ({ type }) => {
         setMessage(response.data.message || "success");
         setError(null);
       }
-      // 🧠 SIGNUP FLOW (with email verification)
+      // 🧠 SIGNUP FLOW (Direct Entry)
       if (type === "signup") {
-        // const token = response.data.token;
-        // if (token) {
-        //   // login(token);
-        //   console.log("Signup token:", token);
-        //   router.push("/pages/login");
-        // }
+        const token = response.data.token;
+        const returnedUserId = response.data.userId;
+        if (token && returnedUserId) {
+          login(token, returnedUserId);
+          setVarUserId(returnedUserId);
+          localStorage.setItem("chatAppUserId", returnedUserId);
+        }
 
-        setMessage(
-          response.data.message ||
-          "Signup successful! Please check your email to verify your account before logging in."
-        );
+        setMessage(response.data.message || "Signup successful!");
+        setError(null);
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
