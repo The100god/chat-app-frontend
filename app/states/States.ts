@@ -1,35 +1,33 @@
-"use client"
+"use client";
 import { atom } from "jotai";
-import { Friend } from "../pages/chatAreas/page";
 import { Group } from "../components/GroupChatPage";
 
+export interface Message {
+  _id?: string;
+  chatId?: string;
+  groupId?: string;
+  uploading?: boolean;
+  sender?:
+    | {
+        _id: string;
+        username: string;
+        profilePic: string;
+      }
+    | string;
+  receiver?: string | object;
+  content?: string;
+  media?: string[];
+  createdAt?: string;
+  isRead?: boolean;
+  expiresAt?: string | null;
+  seenBy?: {
+    _id: string;
+    username: string;
+    profilePic: string;
+  }[];
+}
 
-interface Message {
-    _id?: string;
-    chatId?: string;
-    groupId?: string;
-    uploading?: boolean;
-    sender?:
-      | {
-          _id: string;
-          username: string;
-          profilePic: string;
-        }
-      | string;
-    receiver?: string | object;
-    content?: string;
-    media?: string[]; // not [string]
-    createdAt?: string;
-    isRead?: boolean;
-    expiresAt?: string | null;
-    seenBy?: {
-      _id: string;
-      username: string;
-      profilePic: string;
-    }[];
-  }
-
-  interface FloatingEmoji {
+export interface FloatingEmoji {
   id: number;
   emoji: string;
   x: number;
@@ -44,10 +42,13 @@ export interface User {
   about: string;
 }
 
-// const userId:string|null = localStorage.getItem("userId")
-//     ? localStorage.getItem("userId")
-//     : null;
-  
+export interface Friend {
+  friendId: string;
+  username: string;
+  profilePic: string;
+  unreadMessagesCount: number;
+}
+
 export const userAtom = atom<User>({
   username: "User-X",
   email: "user@example.com",
@@ -56,9 +57,8 @@ export const userAtom = atom<User>({
 });
 
 export const responsiveDeviceAtom = atom<boolean>(true);
-
-export const userIdAtom=atom<string|null>(null)
-// const [userId] = useState<string|null>(() => localStorage.getItem("userId"));
+export const updateAvailableAtom = atom<boolean>(false);
+export const userIdAtom = atom<string | null>(null);
 export const messageAtom = atom<Message[]>([]);
 export const loadingMessageAtom = atom<boolean>(true);
 
@@ -70,6 +70,15 @@ export const groupChatOpenAtom = atom<boolean>(false);
 export const friendsCountsAtom = atom<number>(0);
 export const selectedFriendAtom = atom<Friend | null>(null);
 export const friendsAtom = atom<Friend[]>([]);
+
+export const unreadCountAtom = atom<number>((get) => {
+  const friends = get(friendsAtom);
+  if (!Array.isArray(friends)) return 0;
+  return friends.reduce(
+    (total, friend) => total + (friend?.unreadMessagesCount || 0),
+    0
+  );
+});
 
 export const selectedGroupAtom = atom<Group | null>(null);
 export const groupNameAtom = atom<string>("");
@@ -97,4 +106,4 @@ export const floatingEmojisAtom = atom<FloatingEmoji[]>(() => {
     y: Math.random() * 100, // random y%
     size: Math.random() * 2 + 1.1, // random scale
   }));
-});
+});

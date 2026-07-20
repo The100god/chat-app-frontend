@@ -40,6 +40,10 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
 
   // Initialize checks & page unload listener
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("chatTheme") || "light";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    }
     isPwaMobileActive.current = isMobilePWA();
 
     // Check if biometric is available on this device
@@ -196,7 +200,7 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#0a0a0a] text-white p-6 select-none"
+            className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] p-6 select-none"
           >
             {/* Header / Logo */}
             <div className="flex flex-col items-center mb-10 text-center">
@@ -207,10 +211,10 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
               >
                 <Lock className="w-8 h-8 text-[var(--accent)]" />
               </motion.div>
-              <h1 className="text-3xl font-extrabold tracking-wider bg-gradient-to-r from-white via-gray-300 to-[var(--accent)] bg-clip-text text-transparent">
+              <h1 className="text-3xl font-extrabold tracking-wider text-[var(--foreground)]">
                 Chugli Locked
               </h1>
-              <p className="text-gray-400 text-sm mt-1">App Lock is active</p>
+              <p className="text-[var(--foreground)]/70 text-sm mt-1">App Lock is active</p>
             </div>
 
             {/* PIN indicators */}

@@ -9,6 +9,7 @@ import {
 import React from "react";
 import { X } from "lucide-react";
 import Image from "next/image";
+import { showToast } from "./Toast";
 
 interface GroupFormModalProps {
   handleCreateGroupModalSubmit: () => void;
@@ -31,7 +32,7 @@ const GroupFormModal: React.FC<GroupFormModalProps> = ({
     const fileSizeMB = file.size / (1024 * 1024);
 
     if (fileSizeMB > maxSizeMB) {
-      alert(`${file.name} is too large. Max allowed size is ${maxSizeMB}MB.`);
+      showToast(`${file.name} is too large. Max allowed size is ${maxSizeMB}MB.`, "warning");
       return;
     }
 

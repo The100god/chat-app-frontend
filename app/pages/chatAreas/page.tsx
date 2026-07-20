@@ -16,6 +16,7 @@ import MediaViewerModal from "../../components/MediaViewerModal";
 import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
+import { showToast } from "../../components/Toast";
 import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2 } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
@@ -227,7 +228,7 @@ export default function ChatArea() {
       if (groupId === selectedGroup._id) {
         setSelectedGroup(null);
         setShowGroupInfo(false);
-        alert("This group has been deleted by an admin.");
+        showToast("This group has been deleted by an admin.", "info");
       }
     };
 
@@ -235,7 +236,7 @@ export default function ChatArea() {
       if (groupId === selectedGroup._id) {
         setSelectedGroup(null);
         setShowGroupInfo(false);
-        alert("You have been removed from this group.");
+        showToast("You have been removed from this group.", "info");
       }
     };
 
@@ -660,7 +661,7 @@ export default function ChatArea() {
     const validFiles = files.filter((file) => {
       const fileSizeMB = file.size / (1024 * 1024);
       if (fileSizeMB > maxSizeMB) {
-        alert(`${file.name} is too large. Max allowed size is ${maxSizeMB}MB.`);
+        showToast(`${file.name} is too large. Max allowed size is ${maxSizeMB}MB.`, "warning");
         return false;
       }
       return true;
@@ -831,7 +832,7 @@ export default function ChatArea() {
                 }
               }
             }}
-            className="relative h-full bg-[var(--muted)] p-4 rounded-lg shadow-inner overflow-y-auto space-y-2"
+            className="relative h-full bg-[var(--muted)] p-4 rounded-lg shadow-inner overflow-y-auto space-y-2 select-text"
           >
             {/* 🌸 Floating faint emojis */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
