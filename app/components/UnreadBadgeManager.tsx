@@ -91,13 +91,32 @@ export default function UnreadBadgeManager() {
     socket.on("unreadMessageCountUpdated", handleUnseenCountUpdate);
     socket.on("update_unseen_count", handleUnseenCountUpdate);
 
+    // Request Notification permission on mount if default (required for iOS Safari PWA badging)
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    }
+
     // Request initial friend list with unread counts
     socket.emit("getFriendListWithUnseen", { userId });
+
+    // Refresh unread count on visibility change (mobile app resume / tab switch)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        socket.emit("getFriendListWithUnseen", { userId });
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
 
     return () => {
       socket.off("friendsUpdated", handleFriendsUpdate);
       socket.off("unreadMessageCountUpdated", handleUnseenCountUpdate);
       socket.off("update_unseen_count", handleUnseenCountUpdate);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
     };
   }, [isAuthenticated, userId, setFriends]);
 
@@ -114,15 +133,25 @@ export default function UnreadBadgeManager() {
     }
 
     // Installed Mobile/PWA/Desktop Apps: Update Platform App Icon Badge API
-    if (typeof window !== "undefined" && "navigator" in window) {
+    if (typeof window !== "undefined") {
       const nav = navigator as any;
-      if ("setAppBadge" in nav) {
+      const win = window as any;
+      const setBadge =
+        (nav.setAppBadge && nav.setAppBadge.bind(nav)) ||
+        (nav.setExperimentalAppBadge && nav.setExperimentalAppBadge.bind(nav)) ||
+        (win.setAppBadge && win.setAppBadge.bind(win));
+      const clearBadge =
+        (nav.clearAppBadge && nav.clearAppBadge.bind(nav)) ||
+        (nav.clearExperimentalAppBadge && nav.clearExperimentalAppBadge.bind(nav)) ||
+        (win.clearAppBadge && win.clearAppBadge.bind(win));
+
+      if (setBadge) {
         if (currentCount > 0) {
-          nav.setAppBadge(currentCount).catch((err: unknown) => {
+          setBadge(currentCount).catch((err: unknown) => {
             console.warn("App Badge API (setAppBadge) error:", err);
           });
-        } else if ("clearAppBadge" in nav) {
-          nav.clearAppBadge().catch((err: unknown) => {
+        } else if (clearBadge) {
+          clearBadge().catch((err: unknown) => {
             console.warn("App Badge API (clearAppBadge) error:", err);
           });
         }
