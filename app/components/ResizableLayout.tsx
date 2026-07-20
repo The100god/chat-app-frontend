@@ -58,8 +58,12 @@
 
 "use client";
 import { useAtom } from "jotai";
-import { useState, useRef, useEffect, ReactNode } from "react";
-import { responsiveDeviceAtom } from "../states/States";
+import { useState, useRef, useEffect, ReactNode, useCallback } from "react";
+import {
+  responsiveDeviceAtom,
+  selectedFriendAtom,
+  selectedGroupAtom,
+} from "../states/States";
 import { ArrowLeft } from "lucide-react";
 
 interface ResizableLayoutProps {
@@ -71,17 +75,70 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   leftComponent,
   rightComponent,
 }) => {
-  const [leftWidth, setLeftWidth] = useState<number>(window.innerWidth * 0.4);
-  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 1025);
+  const [leftWidth, setLeftWidth] = useState<number>(350);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
   const [showLeft, setShowLeft] = useAtom(responsiveDeviceAtom); // for mobile toggle
+  const [, setSelectedFriend] = useAtom(selectedFriendAtom);
+  const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const isDraggingRef = useRef<boolean>(false);
+  const isPushingStateRef = useRef<boolean>(false);
 
-  // 🧠 Detect screen size
+  // 🧠 Detect initial dimensions and screen resize
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      setLeftWidth(window.innerWidth * 0.4);
+      setIsMobile(window.innerWidth < 1025);
+    }
     const handleResize = () => setIsMobile(window.innerWidth < 1025);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Helper to handle going back to home section
+  const handleBackToHome = useCallback(() => {
+    setShowLeft(true);
+    setSelectedFriend(null);
+    setSelectedGroup(null);
+  }, [setShowLeft, setSelectedFriend, setSelectedGroup]);
+
+  // 📱 Push history state when chat area opens on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+
+    if (!showLeft) {
+      if (
+        typeof window !== "undefined" &&
+        !window.history.state?.chatViewOpen &&
+        !isPushingStateRef.current
+      ) {
+        isPushingStateRef.current = true;
+        window.history.pushState({ chatViewOpen: true }, "");
+        setTimeout(() => {
+          isPushingStateRef.current = false;
+        }, 100);
+      }
+    }
+  }, [showLeft, isMobile]);
+
+  // 📱 Handle mobile system back button (popstate event)
+  useEffect(() => {
+    const handlePopState = () => {
+      if (isMobile && !showLeft) {
+        // When user presses mobile back button while viewing a chat, show Home (left section) instead of exiting
+        handleBackToHome();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [isMobile, showLeft, handleBackToHome]);
+
+  const handleArrowBackClick = () => {
+    handleBackToHome();
+    if (typeof window !== "undefined" && window.history.state?.chatViewOpen) {
+      window.history.back();
+    }
+  };
 
   // 🖱️ Resize handler (for desktop only)
   const handleMouseDown = () => {
@@ -117,7 +174,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
         {!showLeft && (
           <div className="absolute left-2 top-2 z-50">
             <button
-              onClick={() => setShowLeft(true)}
+              onClick={handleArrowBackClick}
               className="p-2.5 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/85 transition rounded-full flex items-center justify-center shadow-lg cursor-pointer"
               title="Back"
             >
@@ -126,7 +183,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
           </div>
         )}
 
-        <div className="flex-grow overflow-hidden bg-black">
+        <div className="flex-grow overflow-hidden bg-[var(--background)]">
           {showLeft ? leftComponent : rightComponent}
         </div>
       </div>
@@ -138,7 +195,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
     <div className="flex h-full w-full overflow-hidden">
       {/* Left Section */}
       <div
-        className="flex-shrink-0 bg-black p-2"
+        className="flex-shrink-0 bg-[var(--background)] p-2"
         style={{ width: `${leftWidth}px`, minWidth: "250px", maxWidth: "75vw" }}
       >
         {leftComponent}
@@ -151,7 +208,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
       />
 
       {/* Right Section */}
-      <div className="flex-grow bg-black p-2">{rightComponent}</div>
+      <div className="flex-grow bg-[var(--background)] p-2">{rightComponent}</div>
     </div>
   );
 };

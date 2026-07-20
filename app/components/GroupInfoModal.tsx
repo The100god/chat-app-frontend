@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useAtom } from "jotai";
 import { selectedGroupAtom, userIdAtom, friendsAtom } from "../states/States";
+import { showToast } from "./Toast";
 import { 
   X, Edit2, UserPlus, UserMinus, ShieldAlert, ShieldCheck, 
   LogOut, Trash2, Camera, Save, Info, Users, Shield
@@ -55,7 +56,7 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
 
     const maxSizeMB = 10;
     if (file.size / (1024 * 1024) > maxSizeMB) {
-      alert(`${file.name} is too large. Max size is ${maxSizeMB}MB.`);
+      showToast(`${file.name} is too large. Max size is ${maxSizeMB}MB.`, "warning");
       return;
     }
 
@@ -84,12 +85,13 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       if (res.ok) {
         setSelectedGroup(data.group);
         setIsEditing(false);
+        showToast("Group details updated successfully!", "success");
       } else {
-        alert(data.message || "Failed to update group details.");
+        showToast(data.message || "Failed to update group details.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("An error occurred while saving changes.");
+      showToast("An error occurred while saving changes.", "error");
     } finally {
       setSavingInfo(false);
     }
@@ -109,8 +111,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (res.ok) {
         setSelectedGroup(data.group);
+        showToast("Member added to group!", "success");
       } else {
-        alert(data.message || "Failed to add member.");
+        showToast(data.message || "Failed to add member.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -132,8 +135,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (res.ok) {
         setSelectedGroup(data.group);
+        showToast("Member removed from group.", "info");
       } else {
-        alert(data.message || "Failed to remove member.");
+        showToast(data.message || "Failed to remove member.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -154,8 +158,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (res.ok) {
         setSelectedGroup(data.group);
+        showToast("Member promoted to Admin!", "success");
       } else {
-        alert(data.message || "Failed to promote member.");
+        showToast(data.message || "Failed to promote member.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -176,8 +181,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       const data = await res.json();
       if (res.ok) {
         setSelectedGroup(data.group);
+        showToast("Admin demoted to Member.", "info");
       } else {
-        alert(data.message || "Failed to demote admin.");
+        showToast(data.message || "Failed to demote admin.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -199,8 +205,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       if (res.ok) {
         setSelectedGroup(null);
         onClose();
+        showToast("You left the group.", "info");
       } else {
-        alert(data.message || "Failed to leave group.");
+        showToast(data.message || "Failed to leave group.", "error");
       }
     } catch (err) {
       console.error(err);
@@ -222,8 +229,9 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
       if (res.ok) {
         setSelectedGroup(null);
         onClose();
+        showToast("Group deleted permanently.", "info");
       } else {
-        alert(data.message || "Failed to delete group.");
+        showToast(data.message || "Failed to delete group.", "error");
       }
     } catch (err) {
       console.error(err);

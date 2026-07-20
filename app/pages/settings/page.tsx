@@ -10,11 +10,15 @@ import {
   ShieldCheck,
   Fingerprint,
   Smartphone,
+  RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
+import { useAtom } from "jotai";
 import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
 import { isMobilePWA, hashPin } from "../../components/AppLockWrapper";
+import { showToast } from "../../components/Toast";
+import { updateAvailableAtom } from "../../states/States";
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
@@ -25,6 +29,44 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [updatingApp, setUpdatingApp] = useState(false);
+  const [updateMessage, setUpdateMessage] = useState("");
+  const [updateAvailable, setUpdateAvailable] = useAtom(updateAvailableAtom);
+
+  const handleUpdateApp = async () => {
+    setUpdatingApp(true);
+    setUpdateMessage("Checking for updates...");
+
+    try {
+      if ("serviceWorker" in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.update().catch(() => {});
+        }
+      }
+
+      if ("caches" in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((key) => caches.delete(key)));
+      }
+
+      setUpdateMessage("Applying latest version...");
+      showToast("✨ App updated successfully! Reloading...", "success", 2000);
+
+      setTimeout(() => {
+        setUpdateAvailable(false);
+        const url = new URL(window.location.href);
+        url.searchParams.set("v", String(Date.now()));
+        window.location.href = url.toString();
+      }, 700);
+    } catch (err) {
+      console.error("App update failed:", err);
+      showToast("App reload in progress...", "info", 2000);
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    }
+  };
 
   // App Lock State
   const [appLockModalOpen, setAppLockModalOpen] = useState(false);
@@ -101,7 +143,7 @@ export default function SettingsPage() {
       localStorage.removeItem("chugliAppLockBioId");
       setAppLockTimeout(0);
       setAppLockModalOpen(false);
-      alert("✅ App Lock disabled successfully!");
+      showToast("App Lock disabled successfully!", "success");
     } else {
       setSetupTimeoutVal(timeoutVal);
       setLockSetupStep('enter_pin');
@@ -165,7 +207,7 @@ export default function SettingsPage() {
       }
     }
 
-    alert("✅ App Lock enabled successfully!");
+    showToast("App Lock enabled successfully!", "success");
     setAppLockModalOpen(false);
   };
 
@@ -202,11 +244,11 @@ export default function SettingsPage() {
         const rawId = new Uint8Array(credential.rawId);
         const hexId = Array.from(rawId).map(b => b.toString(16).padStart(2, '0')).join('');
         localStorage.setItem("chugliAppLockBioId", hexId);
-        alert("✅ Biometrics enabled successfully!");
+        showToast("Biometrics enabled successfully!", "success");
       }
     } catch (err) {
       console.warn("Biometric registration cancelled or failed:", err);
-      alert("Could not enable biometric login. PIN fallback will be used.");
+      showToast("Could not enable biometric login. PIN fallback will be used.", "warning");
     } finally {
       setAppLockModalOpen(false);
     }
@@ -233,10 +275,10 @@ export default function SettingsPage() {
         window.location.href = "/pages/login";
       } else {
         const data = await res.json();
-        alert(data.message || "Failed to delete account");
+        showToast(data.message || "Failed to delete account", "error");
       }
     } catch {
-      alert("Something went wrong. Please try again.");
+      showToast("Something went wrong. Please try again.", "error");
     } finally {
       setDeleting(false);
     }
@@ -299,7 +341,7 @@ export default function SettingsPage() {
               icon={<User />}
               label="Online Status"
               action="Visible"
-              onClick={() => alert("Coming soon!")}
+              onClick={() => showToast("Online status settings coming soon!", "info")}
             />
             <div className="relative">
               <SettingItem
@@ -372,8 +414,65 @@ export default function SettingsPage() {
           <SettingItem
             icon={<Trash2 />}
             label="Clear Media Cache"
-            onClick={() => alert("Media cache cleared!")}
+            onClick={() => showToast("Media cache cleared successfully!", "success")}
           />
+        </section>
+
+        {/* App Updates */}
+        <section>
+          <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+            App Updates & Version
+            {updateAvailable && (
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full animate-bounce">
+                New Update Available!
+              </span>
+            )}
+          </h3>
+          <div className="bg-[var(--card)] rounded-xl p-4 border border-[var(--foreground)]/10 hover:border-[var(--accent)] transition space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="relative text-[var(--accent)] p-2 bg-[var(--accent)]/10 rounded-full">
+                  <RefreshCw className={`w-5 h-5 ${updatingApp ? "animate-spin" : ""}`} />
+                  {updateAvailable && (
+                    <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <span className="font-semibold block text-sm sm:text-base text-[var(--foreground)]">
+                    Update Application
+                  </span>
+                  <span className="text-xs text-[var(--foreground)]/60 block mt-0.5">
+                    {updateAvailable
+                      ? "✨ A new app update is ready! Click Update Now to install."
+                      : updateMessage || "Instantly fetch & apply latest app features without uninstalling."}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={handleUpdateApp}
+                disabled={updatingApp}
+                className={`px-4 py-2 cursor-pointer rounded-md text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap ${
+                  updateAvailable
+                    ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                    : "bg-[var(--accent)] hover:bg-[var(--accent)]/85 text-[var(--background)]"
+                }`}
+              >
+                {updatingApp ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    Updating...
+                  </>
+                ) : updateAvailable ? (
+                  "Update Now (New)"
+                ) : (
+                  "Update Now"
+                )}
+              </button>
+            </div>
+          </div>
         </section>
 
         {/* Logout */}
@@ -614,7 +713,7 @@ export default function SettingsPage() {
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={() => {
-                    alert("✅ App Lock setup completed (PIN only).");
+                    showToast("App Lock setup completed (PIN only).", "success");
                     setAppLockModalOpen(false);
                   }}
                   className="flex-1 py-2 rounded-md bg-[var(--card)] border border-[var(--foreground)]/10 hover:bg-[var(--foreground)]/5 text-sm font-semibold transition cursor-pointer"

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useAtom } from "jotai";
 import { Pencil, Mail, X, Camera } from "lucide-react";
 import { floatingEmojisAtom, userAtom, User } from "../../states/States";
+import { showToast } from "../../components/Toast";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
@@ -68,7 +69,7 @@ const ProfilePage: React.FC = () => {
     const maxSizeMB = 10;
     const fileSizeMB = file.size / (1024 * 1024);
     if (fileSizeMB > maxSizeMB) {
-      alert("File too large! Max 10MB allowed.");
+      showToast("File too large! Max 10MB allowed.", "warning");
       return;
     }
 

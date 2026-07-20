@@ -28,6 +28,7 @@ import {
   messageAtom,
   responsiveDeviceAtom,
   selectedFriendAtom,
+  updateAvailableAtom,
   userAtom,
 } from "../states/States";
 import NotificationBell from "./NotificationBell";
@@ -44,6 +45,7 @@ const Header: React.FC = () => {
   const [, setLoadingMessages] = useAtom(loadingMessageAtom);
   const [, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [user] = useAtom(userAtom);
+  const [updateAvailable] = useAtom(updateAvailableAtom);
   const router = useRouter();
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
@@ -238,12 +240,18 @@ const Header: React.FC = () => {
               <span className="text-sm font-semibold">Install App</span>
             </button>
           )}
-          <Link href="/pages/settings" className="hover:text-[var(--accent)]">
+          <Link href="/pages/settings" className="relative hover:text-[var(--accent)]">
             <FaCog
               className="hover:rotate-90 transition duration-200"
               aria-label="Setting"
               size={24}
             />
+            {updateAvailable && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+              </span>
+            )}
           </Link>
           <button
             onClick={logout}
@@ -426,10 +434,17 @@ const Header: React.FC = () => {
                 setMenuOpen(false);
                 setShowLeft(true);
               }}
-              className="flex items-center space-x-2"
+              className="flex items-center justify-between w-full"
             >
-              <FaCog />
-              <span>Settings</span>
+              <div className="flex items-center space-x-2">
+                <FaCog />
+                <span>Settings</span>
+              </div>
+              {updateAvailable && (
+                <span className="text-[10px] font-bold bg-red-500 text-white px-2 py-0.5 rounded-full animate-pulse">
+                  Update
+                </span>
+              )}
             </Link>
 
             <button
