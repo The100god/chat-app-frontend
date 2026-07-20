@@ -158,8 +158,18 @@ export default function ChatArea() {
           // console.log("data", data._id);
 
           if (socket && data._id) {
-            // console.log("Joining chat room:", data._id);
             socket.emit("join", data._id);
+            if (selectedFriend?.friendId) {
+              socket.emit("messagesRead", {
+                chatId: data._id,
+                readerId: userId,
+                senderId: selectedFriend.friendId,
+              });
+              socket.emit("mark_messages_read", {
+                senderId: selectedFriend.friendId,
+                receiverId: userId,
+              });
+            }
           }
 
           const messagesRes = await fetch(
@@ -173,6 +183,18 @@ export default function ChatArea() {
             setMessages([]); // or handle the error gracefully
             setLoadingMessages(false);
             console.error("Fetched messages is not an array", messagesData);
+          }
+
+          // Mark messages as read in DB
+          if (selectedFriend?.friendId) {
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/markMessage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                senderId: selectedFriend.friendId,
+                receiverId: userId,
+              }),
+            }).catch(() => {});
           }
         } else if (selectedGroup) {
           const res = await fetch(
@@ -478,8 +500,8 @@ export default function ChatArea() {
           }
           : {
             chatId: savedMessage.chatId,
-            senderId: savedMessage.sender?._id,
-            receiverId: savedMessage.receiver,
+            senderId: userId,
+            receiverId: selectedFriend?.friendId || (typeof savedMessage.receiver === "string" ? savedMessage.receiver : savedMessage.receiver?._id),
             media: savedMessage.media,
             content: savedMessage.content,
           }
