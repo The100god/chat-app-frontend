@@ -134,28 +134,47 @@ export default function UnreadBadgeManager() {
 
     // Installed Mobile/PWA/Desktop Apps: Update Platform App Icon Badge API
     if (typeof window !== "undefined") {
-      const nav = navigator as any;
-      const win = window as any;
-      const setBadge =
-        (nav.setAppBadge && nav.setAppBadge.bind(nav)) ||
-        (nav.setExperimentalAppBadge && nav.setExperimentalAppBadge.bind(nav)) ||
-        (win.setAppBadge && win.setAppBadge.bind(win));
-      const clearBadge =
-        (nav.clearAppBadge && nav.clearAppBadge.bind(nav)) ||
-        (nav.clearExperimentalAppBadge && nav.clearExperimentalAppBadge.bind(nav)) ||
-        (win.clearAppBadge && win.clearAppBadge.bind(win));
-
-      if (setBadge) {
-        if (currentCount > 0) {
-          setBadge(currentCount).catch((err: unknown) => {
-            console.warn("App Badge API (setAppBadge) error:", err);
-          });
-        } else if (clearBadge) {
-          clearBadge().catch((err: unknown) => {
-            console.warn("App Badge API (clearAppBadge) error:", err);
-          });
+      const updateBadge = async () => {
+        // 1. Direct Navigator API
+        const nav = navigator as any;
+        if ("setAppBadge" in nav) {
+          try {
+            if (currentCount > 0) {
+              await nav.setAppBadge(currentCount);
+            } else if ("clearAppBadge" in nav) {
+              await nav.clearAppBadge();
+            }
+          } catch (err) {
+            console.warn("Direct navigator.setAppBadge error:", err);
+          }
         }
-      }
+
+        // 2. Service Worker Registration Badge API (Required for Mobile Launchers & PWAs)
+        if ("serviceWorker" in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.ready;
+            if (reg && "setAppBadge" in reg) {
+              if (currentCount > 0) {
+                await (reg as any).setAppBadge(currentCount);
+              } else if ("clearAppBadge" in reg) {
+                await (reg as any).clearAppBadge();
+              }
+            }
+
+            // Also post message to active Service Worker to execute setAppBadge inside sw.js
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: "SET_BADGE",
+                count: currentCount,
+              });
+            }
+          } catch (err) {
+            console.warn("Service Worker setAppBadge error:", err);
+          }
+        }
+      };
+
+      updateBadge();
     }
   }, [totalUnread, isAuthenticated]);
 

@@ -58,3 +58,23 @@ self.addEventListener("fetch", (event) => {
       })
   );
 });
+
+// Listen for badge update messages from main thread
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SET_BADGE") {
+    const count = event.data.count || 0;
+    if ("setAppBadge" in self.navigator) {
+      if (count > 0) {
+        self.navigator.setAppBadge(count).catch(() => {});
+      } else if ("clearAppBadge" in self.navigator) {
+        self.navigator.clearAppBadge().catch(() => {});
+      }
+    } else if (self.registration && "setAppBadge" in self.registration) {
+      if (count > 0) {
+        self.registration.setAppBadge(count).catch(() => {});
+      } else if ("clearAppBadge" in self.registration) {
+        self.registration.clearAppBadge().catch(() => {});
+      }
+    }
+  }
+});
