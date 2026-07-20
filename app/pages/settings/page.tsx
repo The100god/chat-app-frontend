@@ -107,7 +107,24 @@ export default function SettingsPage() {
     setMode(theme);
     localStorage.setItem("chatTheme", theme);
   };
-  const handleNotificationToggle = () => setNotifications(!notifications);
+  const handleNotificationToggle = async () => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "granted") {
+        setNotifications(!notifications);
+        showToast(`Notifications ${!notifications ? "enabled" : "disabled"}`, "info");
+      } else {
+        const result = await Notification.requestPermission();
+        if (result === "granted") {
+          setNotifications(true);
+          showToast("✨ Notification & App Icon Badge permissions granted!", "success");
+        } else {
+          showToast("Notification permission was denied in browser settings.", "warning");
+        }
+      }
+    } else {
+      setNotifications(!notifications);
+    }
+  };
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";

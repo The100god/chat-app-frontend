@@ -149,7 +149,7 @@ export default function UnreadBadgeManager() {
           }
         }
 
-        // 2. Service Worker Registration Badge API (Required for Mobile Launchers & PWAs)
+        // 2. Service Worker Registration & Notification Badge API (Required for Mobile Launchers & PWAs)
         if ("serviceWorker" in navigator) {
           try {
             const reg = await navigator.serviceWorker.ready;
@@ -167,6 +167,26 @@ export default function UnreadBadgeManager() {
                 type: "SET_BADGE",
                 count: currentCount,
               });
+            }
+
+            // 3. Trigger native notification to force Android & iOS launcher badge overlay
+            if (
+              reg &&
+              "Notification" in window &&
+              Notification.permission === "granted" &&
+              currentCount > 0
+            ) {
+              reg.showNotification("Chugli Chat", {
+                body: `You have ${currentCount} unread message${currentCount > 1 ? "s" : ""}`,
+                icon: "/icon-192.png",
+                badge: "/icon-192.png",
+                tag: "chugli-unread-badge",
+                silent: true,
+              }).catch(() => {});
+            } else if (reg && currentCount === 0) {
+              reg.getNotifications({ tag: "chugli-unread-badge" }).then((nots) => {
+                nots.forEach((n) => n.close());
+              }).catch(() => {});
             }
           } catch (err) {
             console.warn("Service Worker setAppBadge error:", err);
