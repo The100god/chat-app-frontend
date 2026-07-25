@@ -95,7 +95,7 @@ export default function ChatArea() {
       }
     }
   }, [showEmoji]);
-  const [selectedFriend] = useAtom(selectedFriendAtom);
+  const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [messages, setMessages] = useAtom(messageAtom);
   const [messageInput, setMessageInput] = useState<string>("");
   const [chatId, setChatId] = useState<string | null>(null);
@@ -103,7 +103,16 @@ export default function ChatArea() {
   const [typingFriend, setTypingFriend] = useState<string | null>(null);
   let typingTimeout: NodeJS.Timeout;
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [previewVisible, setPreviewVisible] = useState(false);
+
+  useEffect(() => {
+    const urls = mediaFiles.map((file) => URL.createObjectURL(file));
+    setPreviewUrls(urls);
+    return () => {
+      urls.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [mediaFiles]);
   const [loadingMessages, setLoadingMessages] = useAtom(loadingMessageAtom);
   const [hasAutoScrolled, setHasAutoScrolled] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -119,6 +128,21 @@ export default function ChatArea() {
   const timerDropdownRef = useRef<HTMLDivElement | null>(null);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => { },
+  });
   const username =
     selectedFriend?.username ||
     selectedGroup?.groupName ||
@@ -173,7 +197,7 @@ export default function ChatArea() {
           }
 
           const messagesRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/${data._id}`
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/${data._id}?userId=${userId}`
           );
           const messagesData = await messagesRes.json();
           if (Array.isArray(messagesData)) {
@@ -194,11 +218,11 @@ export default function ChatArea() {
                 senderId: selectedFriend.friendId,
                 receiverId: userId,
               }),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         } else if (selectedGroup) {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/group-message/${selectedGroup._id}`
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/groups/group-message/${selectedGroup._id}?userId=${userId}`
           );
           const messagesData = await res.json();
           setChatId(selectedGroup._id);
@@ -288,7 +312,9 @@ export default function ChatArea() {
             m._id?.startsWith("local-") &&
             ((typeof m.sender === "string" && m.sender === userId) ||
               (typeof m.sender === "object" && m.sender?._id === userId)) &&
-            m.content === message.content &&
+            (m.content === message.content ||
+              (!m.content && !message.content) ||
+              (m.content === "" && message.content === "let's Talk!")) &&
             m.media?.length === message.media?.length
         );
 
@@ -324,7 +350,9 @@ export default function ChatArea() {
               m._id?.startsWith("local-") &&
               ((typeof m.sender === "string" && m.sender === userId) ||
                 (typeof m.sender === "object" && m.sender?._id === userId)) &&
-              m.content === message.content &&
+              (m.content === message.content ||
+                (!m.content && !message.content) ||
+                (m.content === "" && message.content === "let's Talk!")) &&
               m.media?.length === message.media?.length
           );
 
@@ -475,9 +503,13 @@ export default function ChatArea() {
       setLoadingMessages(false);
 
       if (mediaFilesToSend.length > 0) {
-        setMessages((prev) =>
-          prev.map((m) => (m._id === localId ? savedMessage : m))
-        );
+        setMessages((prev) => {
+          const alreadyHasSaved = prev.some((m) => m._id === savedMessage._id);
+          if (alreadyHasSaved) {
+            return prev.filter((m) => m._id !== localId);
+          }
+          return prev.map((m) => (m._id === localId ? savedMessage : m));
+        });
       } else {
         setMessages((prev) => {
           const alreadyExists = prev.some((m) => m._id === savedMessage._id);
@@ -511,6 +543,143 @@ export default function ChatArea() {
       if (mediaFilesToSend.length > 0) {
         setMessages((prev) => prev.filter((m) => m._id !== localId));
       }
+    }
+  };
+
+
+
+  const handleDeleteChat = () => {
+    if (!chatId || !userId) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Chat",
+      message: "Are you sure you want to delete this chat? This will clear the chat history for you. The other user will still see the messages.",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/clear-chat`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ chatId, userId }),
+            }
+          );
+
+          if (res.ok) {
+            setMessages([]);
+            setSelectedFriend(null);
+            showToast("Chat deleted successfully.", "success");
+          } else {
+            showToast("Failed to delete chat.", "error");
+          }
+        } catch (err) {
+          console.error("Error deleting chat:", err);
+          showToast("Error deleting chat.", "error");
+        }
+      }
+    });
+  };
+
+  const handleDeleteMessage = (messageId?: string, isGroupChat?: boolean) => {
+    if (!messageId || !userId) return;
+
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete Message",
+      message: "Are you sure you want to delete this message?",
+      onConfirm: async () => {
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/delete-message`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ messageId, userId, isGroup: isGroupChat }),
+            }
+          );
+
+          const data = await res.json();
+          if (res.ok) {
+            setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+            showToast(data.message || "Message deleted.", "success");
+          } else {
+            showToast(data.message || "Failed to delete message.", "error");
+          }
+        } catch (err) {
+          console.error("Error deleting message:", err);
+          showToast("Error deleting message.", "error");
+        }
+      }
+    });
+  };
+
+  const startVoiceRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const file = new File([blob], `voice_${Date.now()}.webm`, {
+          type: "audio/webm",
+        });
+
+        setMediaFiles((prev) => [...prev, file]);
+        setPreviewVisible(true);
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecordingVoice(true);
+      if (navigator.vibrate) {
+        navigator.vibrate(100);
+      }
+      showToast("🎙️ Recording started... Release to preview!", "success");
+    } catch (err) {
+      console.error("Error starting voice recording:", err);
+      showToast("Could not access microphone.", "error");
+      setIsRecordingVoice(false);
+    }
+  };
+
+  const stopVoiceRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecordingVoice(false);
+  };
+
+  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isRecordingVoice) return;
+
+    // Start timer for 3 seconds (3000ms)
+    longPressTimerRef.current = setTimeout(() => {
+      startVoiceRecording();
+    }, 3000);
+  };
+
+  const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+
+      if (!isRecordingVoice) {
+        // Short click -> send regular message
+        sendMessage();
+      } else {
+        // Release hold -> stop and send
+        stopVoiceRecording();
+      }
+    } else if (isRecordingVoice) {
+      stopVoiceRecording();
     }
   };
 
@@ -574,6 +743,20 @@ export default function ChatArea() {
       socket.off("groupSeenUpdate", handleSeenUpdate);
     };
   }, [socket, selectedGroup, setMessages]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessageDeleted = ({ messageId }: { messageId: string }) => {
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+    };
+
+    socket.on("messageDeleted", handleMessageDeleted);
+
+    return () => {
+      socket.off("messageDeleted", handleMessageDeleted);
+    };
+  }, [socket, setMessages]);
 
   useEffect(() => {
     if (!messages || messages.length === 0) return;
@@ -697,8 +880,7 @@ export default function ChatArea() {
       const isImage = file.type.startsWith("image/");
       const isAudio = file.type.startsWith("audio/");
 
-      const url = URL.createObjectURL(file);
-      // console.log("type", url);
+      const url = previewUrls[index] || "";
 
       return (
         <div key={index} className="relative">
@@ -706,7 +888,7 @@ export default function ChatArea() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={url} className="w-20 h-20 object-cover rounded" alt="Preview" />
           ) : isAudio ? (
-            <audio src={url} controls className="w-[25vw] h-20 rounded" />
+            <audio src={url} controls className="w-[260px] md:w-[300px] h-12 rounded bg-black/10 dark:bg-white/10 p-1" />
           ) : (
             <video src={url} className="w-20 h-20 rounded" controls />
           )}
@@ -769,60 +951,72 @@ export default function ChatArea() {
   return (
     <div className="flex flex-col bg-[var(--background)] h-full p-2 pb-5 rounded-md overflow-hidden">
       {!loadingMessages && (
-        <div
-          onClick={() => {
-            setShowEmoji(false);
-            if (selectedGroup) {
-              setShowGroupInfo(true);
-            }
-          }}
-          className={`flex flex-row justify-center items-center gap-2 p-3 ${
-            selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15 px-4 py-1.5 rounded-xl transition duration-200" : ""
-          }`}
-        >
-          {(selectedFriend || selectedGroup) && (
-            <Image
-              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
-              alt="avatar"
-              className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
-              width={30}
-              height={30}
-            />
-          )}
-
-          <h2 className="flex justify-center items-center text-xl font-semibold space-x-1 text-[var(--foreground)]">
-            {selectedFriend || selectedGroup ? (
-              <div className="flex">
-                {username.split("").map((char, i) => (
-                  <motion.span
-                    key={i}
-                    className={`${colors[i % colors.length]} inline-block`}
-                    animate={{
-                      y: [0, -6, 0], // Jump up and down
-                    }}
-                    transition={{
-                      duration: 0.6,
-                      delay: i * 0.1, // Stagger each letter
-                      repeat: Infinity,
-                      repeatDelay: 2,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    {char}
-                  </motion.span>
-                ))}
-              </div>
-            ) : (
-              <span className="text-[var(--muted)]">{username}</span>
+        <div className="w-full flex flex-row items-center justify-between p-3 border-b border-[var(--accent)]/20">
+          <div
+            onClick={() => {
+              setShowEmoji(false);
+              if (selectedGroup) {
+                setShowGroupInfo(true);
+              }
+            }}
+            className={`flex flex-row items-center gap-2 ${selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15 px-4 py-1.5 rounded-xl transition duration-200" : ""
+              }`}
+          >
+            {(selectedFriend || selectedGroup) && (
+              <Image
+                src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
+                alt="avatar"
+                className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
+                width={30}
+                height={30}
+              />
             )}
-          </h2>
 
-          {/* Disappearing messages indicator — only for 1-1 chats */}
-          {selectedFriend && disappearDuration > 0 && (
-            <span className="ml-2 text-xs px-2 py-1 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-1">
-              <Timer size={12} />
-              {disappearDuration}h
-            </span>
+            <h2 className="flex items-center text-xl font-semibold space-x-1 text-[var(--foreground)]">
+              {selectedFriend || selectedGroup ? (
+                <div className="flex">
+                  {username.split("").map((char, i) => (
+                    <motion.span
+                      key={i}
+                      className={`${colors[i % colors.length]} inline-block`}
+                      animate={{
+                        y: [0, -6, 0], // Jump up and down
+                      }}
+                      transition={{
+                        duration: 0.6,
+                        delay: i * 0.1, // Stagger each letter
+                        repeat: Infinity,
+                        repeatDelay: 2,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      {char}
+                    </motion.span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-[var(--muted)]">{username}</span>
+              )}
+            </h2>
+
+            {/* Disappearing messages indicator — only for 1-1 chats */}
+            {selectedFriend && disappearDuration > 0 && (
+              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-1">
+                <Timer size={12} />
+                {disappearDuration}h
+              </span>
+            )}
+          </div>
+
+          {/* Delete Chat Action */}
+          {selectedFriend && chatId && (
+            <button
+              onClick={handleDeleteChat}
+              className="text-rose-500 hover:text-rose-400 p-2 hover:bg-rose-500/10 rounded-lg transition-all flex items-center gap-1 text-sm font-medium cursor-pointer"
+              title="Delete Chat"
+            >
+              🗑️ <span className="hidden sm:inline">Delete Chat</span>
+            </button>
           )}
         </div>
       )}
@@ -898,6 +1092,13 @@ export default function ChatArea() {
                   (typeof msg.sender === "object" &&
                     msg?.sender?._id === selectedFriend?.friendId);
                 const isGroupChat = !!selectedGroup;
+                const hasAudio = !!(msg.media && msg.media.some(url => {
+                  const cleanUrl = url.split("#")[0];
+                  const isBlob = url.startsWith("blob:");
+                  return isBlob
+                    ? url.includes("audio")
+                    : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a"));
+                }));
                 // const isFromFriend = senderId === selectedFriend?.friendId;
 
                 // Only render messages sent by you or the selected friend
@@ -906,7 +1107,8 @@ export default function ChatArea() {
                 return (
                   <div
                     key={msg?._id || idx}
-                    className={` p-3 pr-4 relative rounded-md max-w-[70%] w-fit break-words whitespace-pre-wrap`}
+                    className={` p-3 pr-8 relative rounded-md max-w-[70%] w-fit break-words whitespace-pre-wrap group ${hasAudio ? "min-w-[285px] md:min-w-[325px]" : ""
+                      }`}
                     // ${
                     //   isSentByUser
                     //     ? "bg-lime-400 ml-auto"
@@ -923,6 +1125,18 @@ export default function ChatArea() {
                       marginRight: isSentByUser ? "0" : "auto",
                     }}
                   >
+                    {/* Delete Message Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteMessage(msg?._id, !!selectedGroup);
+                      }}
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 max-md:opacity-60 bg-black/40 hover:bg-black/60 text-white rounded p-0.5 transition-all text-[10px] cursor-pointer z-20"
+                      title="Delete Message"
+                    >
+                      🗑️
+                    </button>
+
                     {msg.media && msg.media?.length > 0 && (
                       <div className="relative">
                         <div
@@ -966,12 +1180,14 @@ export default function ChatArea() {
                                 className="w-24 h-24 cursor-pointer rounded-md border border-[var(--accent)] object-cover"
                               />
                             ) : isAudio ? (
-                              <audio
-                                key={index}
-                                src={cleanUrl}
-                                className="w-[15vw]"
-                                controls
-                              />
+                              <div key={index} className="flex items-center gap-2 p-1 bg-black/10 dark:bg-white/10 rounded-lg w-full">
+                                {/* <span className="text-xl pl-1" title="Voice Message">🎙️</span> */}
+                                <audio
+                                  src={cleanUrl}
+                                  className="w-full h-8 outline-none filter invert-0"
+                                  controls
+                                />
+                              </div>
                             ) : (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
@@ -1171,8 +1387,8 @@ export default function ChatArea() {
             <button
               onClick={() => setShowActionsDropdown(!showActionsDropdown)}
               className={`flex justify-center items-center cursor-pointer p-2.5 border border-[var(--accent)] rounded-lg transition-all ${showActionsDropdown
-                  ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                  : "bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
+                ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                : "bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
                 }`}
               title="More actions"
             >
@@ -1256,26 +1472,58 @@ export default function ChatArea() {
             )}
           </div>
 
-          <textarea
-            value={messageInput}
-            onChange={handleInputChange}
-            onFocus={() => setShowEmoji(false)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault(); // Prevent newline
-                sendMessage();
+          {isRecordingVoice ? (
+            <div className="flex-1 px-4 py-2 rounded-md bg-rose-500/10 text-rose-500 flex items-center gap-2 animate-pulse font-medium text-sm border border-rose-500/20 select-none">
+              <span>🔴</span>
+              <span>Recording Voice Message... Release to preview!</span>
+            </div>
+          ) : (
+            <textarea
+              value={messageInput}
+              onChange={handleInputChange}
+              onFocus={() => setShowEmoji(false)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault(); // Prevent newline
+                  sendMessage();
+                }
+              }}
+              className="flex-1 px-4 py-2 rounded-md bg-[var(--card)] text-[var(--foreground)] outline-none resize-none"
+              placeholder="Type a message..."
+              rows={1}
+            />
+          )}
+          <button
+            onMouseDown={handlePressStart}
+            onMouseUp={handlePressEnd}
+            onMouseLeave={() => {
+              if (longPressTimerRef.current) {
+                clearTimeout(longPressTimerRef.current);
+                longPressTimerRef.current = null;
+              }
+              if (isRecordingVoice) {
+                stopVoiceRecording();
               }
             }}
-            className="flex-1 px-4 py-2 rounded-md bg-[var(--card)] text-[var(--foreground)] outline-none resize-none"
-            placeholder="Type a message..."
-            rows={1}
-          />
-          <button
-            onClick={sendMessage}
-            className="ml-2 bg-[var(--accent)] text-[var(--card-foreground)] p-3 rounded-full cursor-pointer hover:opacity-90 transition-all flex items-center justify-center"
-            title="Send"
+            onTouchStart={(e) => {
+              e.preventDefault();
+              handlePressStart(e);
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              handlePressEnd(e);
+            }}
+            className={`ml-2 p-3 rounded-full cursor-pointer hover:opacity-90 transition-all flex items-center justify-center ${isRecordingVoice
+              ? "bg-rose-600 animate-pulse text-white shadow-lg shadow-rose-500/30"
+              : "bg-[var(--accent)] text-[var(--card-foreground)]"
+              }`}
+            title={isRecordingVoice ? "Release to Preview" : "Hold 3s to Record / Click to Send"}
           >
-            <SendHorizontal size={18} />
+            {isRecordingVoice ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <SendHorizontal size={18} />
+            )}
           </button>
         </div>
       )}
@@ -1289,6 +1537,42 @@ export default function ChatArea() {
         isOpen={showGroupInfo}
         onClose={() => setShowGroupInfo(false)}
       />
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-[var(--card)] border border-[var(--accent)]/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-[var(--foreground)]"
+            >
+              <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                {confirmModal.title}
+              </h3>
+              <p className="text-sm text-[var(--foreground)]/80 mb-6 leading-relaxed">
+                {confirmModal.message}
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setConfirmModal((prev) => ({ ...prev, isOpen: false }))}
+                  className="px-4 py-2 rounded-xl text-sm font-medium hover:bg-[var(--accent)]/10 border border-transparent hover:border-[var(--accent)]/30 transition-all cursor-pointer text-[var(--foreground)]"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    confirmModal.onConfirm();
+                    setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+                  }}
+                  className="px-4 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-all shadow-lg shadow-red-500/20 cursor-pointer"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

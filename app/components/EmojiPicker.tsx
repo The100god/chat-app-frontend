@@ -9,11 +9,12 @@ interface Props {
 
 const EmojiPicker: React.FC<Props> = ({ onEmojiClick }) => {
   return (
-    <div className="absolute bottom-14 left-0 z-50 bg-[var(--background)] border border-[var(--muted)] rounded-lg shadow-lg">
+    <div className="fixed bottom-20 left-4 right-4 md:absolute md:bottom-14 md:left-0 md:right-auto z-50 bg-[var(--card)] border border-[var(--accent)]/30 rounded-2xl shadow-2xl overflow-hidden max-w-md mx-auto md:mx-0 flex flex-col">
       <EmojiPickerLib
         onEmojiClick={(emojiData) => onEmojiClick(emojiData.emoji)}
         theme={Theme.AUTO}
-        height={350}
+        height={320}
+        width="100%"
         emojiStyle={EmojiStyle.FACEBOOK}
         autoFocusSearch={false}
       />

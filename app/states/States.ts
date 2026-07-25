@@ -8,12 +8,12 @@ export interface Message {
   groupId?: string;
   uploading?: boolean;
   sender?:
-    | {
-        _id: string;
-        username: string;
-        profilePic: string;
-      }
-    | string;
+  | {
+    _id: string;
+    username: string;
+    profilePic: string;
+  }
+  | string;
   receiver?: string | object;
   content?: string;
   media?: string[];
@@ -91,11 +91,7 @@ export const isNewGroupWindowAtom = atom<boolean>(false);
 // Values in hours: 1, 4, 8, 12, 24 (default 24h)
 export const disappearDurationAtom = atom<number>(24);
 
-const emojiSet = [
-  "💬", "✨", "🔥", "💫", "💖", "🌈",
-  "🌸", "🦋", "🌟", "💭", "🌈", "🌸",
-  "🦋", "🌟", "💭",
-];
+const emojiSet = ["💕", "😘", "😍", "💑", "💘", "💞", "💓", "❤️", "💖", "💝", "💋", "💌", "🌹", "🌸", "💐", "🌷", "💕", "😘", "😍", "💑", "💘", "💞", "💓", "❤️", "💖", "💝", "💋", "💌", "🌹", "🌸", "💐", "🌷"];
 
 // Create an atom that initializes once with random emojis
 export const floatingEmojisAtom = atom<FloatingEmoji[]>(() => {

@@ -4,16 +4,16 @@
 import { useEffect, useState } from "react";
 
 const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-const emojis = ["😀", "😂", "🥺", "😎", "🤩", "😡", "😭", "😍", "😴", "👻", "💀", "🐶", "🌟", "🍔", "🚀", "🎉", "🦄", "💕","😘","😍","🤤","💪","🎂","😽","😼","🙊","🐯","🦝","🐰","🐭","🐷","👅","👀","🤴","👸","🥷","🧛","👩‍🦽","👩‍🦯","🛀","🏇","👪","💑","🍕","🍔","🍟","🍿","🍞","🍧","🧁","🎂","🍨","🍩","🥝","🍑","🍄","🌺","🍂","🍁","🌷","🌸","💐","💘","💞","💓","🕕"];
+const emojis = ["😀", "😂", "🥺", "😎", "🤩", "😡", "😭", "😍", "😴", "👻", "💀", "🐶", "🌟", "🍔", "🚀", "🎉", "🦄", "💕", "😘", "😍", "🤤", "💪", "🎂", "😽", "😼", "🙊", "🐯", "🦝", "🐰", "🐭", "🐷", "👅", "👀", "🤴", "👸", "🥷", "🧛", "👩‍🦽", "👩‍🦯", "🛀", "🏇", "👪", "💑", "🍕", "🍔", "🍟", "🍿", "🍞", "🍧", "🧁", "🎂", "🍨", "🍩", "🥝", "🍑", "🍄", "🌺", "🍂", "🍁", "🌷", "🌸", "💐", "💘", "💞", "💓", "🕕"];
 
 interface Item {
-    id: number;
-    x: number;
-    y: number;
-    char: string;
-    delay: number;
-    rotate:number;
-  }
+  id: number;
+  x: number;
+  y: number;
+  char: string;
+  delay: number;
+  rotate: number;
+}
 
 const ChatAreaLoading = () => {
   const [items, setItems] = useState<Item[]>([]);
