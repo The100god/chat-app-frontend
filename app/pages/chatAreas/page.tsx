@@ -10,6 +10,7 @@ import {
   selectedGroupAtom,
   userIdAtom,
   disappearDurationAtom,
+  responsiveDeviceAtom,
 } from "../../states/States";
 import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
@@ -17,7 +18,7 @@ import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
 import { showToast } from "../../components/Toast";
-import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2 } from "lucide-react";
+import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2, ArrowLeft, Settings } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -121,13 +122,13 @@ export default function ChatArea() {
   //group
   const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-  // Disappearing messages
   const [disappearDuration, setDisappearDuration] = useAtom(disappearDurationAtom);
-  const [showTimerDropdown, setShowTimerDropdown] = useState(false);
   const [, setCountdownTick] = useState(0); // forces re-render for countdown
-  const timerDropdownRef = useRef<HTMLDivElement | null>(null);
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const settingsDropdownRef = useRef<HTMLDivElement | null>(null);
+  const [, setShowLeft] = useAtom(responsiveDeviceAtom);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -568,13 +569,51 @@ export default function ChatArea() {
           if (res.ok) {
             setMessages([]);
             setSelectedFriend(null);
-            showToast("Chat deleted successfully.", "success");
+            setSelectedGroup(null);
+            setChatId(null);
+            setShowLeft(true);
+            showToast("Chat cleared successfully.", "success");
           } else {
             showToast("Failed to delete chat.", "error");
           }
         } catch (err) {
           console.error("Error deleting chat:", err);
           showToast("Error deleting chat.", "error");
+        }
+      }
+    });
+  };
+
+  const handleRemoveFriend = () => {
+    if (!selectedFriend || !userId) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Remove Friend",
+      message: `Are you sure you want to remove ${selectedFriend.username} from your friends? This will also remove you from their friends list.`,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/friends/remove-friend`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId, friendId: selectedFriend.friendId }),
+            }
+          );
+
+          if (res.ok) {
+            setSelectedFriend(null);
+            setSelectedGroup(null);
+            setChatId(null);
+            setShowLeft(true);
+            showToast("Friend removed successfully.", "success");
+          } else {
+            const data = await res.json();
+            showToast(data.message || "Failed to remove friend.", "error");
+          }
+        } catch (err) {
+          console.error("Error removing friend:", err);
+          showToast("Error removing friend.", "error");
         }
       }
     });
@@ -759,6 +798,26 @@ export default function ChatArea() {
   }, [socket, setMessages]);
 
   useEffect(() => {
+    if (!socket || !selectedFriend) return;
+
+    const handleFriendRemoved = ({ friendId: removedId }: { friendId: string }) => {
+      if (removedId === selectedFriend.friendId) {
+        setSelectedFriend(null);
+        setSelectedGroup(null);
+        setChatId(null);
+        setShowLeft(true);
+        showToast("You are no longer friends with this user.", "info");
+      }
+    };
+
+    socket.on("friendRemoved", handleFriendRemoved);
+
+    return () => {
+      socket.off("friendRemoved", handleFriendRemoved);
+    };
+  }, [socket, selectedFriend, setSelectedFriend, setSelectedGroup, setChatId, setShowLeft]);
+
+  useEffect(() => {
     if (!messages || messages.length === 0) return;
 
     const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
@@ -918,19 +977,7 @@ export default function ChatArea() {
     return () => clearInterval(interval);
   }, [messages, setMessages, setCountdownTick]);
 
-  // Close timer dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        timerDropdownRef.current &&
-        !timerDropdownRef.current.contains(e.target as Node)
-      ) {
-        setShowTimerDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // Close actions dropdown when clicking outside
   useEffect(() => {
@@ -946,12 +993,46 @@ export default function ChatArea() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Close settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        settingsDropdownRef.current &&
+        !settingsDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowSettingsDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // console.log("selectedFriend", selectedFriend)
   // console.log("messages", messages);
   return (
     <div className="flex flex-col bg-[var(--background)] h-full p-2 pb-5 rounded-md overflow-hidden">
-      {!loadingMessages && (
-        <div className="w-full flex flex-row items-center justify-between p-3 border-b border-[var(--accent)]/20">
+      {!loadingMessages && (selectedFriend || selectedGroup) && (
+        <div className="w-full flex flex-row items-center justify-between p-3 border-b border-[var(--accent)]/20 relative min-h-[58px]">
+          {/* Left: Back Button */}
+          <div className="flex items-center">
+            <button
+              onClick={() => {
+                setShowLeft(true);
+                setSelectedFriend(null);
+                setSelectedGroup(null);
+                setChatId(null);
+                if (typeof window !== "undefined" && window.history.state?.chatViewOpen) {
+                  window.history.back();
+                }
+              }}
+              className="p-2 hover:bg-[var(--accent)]/15 rounded-lg text-[var(--foreground)] transition-all cursor-pointer flex items-center justify-center"
+              title="Back"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          </div>
+
+          {/* Center: Profile Pic + Name */}
           <div
             onClick={() => {
               setShowEmoji(false);
@@ -959,65 +1040,135 @@ export default function ChatArea() {
                 setShowGroupInfo(true);
               }
             }}
-            className={`flex flex-row items-center gap-2 ${selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15 px-4 py-1.5 rounded-xl transition duration-200" : ""
+            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row items-center gap-2 px-3 py-1.5 rounded-xl transition duration-200 ${selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15" : ""
               }`}
           >
-            {(selectedFriend || selectedGroup) && (
-              <Image
-                src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
-                alt="avatar"
-                className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)]"
-                width={30}
-                height={30}
-              />
-            )}
+            <Image
+              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
+              alt="avatar"
+              className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)] flex-shrink-0"
+              width={30}
+              height={30}
+            />
 
-            <h2 className="flex items-center text-xl font-semibold space-x-1 text-[var(--foreground)]">
-              {selectedFriend || selectedGroup ? (
-                <div className="flex">
-                  {username.split("").map((char, i) => (
-                    <motion.span
-                      key={i}
-                      className={`${colors[i % colors.length]} inline-block`}
-                      animate={{
-                        y: [0, -6, 0], // Jump up and down
-                      }}
-                      transition={{
-                        duration: 0.6,
-                        delay: i * 0.1, // Stagger each letter
-                        repeat: Infinity,
-                        repeatDelay: 2,
-                        ease: "easeInOut",
-                      }}
-                    >
-                      {char}
-                    </motion.span>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-[var(--muted)]">{username}</span>
-              )}
+            <h2 className="flex items-center text-lg font-semibold space-x-1 text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[250px]">
+              <div className="flex">
+                {username.split("").map((char, i) => (
+                  <motion.span
+                    key={i}
+                    className={`${colors[i % colors.length]} inline-block`}
+                    animate={{
+                      y: [0, -6, 0], // Jump up and down
+                    }}
+                    transition={{
+                      duration: 0.6,
+                      delay: i * 0.1, // Stagger each letter
+                      repeat: Infinity,
+                      repeatDelay: 2,
+                      ease: "easeInOut",
+                    }}
+                  >
+                    {char === " " ? "\u00A0" : char}
+                  </motion.span>
+                ))}
+              </div>
             </h2>
 
             {/* Disappearing messages indicator — only for 1-1 chats */}
             {selectedFriend && disappearDuration > 0 && (
-              <span className="ml-2 text-xs px-2 py-1 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-1">
-                <Timer size={12} />
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-0.5">
+                <Timer size={10} />
                 {disappearDuration}h
               </span>
             )}
           </div>
 
-          {/* Delete Chat Action */}
-          {selectedFriend && chatId && (
+          {/* Right: Settings Icon & Dropdown */}
+          <div className="relative" ref={settingsDropdownRef}>
             <button
-              onClick={handleDeleteChat}
-              className="text-rose-500 hover:text-rose-400 p-2 hover:bg-rose-500/10 rounded-lg transition-all flex items-center gap-1 text-sm font-medium cursor-pointer"
-              title="Delete Chat"
+              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+              className={`p-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${showSettingsDropdown
+                  ? "bg-[var(--accent)]/20 text-[var(--accent)]"
+                  : "hover:bg-[var(--accent)]/15 text-[var(--foreground)]"
+                }`}
+              title="Settings"
             >
-              🗑️ <span className="hidden sm:inline">Delete Chat</span>
+              <Settings size={20} />
             </button>
-          )}
+
+            <AnimatePresence>
+              {showSettingsDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 mt-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[200px] z-50 flex flex-col gap-1"
+                >
+                  {/* Disappearing Messages Settings */}
+                  {selectedFriend && (
+                    <div className="px-1 py-1">
+                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider flex items-center gap-1">
+                        <Timer size={10} /> Disappearing messages
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        {DISAPPEAR_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => {
+                              setDisappearDuration(opt.value);
+                              setShowSettingsDropdown(false);
+                            }}
+                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
+                                ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
+                                : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
+                              }`}
+                          >
+                            <span>⏱️ {opt.label} timer</span>
+                            {disappearDuration === opt.value && (
+                              <span className="text-[var(--accent)]">✓</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Delete Chat */}
+                  {chatId && (
+                    <div className={selectedFriend ? "border-t border-[var(--accent)]/20 mt-1 pt-1" : ""}>
+                      <button
+                        onClick={() => {
+                          setShowSettingsDropdown(false);
+                          handleDeleteChat();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
+                      >
+                        <span>🗑️</span>
+                        <span>Clear Chat</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Remove Friend */}
+                  {selectedFriend && (
+                    <div className="border-t border-[var(--accent)]/20 mt-1 pt-1">
+                      <button
+                        onClick={() => {
+                          setShowSettingsDropdown(false);
+                          handleRemoveFriend();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
+                      >
+                        <span>👤❌</span>
+                        <span>Remove Friend</span>
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       )}
 
@@ -1029,7 +1180,7 @@ export default function ChatArea() {
           </span>
         </div>
       )}
-      {!loadingMessages ? (
+      {!loadingMessages && (selectedFriend || selectedGroup) ? (
         <div className="flex-1 min-h-0 bg-[var(--background)] p-2 rounded-md shadow-inner space-y-2">
           <div
             ref={chatContainerRef}
@@ -1326,60 +1477,6 @@ export default function ChatArea() {
                 setPreviewVisible(true); // Show in preview
               }}
             />
-
-            {/* Disappearing Messages Timer — only for 1-1 chats */}
-            {selectedFriend && (
-              <div className="relative" ref={timerDropdownRef}>
-                <button
-                  onClick={() => setShowTimerDropdown(!showTimerDropdown)}
-                  className={`flex items-center gap-1 cursor-pointer px-3 py-2 border-1 rounded transition-all ${disappearDuration > 0
-                    ? "border-[var(--accent)] bg-[var(--accent)]/20 text-[var(--accent)]"
-                    : "border-[var(--accent)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
-                    }`}
-                  title="Set disappearing timer"
-                >
-                  <Timer size={16} />
-                  {disappearDuration > 0 && (
-                    <span className="text-xs font-semibold">{disappearDuration}h</span>
-                  )}
-                  <ChevronDown size={12} />
-                </button>
-
-                <AnimatePresence>
-                  {showTimerDropdown && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-[var(--card)] border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[140px] z-50"
-                    >
-                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider">
-                        Auto-delete after
-                      </div>
-                      {DISAPPEAR_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => {
-                            setDisappearDuration(opt.value);
-                            setShowTimerDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
-                            ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
-                            : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
-                            }`}
-                        >
-                          <span>⏱️ {opt.label}</span>
-                          {disappearDuration === opt.value && (
-                            <span className="text-[var(--accent)]">✓</span>
-                          )}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
           </div>
 
           {/* Mobile-only Action Dropdown */}
@@ -1426,32 +1523,6 @@ export default function ChatArea() {
                     <span className="text-sm text-[var(--foreground)]">Record Voice</span>
                   </div>
 
-                  {/* Disappearing Messages Options */}
-                  {selectedFriend && (
-                    <div className="border-t border-[var(--accent)]/20 mt-1.5 pt-1.5">
-                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider flex items-center gap-1">
-                        <Timer size={10} /> Auto-delete messages
-                      </div>
-                      {DISAPPEAR_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => {
-                            setDisappearDuration(opt.value);
-                            setShowActionsDropdown(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
-                            ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
-                            : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
-                            }`}
-                        >
-                          <span>⏱️ {opt.label}</span>
-                          {disappearDuration === opt.value && (
-                            <span className="text-[var(--accent)]">✓</span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -1475,7 +1546,7 @@ export default function ChatArea() {
           {isRecordingVoice ? (
             <div className="flex-1 px-4 py-2 rounded-md bg-rose-500/10 text-rose-500 flex items-center gap-2 animate-pulse font-medium text-sm border border-rose-500/20 select-none">
               <span>🔴</span>
-              <span>Recording Voice Message... Release to preview!</span>
+              <span>Recording...</span>
             </div>
           ) : (
             <textarea

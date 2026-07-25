@@ -171,18 +171,6 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   if (isMobile) {
     return (
       <div className="flex flex-col h-full w-full bg-transparent relative">
-        {!showLeft && (
-          <div className="absolute left-2 top-2 z-50">
-            <button
-              onClick={handleArrowBackClick}
-              className="p-2.5 bg-[var(--accent)] text-white hover:bg-[var(--accent)]/85 transition rounded-full flex items-center justify-center shadow-lg cursor-pointer"
-              title="Back"
-            >
-              <ArrowLeft size={20} />
-            </button>
-          </div>
-        )}
-
         <div className="flex-grow overflow-hidden bg-[var(--background)]">
           {showLeft ? leftComponent : rightComponent}
         </div>

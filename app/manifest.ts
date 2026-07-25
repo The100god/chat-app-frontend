@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Chugli - A real-time chat application",
     start_url: "/",
     display: "standalone",
-    background_color: "#ededed",
-    theme_color: "#0aa38c",
+    background_color: "#9333ea",
+    theme_color: "#9333ea",
     icons: [
       {
         src: "/icon-192.png",
