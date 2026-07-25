@@ -12,6 +12,7 @@ import {
   Friend,
 } from "../states/States";
 import { showToast } from "./Toast";
+import { apiFetch } from "../utils/apiFetch";
 
 export default function UnreadBadgeManager() {
   const { isAuthenticated } = useAuth();
@@ -198,5 +199,95 @@ export default function UnreadBadgeManager() {
     }
   }, [totalUnread, isAuthenticated]);
 
+  // 3. Register Web Push subscription with the backend
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    const registerPush = async () => {
+      if (
+        typeof window === "undefined" ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window)
+      ) {
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (!reg.pushManager) {
+          console.warn("Push manager is not supported on this browser.");
+          return;
+        }
+
+        // Get VAPID public key from env or backend (use env first, fallback to API)
+        let vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) {
+          try {
+            const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            const response = await fetch(`${apiBase}/api/users/vapid-public-key`);
+            const data = await response.json();
+            vapidKey = data.publicKey;
+          } catch (e) {
+            console.error("Failed to fetch VAPID key from backend:", e);
+          }
+        }
+
+        if (!vapidKey) {
+          console.error("VAPID public key is missing.");
+          return;
+        }
+
+        // Only request subscription if permission is granted
+        if (Notification.permission !== "granted") {
+          return;
+        }
+
+        const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
+        
+        let subscription = await reg.pushManager.getSubscription();
+
+        if (!subscription) {
+          // Subscribe the user
+          subscription = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: convertedVapidKey,
+          });
+        }
+
+        // Send the subscription to backend
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+        await apiFetch(`${apiBase}/api/users/subscribe`, {
+          method: "POST",
+          body: JSON.stringify({ subscription }),
+        });
+      } catch (err) {
+        console.error("Error registering Web Push subscription:", err);
+      }
+    };
+
+    // Delay registration slightly to avoid blocking main thread on mount
+    const timeoutId = setTimeout(() => {
+      registerPush();
+    }, 2000);
+
+    return () => clearTimeout(timeoutId);
+  }, [isAuthenticated]);
+
   return null;
+}
+
+// Utility to convert VAPID public key to Uint8Array required by subscribe options
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, "+")
+    .replace(/_/g, "/");
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
