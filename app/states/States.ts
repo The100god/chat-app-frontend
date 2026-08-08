@@ -1,6 +1,7 @@
 "use client";
 import { atom } from "jotai";
 import { Group } from "../components/GroupChatPage";
+import { TogetherRoom, TogetherInvite } from "./togetherTypes";
 
 export interface Message {
   _id?: string;
@@ -57,6 +58,15 @@ export const userAtom = atom<User>({
 });
 
 export const responsiveDeviceAtom = atom<boolean>(true);
+export const activeWorkspaceAtom = atom<"chat" | "together">(
+  typeof window !== "undefined" && localStorage.getItem("activeWorkspace") === "together"
+    ? "together"
+    : "chat"
+);
+export const togetherRoomAtom = atom<TogetherRoom | null>(null);
+export const isAppLockedAtom = atom<boolean>(false);
+export const pendingTogetherInviteAtom = atom<{ roomId: string; roomType?: string } | null>(null);
+export const togetherInvitesAtom = atom<TogetherInvite[]>([]);
 export const updateAvailableAtom = atom<boolean>(false);
 export const userIdAtom = atom<string | null>(null);
 export const messageAtom = atom<Message[]>([]);
