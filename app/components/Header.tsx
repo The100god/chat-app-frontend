@@ -18,6 +18,7 @@ import {
 import { MdLogout } from "react-icons/md";
 import { useAtom } from "jotai";
 import {
+  activeWorkspaceAtom,
   allFriendsAtom,
   findFriendAtom,
   findFriendWithChatAtom,
@@ -32,14 +33,15 @@ import {
   userAtom,
 } from "../states/States";
 import NotificationBell from "./NotificationBell";
+import { Gamepad2, MessageCircle } from "lucide-react";
 
 const Header: React.FC = () => {
   const { isAuthenticated, logout } = useAuth();
-  const [, setFindFriend] = useAtom(findFriendAtom);
-  const [, setFindFriendWithChat] = useAtom(findFriendWithChatAtom);
-  const [, setFriendsRequests] = useAtom(friendsRequestsAtom);
-  const [, setAllFriends] = useAtom(allFriendsAtom);
-  const [, setGroupChatOpen] = useAtom(groupChatOpenAtom);
+  const [findFriend, setFindFriend] = useAtom(findFriendAtom);
+  const [findFriendWithChat, setFindFriendWithChat] = useAtom(findFriendWithChatAtom);
+  const [friendsRequests, setFriendsRequests] = useAtom(friendsRequestsAtom);
+  const [allFriends, setAllFriends] = useAtom(allFriendsAtom);
+  const [groupChatOpen, setGroupChatOpen] = useAtom(groupChatOpenAtom);
   const [friendsCounts] = useAtom(friendsCountsAtom);
   const [, setMessages] = useAtom(messageAtom);
   const [, setLoadingMessages] = useAtom(loadingMessageAtom);
@@ -48,6 +50,13 @@ const Header: React.FC = () => {
   const [updateAvailable] = useAtom(updateAvailableAtom);
   const router = useRouter();
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
+  const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
+
+  const isHomeActive = findFriendWithChat && !findFriend && !friendsRequests && !allFriends && !groupChatOpen;
+  const isFindFriendsActive = findFriend;
+  const isRequestsActive = friendsRequests;
+  const isFriendsActive = allFriends;
+  const isGroupsActive = groupChatOpen;
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -93,7 +102,25 @@ const Header: React.FC = () => {
     setSelectedFriend(null);
     setMenuOpen(false);
     setShowLeft(true);
+    setActiveWorkspace("chat");
     router.push("/");
+  };
+
+  const handleWorkspaceSwitch = (workspace: "chat" | "together") => {
+    setActiveWorkspace(workspace);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("activeWorkspace", workspace);
+    }
+    setMenuOpen(false);
+    if (workspace === "chat") {
+      setFindFriendWithChat(true);
+      setFindFriend(false);
+      setFriendsRequests(false);
+      setAllFriends(false);
+      setGroupChatOpen(false);
+      setShowLeft(true);
+    }
+    router.push(`/?workspace=${workspace}`);
   };
 
   return (
@@ -128,91 +155,158 @@ const Header: React.FC = () => {
         </div>
 
         {/* Center Section */}
-        <div className="w-[60%] flex justify-around gap-2">
-          <div
-            onClick={() =>
-              handleNav(() => {
-                setFindFriendWithChat(true);
-                setFindFriend(false);
-                setFriendsRequests(false);
-                setAllFriends(false);
-                setGroupChatOpen(false);
-              })
-            }
-            className="flex cursor-pointer items-center space-x-2 hover:text-[var(--accent)]"
-          >
-            <FaHome size={24} />
-            <span className="hidden lg:flex md:text-sm">Home</span>
+        <div className="w-[60%] flex justify-around gap-2 items-center">
+          {/* Workspace Switcher Pill */}
+          <div className="flex items-center bg-[var(--muted)] rounded-full p-1 gap-0.5">
+            <button
+              onClick={() => handleWorkspaceSwitch("chat")}
+              aria-label="Switch to Chat workspace"
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer z-10 ${
+                activeWorkspace === "chat"
+                  ? "text-white"
+                  : "text-[var(--foreground)] opacity-60 hover:opacity-100"
+              }`}
+            >
+              {activeWorkspace === "chat" && (
+                <motion.div
+                  layoutId="workspace-pill"
+                  className="absolute inset-0 bg-[var(--accent)] rounded-full"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <MessageCircle size={16} className="relative z-10" />
+              <span className="relative z-10">Chat</span>
+            </button>
+            <button
+              onClick={() => handleWorkspaceSwitch("together")}
+              aria-label="Switch to Together workspace"
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer z-10 ${
+                activeWorkspace === "together"
+                  ? "text-white"
+                  : "text-[var(--foreground)] opacity-60 hover:opacity-100"
+              }`}
+            >
+              {activeWorkspace === "together" && (
+                <motion.div
+                  layoutId="workspace-pill"
+                  className="absolute inset-0 bg-[var(--accent)] rounded-full"
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+              <Gamepad2 size={16} className="relative z-10" />
+              <span className="relative z-10">Together</span>
+            </button>
           </div>
 
-          <div
-            onClick={() =>
-              handleNav(() => {
-                setFindFriend(true);
-                setFindFriendWithChat(false);
-                setFriendsRequests(false);
-                setAllFriends(false);
-                setGroupChatOpen(false);
-              })
-            }
-            className="flex cursor-pointer items-center space-x-2 hover:text-[var(--accent)]"
-          >
-            <FaSearch size={24} />
-            <span className="hidden lg:flex md:text-sm">Find Friends</span>
-          </div>
+          {/* Chat nav items — only visible when Chat workspace is active */}
+          {activeWorkspace === "chat" && (
+            <>
+              <div
+                onClick={() =>
+                  handleNav(() => {
+                    setFindFriendWithChat(true);
+                    setFindFriend(false);
+                    setFriendsRequests(false);
+                    setAllFriends(false);
+                    setGroupChatOpen(false);
+                  })
+                }
+                className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
+                  isHomeActive
+                    ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                    : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)]"
+                }`}
+              >
+                <FaHome size={20} />
+                <span className="hidden lg:flex md:text-sm">Home</span>
+              </div>
 
-          <div
-            onClick={() =>
-              handleNav(() => {
-                setFindFriend(false);
-                setFindFriendWithChat(false);
-                setFriendsRequests(true);
-                setAllFriends(false);
-                setGroupChatOpen(false);
-              })
-            }
-            className="flex relative cursor-pointer items-center space-x-2 hover:text-[var(--accent)]"
-          >
-            <FaBell size={24} />
-            <span className="hidden lg:flex md:text-sm">Requests</span>
-            <div className="absolute top-[-10px] left-8">
-              <NotificationBell />
-            </div>
-          </div>
+              <div
+                onClick={() =>
+                  handleNav(() => {
+                    setFindFriend(true);
+                    setFindFriendWithChat(false);
+                    setFriendsRequests(false);
+                    setAllFriends(false);
+                    setGroupChatOpen(false);
+                  })
+                }
+                className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
+                  isFindFriendsActive
+                    ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                    : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)]"
+                }`}
+              >
+                <FaSearch size={20} />
+                <span className="hidden lg:flex md:text-sm">Find Friends</span>
+              </div>
 
-          <div
-            onClick={() =>
-              handleNav(() => {
-                setAllFriends(true);
-                setFindFriend(false);
-                setFindFriendWithChat(false);
-                setFriendsRequests(false);
-                setGroupChatOpen(false);
-              })
-            }
-            className="flex cursor-pointer items-center space-x-2 hover:text-[var(--accent)]"
-          >
-            <FaUserFriends size={24} />
-            <span className="hidden lg:flex md:text-sm">
-              {friendCount} Friends
-            </span>
-          </div>
+              <div
+                onClick={() =>
+                  handleNav(() => {
+                    setFindFriend(false);
+                    setFindFriendWithChat(false);
+                    setFriendsRequests(true);
+                    setAllFriends(false);
+                    setGroupChatOpen(false);
+                  })
+                }
+                className={`flex relative cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
+                  isRequestsActive
+                    ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                    : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)]"
+                }`}
+              >
+                <FaBell size={20} />
+                <span className="hidden lg:flex md:text-sm">Requests</span>
+                <div className="absolute top-[-10px] left-8">
+                  <NotificationBell />
+                </div>
+              </div>
 
-          <div
-            onClick={() =>
-              handleNav(() => {
-                setGroupChatOpen(true);
-                setFindFriend(false);
-                setFindFriendWithChat(false);
-                setFriendsRequests(false);
-                setAllFriends(false);
-              })
-            }
-            className="flex cursor-pointer items-center space-x-2 hover:text-[var(--accent)]"
-          >
-            <FaUsers size={24} />
-            <span className="hidden lg:flex md:text-sm">Groups</span>
-          </div>
+              <div
+                onClick={() =>
+                  handleNav(() => {
+                    setAllFriends(true);
+                    setFindFriend(false);
+                    setFindFriendWithChat(false);
+                    setFriendsRequests(false);
+                    setGroupChatOpen(false);
+                  })
+                }
+                className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
+                  isFriendsActive
+                    ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                    : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)]"
+                }`}
+              >
+                <FaUserFriends size={20} />
+                <span className="hidden lg:flex md:text-sm">
+                  {friendCount} Friends
+                </span>
+              </div>
+
+              <div
+                onClick={() =>
+                  handleNav(() => {
+                    setGroupChatOpen(true);
+                    setFindFriend(false);
+                    setFindFriendWithChat(false);
+                    setFriendsRequests(false);
+                    setAllFriends(false);
+                  })
+                }
+                className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
+                  isGroupsActive
+                    ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                    : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)]"
+                }`}
+              >
+                <FaUsers size={20} />
+                <span className="hidden lg:flex md:text-sm">Groups</span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Section */}
@@ -308,6 +402,51 @@ const Header: React.FC = () => {
             transition={{ duration: 0.4, ease: "easeInOut" }}
             className="lg:hidden absolute z-1000 w-[87%] m-auto flex flex-col bg-[var(--card)] rounded-xl mt-2 py-3 px-4 space-y-3 shadow-lg overflow-hidden"
           >
+            {/* Workspace Switcher — Option A: top of dropdown */}
+            <div className="flex items-center bg-[var(--muted)] rounded-full p-1 gap-0.5 mb-2">
+              <button
+                onClick={() => handleWorkspaceSwitch("chat")}
+                aria-label="Switch to Chat workspace"
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer z-10 flex-1 justify-center ${
+                  activeWorkspace === "chat"
+                    ? "text-white"
+                    : "text-[var(--foreground)] opacity-60"
+                }`}
+              >
+                {activeWorkspace === "chat" && (
+                  <motion.div
+                    layoutId="workspace-pill-mobile"
+                    className="absolute inset-0 bg-[var(--accent)] rounded-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <MessageCircle size={14} className="relative z-10" />
+                <span className="relative z-10">Chat</span>
+              </button>
+              <button
+                onClick={() => handleWorkspaceSwitch("together")}
+                aria-label="Switch to Together workspace"
+                className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer z-10 flex-1 justify-center ${
+                  activeWorkspace === "together"
+                    ? "text-white"
+                    : "text-[var(--foreground)] opacity-60"
+                }`}
+              >
+                {activeWorkspace === "together" && (
+                  <motion.div
+                    layoutId="workspace-pill-mobile"
+                    className="absolute inset-0 bg-[var(--accent)] rounded-full"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <Gamepad2 size={14} className="relative z-10" />
+                <span className="relative z-10">Together</span>
+              </button>
+            </div>
+
+            {/* Chat nav items — only when Chat workspace active */}
+            {activeWorkspace === "chat" && (
+              <>
             <button
               onClick={() =>
                 handleNav(() => {
@@ -321,7 +460,11 @@ const Header: React.FC = () => {
                   router.push("/");
                 })
               }
-              className="flex items-center space-x-2"
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-all ${
+                isHomeActive
+                  ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                  : "text-[var(--foreground)] opacity-70"
+              }`}
             >
               <FaHome />
               <span>Home</span>
@@ -339,7 +482,11 @@ const Header: React.FC = () => {
                   router.push("/");
                 })
               }
-              className="flex items-center space-x-2"
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-all ${
+                isFindFriendsActive
+                  ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                  : "text-[var(--foreground)] opacity-70"
+              }`}
             >
               <FaSearch />
               <span>Find Friends</span>
@@ -357,7 +504,11 @@ const Header: React.FC = () => {
                   router.push("/");
                 })
               }
-              className="flex items-center space-x-2 relative"
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-all relative ${
+                isRequestsActive
+                  ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                  : "text-[var(--foreground)] opacity-70"
+              }`}
             >
               <FaBell />
               <span>Requests</span>
@@ -378,7 +529,11 @@ const Header: React.FC = () => {
                   router.push("/");
                 })
               }
-              className="flex items-center space-x-2"
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-all ${
+                isFriendsActive
+                  ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                  : "text-[var(--foreground)] opacity-70"
+              }`}
             >
               <FaUserFriends />
               <span>{friendCount} Friends</span>
@@ -396,11 +551,17 @@ const Header: React.FC = () => {
                   router.push("/");
                 })
               }
-              className="flex items-center space-x-2"
+              className={`flex items-center space-x-2 p-2 rounded-lg transition-all ${
+                isGroupsActive
+                  ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
+                  : "text-[var(--foreground)] opacity-70"
+              }`}
             >
               <FaUsers />
               <span>Groups</span>
             </button>
+              </>
+            )}
 
             {isInstallable && (
               <button

@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Lock, Fingerprint, Delete } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSetAtom } from "jotai";
+import { isAppLockedAtom } from "../states/States";
 
 // Helper to hash PIN securely using SHA-256 via Web Crypto API
 export async function hashPin(pin: string): Promise<string> {
@@ -31,9 +33,14 @@ export function isMobilePWA(): boolean {
 
 export default function AppLockWrapper({ children }: { children: React.ReactNode }) {
   const [isLocked, setIsLocked] = useState(false);
+  const setIsAppLocked = useSetAtom(isAppLockedAtom);
   const [pin, setPin] = useState("");
   const [bioAvailable, setBioAvailable] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useEffect(() => {
+    setIsAppLocked(isLocked);
+  }, [isLocked, setIsAppLocked]);
 
   const lastActiveTimeRef = useRef<number>(Date.now());
   const isPwaMobileActive = useRef<boolean>(false);

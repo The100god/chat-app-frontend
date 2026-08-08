@@ -95,7 +95,7 @@ self.addEventListener("push", (event) => {
     icon: data.icon || "/icon-192.png",
     badge: data.badge || "/icon-192.png",
     data: data.data || {},
-    tag: data.tag || "chugli-message",
+    tag: data.tag || "chugli-notification",
     vibrate: [100, 50, 100],
     actions: data.actions || [],
   };
@@ -115,23 +115,38 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Handle notification clicks (focus app or open new tab)
+// Handle notification clicks (redirect to Together or Chat interface)
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
 
-  const chatUrl = "/";
+  const data = event.notification.data || {};
+  const isTogether = data.type === "together_invite" || !!data.roomId;
+
+  const targetUrl = isTogether
+    ? `/?workspace=together${data.roomId ? `&joinRoom=${encodeURIComponent(data.roomId)}` : ""}`
+    : `/?workspace=chat`;
 
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it
       for (const client of clientList) {
-        if (client.url.includes(self.location.origin) && "focus" in client) {
-          return client.focus();
+        if (client.url.includes(self.location.origin)) {
+          // Send message to active window to update state immediately
+          client.postMessage({
+            type: "NAVIGATE_WORKSPACE",
+            workspace: isTogether ? "together" : "chat",
+            roomId: data.roomId,
+          });
+
+          if ("focus" in client) {
+            if ("navigate" in client) {
+              client.navigate(targetUrl);
+            }
+            return client.focus();
+          }
         }
       }
-      // Otherwise, open a new window
       if (self.clients.openWindow) {
-        return self.clients.openWindow(chatUrl);
+        return self.clients.openWindow(targetUrl);
       }
     })
   );
