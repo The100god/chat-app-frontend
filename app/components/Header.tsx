@@ -161,6 +161,7 @@ const Header: React.FC = () => {
             <button
               onClick={() => handleWorkspaceSwitch("chat")}
               aria-label="Switch to Chat workspace"
+              title="Chat Workspace"
               className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer z-10 ${
                 activeWorkspace === "chat"
                   ? "text-white"
@@ -175,11 +176,12 @@ const Header: React.FC = () => {
                 />
               )}
               <MessageCircle size={16} className="relative z-10" />
-              <span className="relative z-10">Chat</span>
+              <span className="relative z-10 hidden sm:inline">Chat</span>
             </button>
             <button
               onClick={() => handleWorkspaceSwitch("together")}
               aria-label="Switch to Together workspace"
+              title="Together Workspace"
               className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 cursor-pointer z-10 ${
                 activeWorkspace === "together"
                   ? "text-white"
@@ -194,7 +196,7 @@ const Header: React.FC = () => {
                 />
               )}
               <Gamepad2 size={16} className="relative z-10" />
-              <span className="relative z-10">Together</span>
+              <span className="relative z-10 hidden sm:inline">Together</span>
             </button>
           </div>
 
@@ -211,6 +213,7 @@ const Header: React.FC = () => {
                     setGroupChatOpen(false);
                   })
                 }
+                title="Home"
                 className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
                   isHomeActive
                     ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
@@ -218,7 +221,7 @@ const Header: React.FC = () => {
                 }`}
               >
                 <FaHome size={20} />
-                <span className="hidden lg:flex md:text-sm">Home</span>
+                <span className="hidden xl:inline text-sm">Home</span>
               </div>
 
               <div
@@ -231,6 +234,7 @@ const Header: React.FC = () => {
                     setGroupChatOpen(false);
                   })
                 }
+                title="Find Friends"
                 className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
                   isFindFriendsActive
                     ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
@@ -238,7 +242,7 @@ const Header: React.FC = () => {
                 }`}
               >
                 <FaSearch size={20} />
-                <span className="hidden lg:flex md:text-sm">Find Friends</span>
+                <span className="hidden xl:inline text-sm">Find Friends</span>
               </div>
 
               <div
@@ -251,6 +255,7 @@ const Header: React.FC = () => {
                     setGroupChatOpen(false);
                   })
                 }
+                title="Requests"
                 className={`flex relative cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
                   isRequestsActive
                     ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
@@ -258,7 +263,7 @@ const Header: React.FC = () => {
                 }`}
               >
                 <FaBell size={20} />
-                <span className="hidden lg:flex md:text-sm">Requests</span>
+                <span className="hidden xl:inline text-sm">Requests</span>
                 <div className="absolute top-[-10px] left-8">
                   <NotificationBell />
                 </div>
@@ -274,6 +279,7 @@ const Header: React.FC = () => {
                     setGroupChatOpen(false);
                   })
                 }
+                title="Friends"
                 className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
                   isFriendsActive
                     ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
@@ -281,7 +287,7 @@ const Header: React.FC = () => {
                 }`}
               >
                 <FaUserFriends size={20} />
-                <span className="hidden lg:flex md:text-sm">
+                <span className="hidden xl:inline text-sm">
                   {friendCount} Friends
                 </span>
               </div>
@@ -296,6 +302,7 @@ const Header: React.FC = () => {
                     setAllFriends(false);
                   })
                 }
+                title="Groups"
                 className={`flex cursor-pointer items-center space-x-2 px-3 py-1.5 rounded-full transition-all ${
                   isGroupsActive
                     ? "text-[var(--accent)] font-bold bg-[var(--accent)]/15"
@@ -303,7 +310,7 @@ const Header: React.FC = () => {
                 }`}
               >
                 <FaUsers size={20} />
-                <span className="hidden lg:flex md:text-sm">Groups</span>
+                <span className="hidden xl:inline text-sm">Groups</span>
               </div>
             </>
           )}
@@ -331,7 +338,7 @@ const Header: React.FC = () => {
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 ></path>
               </svg>
-              <span className="text-sm font-semibold">Install App</span>
+              <span className="text-sm font-semibold hidden sm:inline">Install App</span>
             </button>
           )}
           <Link href="/pages/settings" className="relative hover:text-[var(--accent)]">
@@ -350,16 +357,17 @@ const Header: React.FC = () => {
           <button
             onClick={logout}
             className="flex items-center cursor-pointer space-x-2 bg-red-500 border-2 border-black hover:border-red-800 text-[var(--foreground)] px-3 py-2 rounded-lg hover:bg-red-400"
+            title="Logout"
           >
             <MdLogout size={20} />
-            <span>Logout</span>
+            <span className="hidden sm:inline">Logout</span>
           </button>
         </div>
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden flex items-center justify-between rounded-4xl px-4 py-4 bg-[var(--card)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] glow">
-        <div className="flex items-center space-x-3">
+      <div className="lg:hidden flex items-center justify-between rounded-4xl px-4 py-3 bg-[var(--card)] transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] glow gap-2">
+        <div className="flex items-center space-x-2.5">
           <Link href="/pages/profilePage">
             <Image
               src={profilePic || "/user.jpg"}
@@ -370,7 +378,7 @@ const Header: React.FC = () => {
             />
           </Link>
           <span
-            className="text-xl font-bold text-[var(--accent)]"
+            className="text-lg font-bold text-[var(--accent)] cursor-pointer"
             onClick={() =>
               handleNav(() => {
                 setFindFriendWithChat(true);
@@ -387,8 +395,30 @@ const Header: React.FC = () => {
           </span>
         </div>
 
-        <button onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+        {/* Quick Workspace Switcher Pill for Mobile */}
+        <div className="flex items-center bg-[var(--muted)] rounded-full p-1 gap-0.5">
+          <button
+            onClick={() => handleWorkspaceSwitch("chat")}
+            title="Chat Workspace"
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+              activeWorkspace === "chat" ? "bg-[var(--accent)] text-white shadow" : "text-[var(--foreground)] opacity-60"
+            }`}
+          >
+            <MessageCircle size={16} />
+          </button>
+          <button
+            onClick={() => handleWorkspaceSwitch("together")}
+            title="Together Workspace"
+            className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+              activeWorkspace === "together" ? "bg-[var(--accent)] text-white shadow" : "text-[var(--foreground)] opacity-60"
+            }`}
+          >
+            <Gamepad2 size={16} />
+          </button>
+        </div>
+
+        <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-[var(--foreground)]" title="Toggle Navigation Menu">
+          {menuOpen ? <FaTimes size={22} /> : <FaBars size={22} />}
         </button>
       </div>
 
@@ -407,6 +437,7 @@ const Header: React.FC = () => {
               <button
                 onClick={() => handleWorkspaceSwitch("chat")}
                 aria-label="Switch to Chat workspace"
+                title="Chat Workspace"
                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer z-10 flex-1 justify-center ${
                   activeWorkspace === "chat"
                     ? "text-white"
@@ -421,11 +452,12 @@ const Header: React.FC = () => {
                   />
                 )}
                 <MessageCircle size={14} className="relative z-10" />
-                <span className="relative z-10">Chat</span>
+                <span className="relative z-10 hidden sm:inline">Chat</span>
               </button>
               <button
                 onClick={() => handleWorkspaceSwitch("together")}
                 aria-label="Switch to Together workspace"
+                title="Together Workspace"
                 className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors duration-200 cursor-pointer z-10 flex-1 justify-center ${
                   activeWorkspace === "together"
                     ? "text-white"
@@ -440,7 +472,7 @@ const Header: React.FC = () => {
                   />
                 )}
                 <Gamepad2 size={14} className="relative z-10" />
-                <span className="relative z-10">Together</span>
+                <span className="relative z-10 hidden sm:inline">Together</span>
               </button>
             </div>
 

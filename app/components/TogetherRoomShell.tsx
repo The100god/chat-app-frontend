@@ -113,20 +113,19 @@ const TogetherRoomShell: React.FC = () => {
             <button
               onClick={() => setIsChangingGame(!isChangingGame)}
               className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-xs font-bold transition-colors cursor-pointer"
-              title="Select a new game in this room"
+              title={isChangingGame ? "Resume Current Game" : "Switch Game"}
             >
               <ArrowRightLeft size={13} />
               <span className="hidden sm:inline">{isChangingGame ? "Resume Game" : "Switch Game"}</span>
-              <span className="sm:hidden">{isChangingGame ? "Resume" : "Switch"}</span>
             </button>
           )}
 
           <button
             onClick={handleCopyRoomId}
             className="flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-lg px-2.5 py-1 text-xs transition-colors cursor-pointer"
-            title="Click to copy Room ID"
+            title={`Click to copy Room ID (${room.roomId})`}
           >
-            <span className="font-mono font-medium">{room.roomId}</span>
+            <span className="font-mono font-medium hidden sm:inline">{room.roomId}</span>
             {copied ? <Check size={12} /> : <Copy size={12} className="opacity-70" />}
           </button>
 
@@ -152,15 +151,18 @@ const TogetherRoomShell: React.FC = () => {
                 {room.gameId && (
                   <button
                     onClick={() => setIsChangingGame(false)}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--muted)] hover:bg-[var(--accent)] hover:text-white transition cursor-pointer"
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--muted)] hover:bg-[var(--accent)] hover:text-white transition cursor-pointer flex items-center gap-1"
+                    title="Cancel & Resume Current Game"
                   >
-                    Cancel & Resume Current Game
+                    <X size={14} />
+                    <span className="hidden sm:inline">Cancel & Resume</span>
                   </button>
                 )}
               </div>
               <GameSelector
                 selectedGameId={room.gameId as TogetherGameId | null}
                 userStats={room.sessionStats}
+                currentUserId={userId || undefined}
                 onSelectGame={(newGameId) => {
                   switchGame(newGameId);
                   setIsChangingGame(false);

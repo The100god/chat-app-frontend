@@ -8,6 +8,7 @@ import AppLockWrapper from "./components/AppLockWrapper";
 import UnreadBadgeManager from "./components/UnreadBadgeManager";
 import ToastContainer from "./components/Toast";
 import TogetherInviteToast from "./components/TogetherInviteToast";
+import Footer from "./components/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
             <UnreadBadgeManager />
             <Header />
             {children}
+            <Footer />
             <ToastContainer />
             <TogetherInviteToast />
           </AppLockWrapper>

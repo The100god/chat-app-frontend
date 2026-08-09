@@ -42,7 +42,7 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
   const myScore = scores[currentUserId] || 0;
   const partnerScore = scores[partnerId] || 0;
 
-  const sessionStats: GameStats = room.sessionStats?.[currentUserId] || {
+  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`rps_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -70,9 +70,9 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
   };
 
   const getChoiceEmoji = (choice?: string | null) => {
-    if (choice === "rock") return "🪨";
-    if (choice === "paper") return "📄";
-    if (choice === "scissors") return "✂️";
+    if (choice === "rock") return "✊";
+    if (choice === "paper") return "🤚";
+    if (choice === "scissors") return "✌️";
     return "❓";
   };
 
@@ -82,7 +82,14 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl">✂️🪨</span>
+            <img
+              src="/game-icons/rps.png"
+              alt="Rock Paper Scissors"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-rose-500/10 border border-rose-500/30"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
             <div>
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Rock Paper Scissors
@@ -113,16 +120,18 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
 
         {/* Live Session Stats Badge */}
         <div className="w-full bg-[var(--muted)]/50 rounded-xl py-1 px-2.5 border border-[var(--border)] flex items-center justify-between text-[10px] font-extrabold text-[var(--foreground)]">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <Trophy size={11} /> {sessionStats.wins} Wins
+          <span className="flex items-center gap-1 text-emerald-400" title={`${sessionStats.wins} Wins`}>
+            <Trophy size={12} /> {sessionStats.wins} <span className="hidden sm:inline">Wins</span>
           </span>
-          <span className="flex items-center gap-1 text-rose-400">
-            <XCircle size={11} /> {sessionStats.losses} Losses
+          <span className="flex items-center gap-1 text-rose-400" title={`${sessionStats.losses} Losses`}>
+            <XCircle size={12} /> {sessionStats.losses} <span className="hidden sm:inline">Losses</span>
           </span>
-          <span className="flex items-center gap-1 text-amber-400">
-            <Handshake size={11} /> {sessionStats.ties} Ties
+          <span className="flex items-center gap-1 text-amber-400" title={`${sessionStats.ties} Ties`}>
+            <Handshake size={12} /> {sessionStats.ties} <span className="hidden sm:inline">Ties</span>
           </span>
-          <span className="opacity-60">{sessionStats.total} Total</span>
+          <span className="opacity-60" title={`${sessionStats.total} Total Matches`}>
+            {sessionStats.total} <span className="hidden sm:inline">Total</span>
+          </span>
         </div>
 
         {/* Player Score Counter */}
@@ -146,11 +155,10 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
             <span className="text-xs font-bold text-[var(--foreground)] opacity-70">Your Move</span>
             <motion.div
               animate={{ scale: hasMyChoice ? 1.05 : 1 }}
-              className={`w-20 h-28 rounded-2xl border-2 flex flex-col items-center justify-center text-3xl shadow-lg transition-all ${
-                hasMyChoice
-                  ? "bg-gradient-to-b from-cyan-500/20 to-cyan-500/40 border-cyan-400 text-cyan-300"
-                  : "bg-[var(--muted)] border-dashed border-[var(--border)] text-gray-400"
-              }`}
+              className={`w-20 h-28 rounded-2xl border-2 flex flex-col items-center justify-center text-3xl shadow-lg transition-all ${hasMyChoice
+                ? "bg-gradient-to-b from-cyan-500/20 to-cyan-500/40 border-cyan-400 text-cyan-300"
+                : "bg-[var(--muted)] border-dashed border-[var(--border)] text-gray-400"
+                }`}
             >
               {hasMyChoice ? getChoiceEmoji(myChoice) : "❓"}
             </motion.div>
@@ -163,13 +171,12 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
             <span className="text-xs font-bold text-[var(--foreground)] opacity-70">Partner</span>
             <motion.div
               animate={{ scale: hasPartnerChoice ? 1.05 : 1 }}
-              className={`w-20 h-28 rounded-2xl border-2 flex flex-col items-center justify-center text-3xl shadow-lg transition-all ${
-                status === "round_ended"
-                  ? "bg-gradient-to-b from-rose-500/20 to-rose-500/40 border-rose-400 text-rose-300"
-                  : hasPartnerChoice
+              className={`w-20 h-28 rounded-2xl border-2 flex flex-col items-center justify-center text-3xl shadow-lg transition-all ${status === "round_ended"
+                ? "bg-gradient-to-b from-rose-500/20 to-rose-500/40 border-rose-400 text-rose-300"
+                : hasPartnerChoice
                   ? "bg-purple-500/20 border-purple-400 text-purple-300"
                   : "bg-[var(--muted)] border-dashed border-[var(--border)] text-gray-400"
-              }`}
+                }`}
             >
               {status === "round_ended" ? (
                 getChoiceEmoji(partnerChoice)
@@ -215,16 +222,15 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
       {status !== "round_ended" && (
         <div className="w-full flex items-center justify-center gap-2">
           {[
-            { id: "rock", label: "Rock", icon: "🪨", color: "hover:border-cyan-400" },
-            { id: "paper", label: "Paper", icon: "📄", color: "hover:border-emerald-400" },
-            { id: "scissors", label: "Scissors", icon: "✂️", color: "hover:border-rose-400" },
+            { id: "rock", label: "Rock", icon: "✊", color: "hover:border-cyan-400" },
+            { id: "paper", label: "Paper", icon: "🤚", color: "hover:border-emerald-400" },
+            { id: "scissors", label: "Scissors", icon: "✌️", color: "hover:border-rose-400" },
           ].map((btn) => (
             <button
               key={btn.id}
               onClick={() => handleSelectChoice(btn.id as any)}
-              className={`flex-1 py-3 px-2 rounded-2xl bg-[var(--card)] border border-[var(--border)] ${btn.color} shadow-md flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${
-                myChoice === btn.id ? "ring-2 ring-[var(--accent)] bg-[var(--accent)]/10" : ""
-              }`}
+              className={`flex-1 py-3 px-2 rounded-2xl bg-[var(--card)] border border-[var(--border)] ${btn.color} shadow-md flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${myChoice === btn.id ? "ring-2 ring-[var(--accent)] bg-[var(--accent)]/10" : ""
+                }`}
             >
               <span className="text-2xl">{btn.icon}</span>
               <span className="text-[11px] font-bold text-[var(--foreground)]">{btn.label}</span>
@@ -258,11 +264,10 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
                 comments.map((c) => (
                   <div
                     key={c.id}
-                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${
-                      c.senderId === currentUserId
-                        ? "bg-[var(--accent)] text-white self-end"
-                        : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
-                    }`}
+                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${c.senderId === currentUserId
+                      ? "bg-[var(--accent)] text-white self-end"
+                      : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
+                      }`}
                   >
                     {c.text}
                   </div>

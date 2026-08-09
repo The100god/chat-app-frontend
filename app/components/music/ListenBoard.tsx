@@ -93,11 +93,18 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
   const [customUrl, setCustomUrl] = useState("");
 
   const [commentText, setCommentText] = useState("");
-  const commentsEndRef = useRef<HTMLDivElement | null>(null);
+  const commentsContainerRef = useRef<HTMLDivElement | null>(null);
   const comments = musicState?.comments || [];
+  const prevCommentsLength = useRef(comments.length);
 
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (comments.length > prevCommentsLength.current) {
+      const container = commentsContainerRef.current;
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+    }
+    prevCommentsLength.current = comments.length;
   }, [comments.length]);
 
   const handleSendComment = (textToSend?: string) => {
@@ -400,19 +407,20 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Sync Status Badge */}
-        <div className="w-full flex items-center justify-between">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold">
+        {/* Sync Status Badge & Action */}
+        <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 text-xs font-bold w-full sm:w-auto">
             <Radio size={13} className="animate-pulse" />
-            <span>{musicState?.playing ? "Synced Audio Playing" : "Paused"}</span>
+            <span className="block w-full sm:w-auto">{musicState?.playing ? "Synced Audio Playing" : "Paused"}</span>
           </div>
 
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold shadow hover:opacity-90 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold shadow hover:opacity-90 transition cursor-pointer self-end sm:self-auto"
+            title="Add Track to Queue"
           >
             <Plus size={14} />
-            <span>Add Track</span>
+            <span className="hidden sm:inline">Add Track</span>
           </button>
         </div>
 
@@ -608,7 +616,7 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
         </div>
 
         {/* Comments Stream List */}
-        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+        <div ref={commentsContainerRef} className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
           {comments.length === 0 ? (
             <p className="text-xs text-[var(--foreground)] opacity-50 italic py-2 text-center">
               No live comments yet. React or send a comment while listening!
@@ -627,7 +635,6 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
               </div>
             ))
           )}
-          <div ref={commentsEndRef} />
         </div>
 
         {/* Live Comment Input Box */}

@@ -23,6 +23,7 @@ import {
 import { useAtom, useSetAtom } from "jotai";
 import {
   friendsAtom,
+  userIdAtom,
   isAppLockedAtom,
   pendingTogetherInviteAtom,
 } from "../states/States";
@@ -123,6 +124,7 @@ const TogetherWorkspace: React.FC = () => {
   const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
 
   const [friends] = useAtom(friendsAtom);
+  const [userId] = useAtom(userIdAtom);
   const [isAppLocked] = useAtom(isAppLockedAtom);
   const setPendingInvite = useSetAtom(pendingTogetherInviteAtom);
   const { room, invites, dismissInvite, createRoom, joinRoom } = useTogetherRoom();
@@ -293,7 +295,7 @@ const TogetherWorkspace: React.FC = () => {
         {/* Mobile Tab Bar */}
         {isMobile && (
           <nav
-            className="flex items-center gap-1 px-3 py-2 bg-[var(--card)] border-b border-[var(--border)] overflow-x-auto"
+            className="flex items-center justify-center gap-2 px-3 py-2 bg-[var(--card)] border-b border-[var(--border)] overflow-x-auto no-scrollbar"
             aria-label="Together workspace navigation"
           >
             {sections.map((section) => {
@@ -305,11 +307,12 @@ const TogetherWorkspace: React.FC = () => {
                   onClick={() => setActiveSection(section.id)}
                   aria-label={section.label}
                   aria-current={isActive ? "page" : undefined}
+                  title={section.label}
                   className={`
-                    relative flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium
+                    relative flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium
                     whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0
                     ${isActive
-                      ? "text-white"
+                      ? "text-white shadow-sm"
                       : "text-[var(--foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--muted)]"
                     }
                   `}
@@ -319,8 +322,8 @@ const TogetherWorkspace: React.FC = () => {
                       : undefined
                   }
                 >
-                  <span className="text-sm">{section.emoji}</span>
-                  <span>{section.id === "home" ? "Home" : section.label.split(" ")[0]}</span>
+                  <span className="flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">{section.icon}</span>
+                  <span className="hidden sm:inline">{section.id === "home" ? "Home" : section.label.split(" ")[0]}</span>
                   {hasTypeInvites && (
                     <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                   )}
@@ -355,7 +358,7 @@ const TogetherWorkspace: React.FC = () => {
               >
                 {/* Active Session Banner if in room but viewing another tab */}
                 {room && roomSectionMap[room.type] && (
-                  <div className="w-full bg-gradient-to-r from-[var(--accent)]/20 via-purple-500/20 to-pink-500/20 border border-[var(--accent)]/40 rounded-2xl p-3.5 flex items-center justify-between shadow-md">
+                  <div className="w-full bg-gradient-to-r from-[var(--accent)]/20 via-purple-500/20 to-pink-500/20 border border-[var(--accent)]/40 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
                     <div className="flex items-center gap-2">
                       <Zap size={18} className="text-[var(--accent)] animate-pulse" />
                       <span className="text-xs font-bold text-[var(--foreground)] capitalize">
@@ -364,10 +367,10 @@ const TogetherWorkspace: React.FC = () => {
                     </div>
                     <button
                       onClick={() => setActiveSection(roomSectionMap[room.type])}
-                      className="px-3.5 py-1.5 rounded-xl bg-[var(--accent)] text-white text-xs font-bold shadow hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 rounded-xl bg-[var(--accent)] text-white text-xs font-bold shadow hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1.5 self-end sm:self-auto"
                     >
                       <RotateCcw size={13} />
-                      Return to {sections.find((s) => s.id === roomSectionMap[room.type])?.label || "Session"}
+                      <span>Return to {sections.find((s) => s.id === roomSectionMap[room.type])?.label || "Session"}</span>
                     </button>
                   </div>
                 )}
@@ -452,6 +455,7 @@ const TogetherWorkspace: React.FC = () => {
                   <GameSelector
                     selectedGameId={selectedGameId}
                     userStats={(room as TogetherRoom | null)?.sessionStats}
+                    currentUserId={userId || undefined}
                     onSelectGame={(gameId) => {
                       setSelectedGameId(gameId);
                       setPendingRoomType("game");
@@ -642,7 +646,7 @@ const TogetherWorkspace: React.FC = () => {
             >
               <h3 className="text-lg font-bold text-[var(--foreground)] mb-1 flex items-center gap-2">
                 <LogIn size={20} className="text-[var(--accent)]" />
-                Join / Rejoin Room
+                Join Room
               </h3>
               <p className="text-xs text-[var(--foreground)] opacity-60 mb-4">
                 Rejoin an active room session, or enter a Room ID manually.
@@ -744,11 +748,10 @@ const HomeSection: React.FC<{
 
       <div>
         <h1 className="text-2xl font-bold text-[var(--foreground)] mb-2">
-          Welcome to Together
+          Welcome to Chugli's Together
         </h1>
         <p className="text-sm text-[var(--foreground)] opacity-60 max-w-xs mx-auto">
-          A shared space to play, watch, listen, and connect with the people you
-          love. Pick an activity from the menu to get started!
+          Strengthen your love and relationship bond with Chugli Together. Share your special moments, create beautiful memories, and celebrate your journey together.
         </p>
       </div>
 
@@ -766,7 +769,7 @@ const HomeSection: React.FC<{
           className="relative flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--muted)] text-[var(--foreground)] text-sm font-medium cursor-pointer hover:bg-[var(--border)] transition-colors"
         >
           <LogIn size={16} />
-          Join / Rejoin Room
+          Join Room
           {invitesCount > 0 && (
             <span className="ml-1 px-2 py-0.5 text-[10px] font-extrabold bg-[var(--accent)] text-white rounded-full animate-pulse shadow">
               {invitesCount}
@@ -852,7 +855,7 @@ const ComingSoonCard: React.FC<{
           className="relative flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--muted)] text-[var(--foreground)] text-sm font-medium cursor-pointer hover:bg-[var(--border)] transition-colors"
         >
           <LogIn size={16} />
-          Join / Rejoin
+          Join
           {invitesCount > 0 && (
             <span className="ml-1 px-2 py-0.5 text-[10px] font-extrabold bg-[var(--accent)] text-white rounded-full animate-pulse shadow">
               {invitesCount}

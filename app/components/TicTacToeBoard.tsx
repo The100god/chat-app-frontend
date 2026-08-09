@@ -6,7 +6,7 @@ import { useAtom } from "jotai";
 import { userIdAtom, friendsAtom } from "../states/States";
 import { TogetherRoom, TicTacToeState, TicTacToeComment } from "../states/togetherTypes";
 import { getSocket } from "../hooks/useSocket";
-import { RotateCcw, Trophy, Sparkles, Users, Circle, Send, MessageSquare } from "lucide-react";
+import { RotateCcw, Trophy, Sparkles, Users, Circle, Send, MessageSquare, XCircle, Handshake, LogOut } from "lucide-react";
 
 interface TicTacToeBoardProps {
   room: TogetherRoom;
@@ -24,9 +24,9 @@ const QUICK_REACTIONS = [
 export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
   const [userId] = useAtom(userIdAtom);
   const [friends] = useAtom(friendsAtom);
-  const [hoveredCell, setHoveredCell] = useState<number | null>(null);
   const [commentText, setCommentText] = useState("");
   const [showComments, setShowComments] = useState(true);
+  const [hoveredCell, setHoveredCell] = useState<number | null>(null);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const gameState: TicTacToeState = room.state?.ticTacToe || {
@@ -48,10 +48,26 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
   const playerSymbol = userId === players.X ? "X" : userId === players.O ? "O" : null;
   const isMyTurn = status === "playing" && playerSymbol && currentTurn === playerSymbol;
 
-  // Auto-scroll comments to bottom
+  const sessionStats = (userId && (room.sessionStats?.[`tictactoe_${userId}`] || room.sessionStats?.[userId])) || {
+    wins: 0,
+    losses: 0,
+    ties: 0,
+    total: 0,
+  };
+
+  const commentsContainerRef = useRef<HTMLDivElement | null>(null);
+  const prevCommentsLength = useRef(comments.length);
+
+  // Auto-scroll comments inside container only
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [comments]);
+    if (comments.length > prevCommentsLength.current) {
+      const container = commentsContainerRef.current;
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+    }
+    prevCommentsLength.current = comments.length;
+  }, [comments.length]);
 
   // Helper to resolve player info
   const getPlayerInfo = (pid: string | null | undefined) => {
@@ -113,6 +129,65 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
 
   return (
     <div className="flex flex-col items-center w-full max-w-sm sm:max-w-md mx-auto select-none gap-3">
+      {/* ─── Top Scoreboard & Logo ─── */}
+      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img
+              src="/game-icons/tictactoe.png"
+              alt="Tic-Tac-Toe"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-cyan-500/10 border border-cyan-500/30"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
+            <div>
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+                Tic-Tac-Toe
+              </h2>
+              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "3x3 Match"}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRematch}
+              className="p-1.5 rounded-xl bg-[var(--muted)] hover:bg-[var(--accent)] hover:text-white text-[var(--foreground)] transition cursor-pointer"
+              title="Reset Game"
+            >
+              <RotateCcw size={14} />
+            </button>
+            {onLeave && (
+              <button
+                onClick={onLeave}
+                className="p-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 hover:bg-rose-500 hover:text-white transition cursor-pointer"
+                title="Leave Room"
+              >
+                <LogOut size={14} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Live Session Stats */}
+        <div className="w-full bg-[var(--muted)]/50 rounded-xl py-1 px-2.5 border border-[var(--border)] flex items-center justify-between text-[10px] font-extrabold text-[var(--foreground)]">
+          <span className="flex items-center gap-1 text-emerald-400" title={`${sessionStats.wins} Wins`}>
+            <Trophy size={12} /> {sessionStats.wins} <span className="hidden sm:inline">Wins</span>
+          </span>
+          <span className="flex items-center gap-1 text-rose-400" title={`${sessionStats.losses} Losses`}>
+            <XCircle size={12} /> {sessionStats.losses} <span className="hidden sm:inline">Losses</span>
+          </span>
+          <span className="flex items-center gap-1 text-amber-400" title={`${sessionStats.ties} Ties`}>
+            <Handshake size={12} /> {sessionStats.ties} <span className="hidden sm:inline">Ties</span>
+          </span>
+          <span className="opacity-60" title={`${sessionStats.total} Total Matches`}>
+            {sessionStats.total} <span className="hidden sm:inline">Total</span>
+          </span>
+        </div>
+      </div>
+
       {/* ─── Header / Player Cards ─── */}
       <div className="w-full grid grid-cols-2 gap-2">
         {/* Player X Card */}
@@ -447,7 +522,7 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
           <>
             {/* Comments List */}
             {comments.length > 0 ? (
-              <div className="max-h-24 overflow-y-auto flex flex-col gap-1.5 px-1 py-0.5 scrollbar-thin">
+              <div ref={commentsContainerRef} className="max-h-24 overflow-y-auto flex flex-col gap-1.5 px-1 py-0.5 scrollbar-thin">
                 {comments.map((c: TicTacToeComment) => {
                   const isMe = c.senderId === userId;
                   const senderName = isMe ? "You" : friends.find((f) => f.friendId === c.senderId)?.username || "Partner";
@@ -470,7 +545,6 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
                     </motion.div>
                   );
                 })}
-                <div ref={commentsEndRef} />
               </div>
             ) : (
               <p className="text-[11px] text-[var(--foreground)] opacity-50 text-center py-1 italic">
@@ -523,18 +597,21 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
       <div className="w-full flex items-center justify-center gap-2">
         <button
           onClick={handleRematch}
+          title="Rematch"
           className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-[var(--accent)] to-purple-600 text-white text-xs font-bold shadow-md hover:opacity-90 transition-opacity cursor-pointer"
         >
           <RotateCcw size={14} />
-          Rematch
+          <span className="hidden sm:inline">Rematch</span>
         </button>
 
         {onLeave && (
           <button
             onClick={onLeave}
+            title="Leave Game"
             className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-[var(--muted)] text-[var(--foreground)] text-xs font-medium hover:bg-[var(--border)] transition-colors cursor-pointer"
           >
-            Leave Game
+            <Users size={14} />
+            <span className="hidden sm:inline">Leave Game</span>
           </button>
         )}
       </div>

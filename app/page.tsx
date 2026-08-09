@@ -89,7 +89,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex w-full" style={{ height: "calc(100vh - 112px)" }}>
+    <div className="flex w-full overflow-hidden" style={{ height: "calc(100vh - 84px)" }}>
       {activeWorkspace === "chat" ? (
         <ResizableLayout
           leftComponent={<LeftSection />}

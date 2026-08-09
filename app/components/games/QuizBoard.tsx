@@ -51,7 +51,7 @@ export const QuizBoard: React.FC<QuizBoardProps> = ({
   const mySelectedOption = currentQuestion ? myAnswers[currentQuestionIndex] : undefined;
   const hasAnsweredCurrent = mySelectedOption !== undefined;
 
-  const sessionStats: GameStats = room.sessionStats?.[currentUserId] || {
+  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`quiz_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -201,7 +201,14 @@ export const QuizBoard: React.FC<QuizBoardProps> = ({
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl">💡❓</span>
+            <img
+              src="/game-icons/quiz.png"
+              alt="Trivia Quiz"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-violet-500/10 border border-violet-500/30"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
             <div>
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Trivia & Voice Quiz
@@ -234,16 +241,18 @@ export const QuizBoard: React.FC<QuizBoardProps> = ({
 
         {/* Live Session Stats */}
         <div className="w-full bg-[var(--muted)]/50 rounded-xl py-1 px-2.5 border border-[var(--border)] flex items-center justify-between text-[10px] font-extrabold text-[var(--foreground)]">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <Trophy size={11} /> {sessionStats.wins} Wins
+          <span className="flex items-center gap-1 text-emerald-400" title={`${sessionStats.wins} Wins`}>
+            <Trophy size={12} /> {sessionStats.wins} <span className="hidden sm:inline">Wins</span>
           </span>
-          <span className="flex items-center gap-1 text-rose-400">
-            <XCircle size={11} /> {sessionStats.losses} Losses
+          <span className="flex items-center gap-1 text-rose-400" title={`${sessionStats.losses} Losses`}>
+            <XCircle size={12} /> {sessionStats.losses} <span className="hidden sm:inline">Losses</span>
           </span>
-          <span className="flex items-center gap-1 text-amber-400">
-            <Handshake size={11} /> {sessionStats.ties} Ties
+          <span className="flex items-center gap-1 text-amber-400" title={`${sessionStats.ties} Ties`}>
+            <Handshake size={12} /> {sessionStats.ties} <span className="hidden sm:inline">Ties</span>
           </span>
-          <span className="opacity-60">{sessionStats.total} Total</span>
+          <span className="opacity-60" title={`${sessionStats.total} Total Matches`}>
+            {sessionStats.total} <span className="hidden sm:inline">Total</span>
+          </span>
         </div>
 
         {/* Score Breakdown */}

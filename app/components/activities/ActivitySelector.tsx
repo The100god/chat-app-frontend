@@ -43,33 +43,45 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
     <div className="w-full flex flex-col gap-5">
       {/* ─── Hero Banner Header ─── */}
       <div className="w-full bg-gradient-to-r from-pink-500 via-rose-500 to-purple-600 rounded-3xl p-6 text-white shadow-xl flex flex-col gap-3 relative overflow-hidden">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-col gap-3 justify-center">
           <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-3xl shadow">
             ❤️
           </div>
-          <div>
-            <h2 className="text-xl font-black uppercase tracking-wider">Couple Activities</h2>
-            <p className="text-xs text-white/80 font-medium">
+          <div className="w-full flex justify-center">
+            <h2 className="text-xl font-black text-center uppercase tracking-wider w-full sm:w-auto">Couple Activities</h2>
+            {/* <p className="text-xs text-white/80 font-medium">
               Discover real-time interactive challenges, Would You Rather, Truth or Dare, and Daily Questions!
-            </p>
+            </p> */}
           </div>
         </div>
 
         {/* Filter Badges */}
-        <div className="flex flex-wrap gap-2 pt-2">
-          {["all", "scenario", "turn_based", "comparison", "daily", "categorized"].map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1 rounded-full text-[11px] font-bold capitalize transition cursor-pointer ${
-                filter === f
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+          {[
+            { id: "all", label: "All", icon: Sparkles },
+            { id: "scenario", label: "Scenario", icon: Heart },
+            { id: "turn_based", label: "Turn Based", icon: Flame },
+            { id: "comparison", label: "Comparison", icon: Scale },
+            { id: "daily", label: "Daily", icon: Calendar },
+            { id: "categorized", label: "Categorized", icon: MessageCircle },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isSelected = filter === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setFilter(item.id)}
+                title={item.label}
+                className={`px-3 py-1 rounded-full text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 ${isSelected
                   ? "bg-white text-rose-600 shadow"
                   : "bg-white/10 hover:bg-white/20 text-white"
-              }`}
-            >
-              {f.replace("_", " ")}
-            </button>
-          ))}
+                  }`}
+              >
+                <Icon size={13} />
+                <span className="hidden sm:inline">{item.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -84,11 +96,10 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
               whileHover={{ y: -4, scale: 1.01 }}
               transition={{ duration: 0.2 }}
               onClick={() => onSelectActivity(act.id)}
-              className={`relative rounded-2xl p-5 border cursor-pointer transition shadow-lg flex flex-col justify-between overflow-hidden bg-[var(--card)] ${
-                isSelected
-                  ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/30"
-                  : "border-[var(--border)] hover:border-[var(--accent)]/60"
-              }`}
+              className={`relative rounded-2xl p-5 border cursor-pointer transition shadow-lg flex flex-col justify-between overflow-hidden bg-[var(--card)] ${isSelected
+                ? "border-[var(--accent)] ring-2 ring-[var(--accent)]/30"
+                : "border-[var(--border)] hover:border-[var(--accent)]/60"
+                }`}
             >
               {/* Background Glow */}
               <div
@@ -121,7 +132,7 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
 
               <div className="pt-4 mt-2 border-t border-[var(--border)]/50 flex items-center justify-between relative z-10">
                 <span className="text-[11px] font-bold text-[var(--accent)] flex items-center gap-1">
-                  Start Session
+                  Start
                 </span>
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center text-white shadow"
