@@ -9,13 +9,15 @@ import { GameStats, TogetherGameId } from "../../states/togetherTypes";
 interface GameSelectorProps {
   selectedGameId?: TogetherGameId | null;
   onSelectGame: (gameId: TogetherGameId) => void;
-  userStats?: Record<string, GameStats>; // gameId -> GameStats
+  userStats?: Record<string, GameStats>;
+  currentUserId?: string;
 }
 
 export const GameSelector: React.FC<GameSelectorProps> = ({
   selectedGameId = null,
   onSelectGame,
   userStats = {},
+  currentUserId,
 }) => {
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showStatsDashboard, setShowStatsDashboard] = useState<boolean>(false);
@@ -24,16 +26,31 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
     (g) => filterCategory === "all" || g.category === filterCategory
   );
 
-  // Compute aggregate stats across all games
-  const totalStats = Object.values(userStats).reduce(
-    (acc, curr) => ({
-      wins: acc.wins + (curr?.wins || 0),
-      losses: acc.losses + (curr?.losses || 0),
-      ties: acc.ties + (curr?.ties || 0),
-      total: acc.total + (curr?.total || 0),
-    }),
-    { wins: 0, losses: 0, ties: 0, total: 0 }
-  );
+  const getStatsForGame = (gameId: string): GameStats => {
+    if (currentUserId && userStats[`${gameId}_${currentUserId}`]) {
+      return userStats[`${gameId}_${currentUserId}`];
+    }
+    if (userStats[gameId]) {
+      return userStats[gameId];
+    }
+    return { wins: 0, losses: 0, ties: 0, total: 0 };
+  };
+
+  // Compute aggregate stats across all games for current user or room
+  const totalStats = currentUserId && userStats[currentUserId]
+    ? userStats[currentUserId]
+    : GAMES_REGISTRY.reduce(
+        (acc, g) => {
+          const st = getStatsForGame(g.id);
+          return {
+            wins: acc.wins + st.wins,
+            losses: acc.losses + st.losses,
+            ties: acc.ties + st.ties,
+            total: acc.total + st.total,
+          };
+        },
+        { wins: 0, losses: 0, ties: 0, total: 0 }
+      );
 
   const winRate = totalStats.total > 0 ? Math.round((totalStats.wins / totalStats.total) * 100) : 0;
 
@@ -59,13 +76,14 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
                   setFilterCategory(tab.id);
                   setShowStatsDashboard(false);
                 }}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 whitespace-nowrap ${isActive
+                title={tab.label}
+                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${isActive
                     ? "bg-[var(--accent)] text-white shadow"
                     : "text-[var(--foreground)] opacity-70 hover:opacity-100"
                   }`}
               >
-                <Icon size={12} />
-                <span>{tab.label}</span>
+                <Icon size={14} />
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
           })}
@@ -75,13 +93,14 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
         <button
           type="button"
           onClick={() => setShowStatsDashboard(!showStatsDashboard)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-sm border flex-shrink-0 ${showStatsDashboard
+          title="Game Stats"
+          className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap shadow-sm border flex-shrink-0 ${showStatsDashboard
               ? "bg-gradient-to-r from-amber-500 to-purple-600 text-white border-amber-400"
               : "bg-[var(--card)] border-[var(--border)] text-[var(--foreground)] opacity-80 hover:opacity-100 hover:border-[var(--accent)]"
             }`}
         >
-          <BarChart3 size={13} />
-          <span>{showStatsDashboard ? "Hide Stats" : "📊 Game Stats"}</span>
+          <BarChart3 size={14} />
+          <span className="hidden sm:inline">{showStatsDashboard ? "Hide Stats" : "Game Stats"}</span>
         </button>
       </div>
 
@@ -116,20 +135,32 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
 
             {/* Overall Stats Cards */}
             <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase">Wins</span>
+              <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1" title="Wins">
+                  <Trophy size={12} />
+                  <span className="hidden sm:inline">Wins</span>
+                </span>
                 <p className="text-lg font-black text-emerald-300">{totalStats.wins}</p>
               </div>
-              <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30">
-                <span className="text-[10px] font-bold text-rose-400 uppercase">Losses</span>
+              <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1" title="Losses">
+                  <XCircle size={12} />
+                  <span className="hidden sm:inline">Losses</span>
+                </span>
                 <p className="text-lg font-black text-rose-300">{totalStats.losses}</p>
               </div>
-              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                <span className="text-[10px] font-bold text-amber-400 uppercase">Ties</span>
+              <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-amber-400 uppercase flex items-center gap-1" title="Ties">
+                  <Handshake size={12} />
+                  <span className="hidden sm:inline">Ties</span>
+                </span>
                 <p className="text-lg font-black text-amber-300">{totalStats.ties}</p>
               </div>
-              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30">
-                <span className="text-[10px] font-bold text-purple-400 uppercase">Played</span>
+              <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/30 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-purple-400 uppercase flex items-center gap-1" title="Total Played">
+                  <Gamepad2 size={12} />
+                  <span className="hidden sm:inline">Played</span>
+                </span>
                 <p className="text-lg font-black text-purple-300">{totalStats.total}</p>
               </div>
             </div>
@@ -137,7 +168,7 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
             {/* Individual Game Breakdown */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
               {GAMES_REGISTRY.map((game) => {
-                const st = userStats[game.id] || { wins: 0, losses: 0, ties: 0, total: 0 };
+                const st = getStatsForGame(game.id);
                 return (
                   <div
                     key={game.id}
@@ -147,8 +178,10 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
                       <img src={game.iconPath} alt={game.title} className="w-6 h-6 object-contain" />
                       <div>
                         <h4 className="text-xs font-bold text-[var(--foreground)]">{game.title}</h4>
-                        <p className="text-[10px] text-[var(--foreground)] opacity-60">
-                          {st.wins}W / {st.losses}L / {st.ties}T
+                        <p className="text-[10px] text-[var(--foreground)] opacity-70 flex items-center gap-1.5 font-bold">
+                          <span className="text-emerald-400 flex items-center gap-0.5" title={`${st.wins} Wins`}><Trophy size={10} />{st.wins}<span className="hidden sm:inline">W</span></span>
+                          <span className="text-rose-400 flex items-center gap-0.5" title={`${st.losses} Losses`}><XCircle size={10} />{st.losses}<span className="hidden sm:inline">L</span></span>
+                          <span className="text-amber-400 flex items-center gap-0.5" title={`${st.ties} Ties`}><Handshake size={10} />{st.ties}<span className="hidden sm:inline">T</span></span>
                         </p>
                       </div>
                     </div>
@@ -170,7 +203,7 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
         {filteredGames.map((game: TogetherGameDefinition) => {
           const isSelected = selectedGameId !== null && selectedGameId === game.id;
-          const stats = userStats[game.id] || { wins: 0, losses: 0, ties: 0, total: 0 };
+          const stats = getStatsForGame(game.id);
 
           return (
             <motion.div

@@ -821,14 +821,20 @@ export default function ChatArea() {
     if (!messages || messages.length === 0) return;
 
     const scrollToBottom = (behavior: "smooth" | "auto" = "smooth") => {
-      bottomRef.current?.scrollIntoView({ behavior });
-      // Staggered timeouts to ensure it scrolls down even if images/elements finish layout late
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior });
-      }, 50);
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior });
-      }, 150);
+      const container = chatContainerRef.current;
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior });
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior });
+          }
+        }, 50);
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTo({ top: chatContainerRef.current.scrollHeight, behavior });
+          }
+        }, 150);
+      }
     };
 
     if (shouldScroll.current) {

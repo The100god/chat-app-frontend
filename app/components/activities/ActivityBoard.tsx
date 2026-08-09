@@ -257,7 +257,7 @@ export const ActivityBoard: React.FC<ActivityBoardProps> = ({
   return (
     <div className="w-full flex flex-col gap-4 max-w-2xl mx-auto p-2">
       {/* ─── Top Header Bar ─── */}
-      <div className="w-full flex items-center justify-between p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-md">
+      <div className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-md">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl">{activeDefinition.icon}</span>
           <div>
@@ -271,11 +271,11 @@ export const ActivityBoard: React.FC<ActivityBoardProps> = ({
         </div>
 
         {/* Activity Switcher Dropdown */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto justify-end">
           <select
             value={currentActivityId}
             onChange={(e) => handleSwitchActivity(e.target.value as TogetherActivityId)}
-            className="py-1.5 px-3 rounded-xl bg-[var(--muted)] border border-[var(--border)] text-xs font-bold text-[var(--foreground)] cursor-pointer outline-none"
+            className="py-1.5 px-3 rounded-xl bg-[var(--muted)] border border-[var(--border)] text-xs font-bold text-[var(--foreground)] cursor-pointer outline-none max-w-[200px] truncate"
           >
             {ACTIVITIES_REGISTRY.map((a) => (
               <option key={a.id} value={a.id}>
@@ -286,7 +286,7 @@ export const ActivityBoard: React.FC<ActivityBoardProps> = ({
 
           <button
             onClick={onLeaveRoom}
-            className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition cursor-pointer"
+            className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white transition cursor-pointer flex-shrink-0"
             title="Leave Activity Room"
           >
             <LogOut size={16} />

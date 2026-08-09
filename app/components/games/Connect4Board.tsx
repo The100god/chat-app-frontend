@@ -38,7 +38,7 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
   const playerSymbol = currentUserId === players.R ? "R" : currentUserId === players.Y ? "Y" : null;
   const isMyTurn = status === "playing" && currentTurn === playerSymbol;
 
-  const sessionStats: GameStats = room.sessionStats?.[currentUserId] || {
+  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`connect4_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -80,7 +80,14 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xl">🔴🟡</span>
+            <img
+              src="/game-icons/connect4.png"
+              alt="Connect 4"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-amber-500/10 border border-amber-500/30"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
             <div>
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Connect 4
@@ -111,16 +118,18 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
 
         {/* Live Session Stats */}
         <div className="w-full bg-[var(--muted)]/50 rounded-xl py-1 px-2.5 border border-[var(--border)] flex items-center justify-between text-[10px] font-extrabold text-[var(--foreground)]">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <Trophy size={11} /> {sessionStats.wins} Wins
+          <span className="flex items-center gap-1 text-emerald-400" title={`${sessionStats.wins} Wins`}>
+            <Trophy size={12} /> {sessionStats.wins} <span className="hidden sm:inline">Wins</span>
           </span>
-          <span className="flex items-center gap-1 text-rose-400">
-            <XCircle size={11} /> {sessionStats.losses} Losses
+          <span className="flex items-center gap-1 text-rose-400" title={`${sessionStats.losses} Losses`}>
+            <XCircle size={12} /> {sessionStats.losses} <span className="hidden sm:inline">Losses</span>
           </span>
-          <span className="flex items-center gap-1 text-amber-400">
-            <Handshake size={11} /> {sessionStats.ties} Ties
+          <span className="flex items-center gap-1 text-amber-400" title={`${sessionStats.ties} Ties`}>
+            <Handshake size={12} /> {sessionStats.ties} <span className="hidden sm:inline">Ties</span>
           </span>
-          <span className="opacity-60">{sessionStats.total} Total</span>
+          <span className="opacity-60" title={`${sessionStats.total} Total Matches`}>
+            {sessionStats.total} <span className="hidden sm:inline">Total</span>
+          </span>
         </div>
       </div>
 
@@ -154,13 +163,13 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
             {/* Current Selected Roles Preview */}
             <div className="grid grid-cols-2 gap-2 w-full">
               <div className="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 flex flex-col items-center text-center">
-                <span className="text-[10px] font-bold text-rose-400 uppercase">🔴 Red Token (1st Turn)</span>
+                <span className="text-[10px] font-bold text-rose-400 uppercase">🔴 Red</span>
                 <span className="text-xs font-black text-rose-300 mt-0.5">
                   {players.R === currentUserId ? "You 👤" : "Partner 👥"}
                 </span>
               </div>
               <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col items-center text-center">
-                <span className="text-[10px] font-bold text-amber-400 uppercase">🟡 Yellow Token (2nd Turn)</span>
+                <span className="text-[10px] font-bold text-amber-400 uppercase">🟡 Yellow</span>
                 <span className="text-xs font-black text-amber-300 mt-0.5">
                   {players.Y === currentUserId ? "You 👤" : "Partner 👥"}
                 </span>
@@ -170,21 +179,19 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
             <div className="flex items-center gap-2 w-full">
               <button
                 onClick={() => handleSelectFirstPlayer(currentUserId)}
-                className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  players.R === currentUserId
-                    ? "bg-rose-500 text-white border-rose-400 shadow-md ring-2 ring-rose-400/50"
-                    : "bg-[var(--muted)] text-[var(--foreground)] opacity-70 hover:opacity-100"
-                }`}
+                className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${players.R === currentUserId
+                  ? "bg-rose-500 text-white border-rose-400 shadow-md ring-2 ring-rose-400/50"
+                  : "bg-[var(--muted)] text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  }`}
               >
                 🔴 You Play 1st
               </button>
               <button
                 onClick={() => handleSelectFirstPlayer(partnerId)}
-                className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                  players.R === partnerId
-                    ? "bg-rose-500 text-white border-rose-400 shadow-md ring-2 ring-rose-400/50"
-                    : "bg-[var(--muted)] text-[var(--foreground)] opacity-70 hover:opacity-100"
-                }`}
+                className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold border transition cursor-pointer flex items-center justify-center gap-1.5 ${players.R === partnerId
+                  ? "bg-rose-500 text-white border-rose-400 shadow-md ring-2 ring-rose-400/50"
+                  : "bg-[var(--muted)] text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  }`}
               >
                 🔴 Partner Plays 1st
               </button>
@@ -204,15 +211,14 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
       {(status === "playing" || status === "finished") && (
         <div className="w-full grid grid-cols-2 gap-2 max-w-[380px] sm:max-w-[440px]">
           {/* You */}
-          <div className={`p-2 rounded-xl border flex items-center gap-2 transition ${
-            isMyTurn
-              ? "bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/50 shadow-md"
-              : "bg-[var(--card)] border-[var(--border)] opacity-70"
-          }`}>
+          <div className={`p-2 rounded-xl border flex items-center gap-2 transition ${isMyTurn
+            ? "bg-emerald-500/15 border-emerald-400 ring-2 ring-emerald-400/50 shadow-md"
+            : "bg-[var(--card)] border-[var(--border)] opacity-70"
+            }`}>
             <span className="text-xl">{playerSymbol === "R" ? "🔴" : "🟡"}</span>
             <div className="flex flex-col text-left">
               <span className="text-[11px] font-black text-[var(--foreground)]">
-                You ({playerSymbol === "R" ? "Red - 1st" : "Yellow - 2nd"})
+                You ({playerSymbol === "R" ? "1st" : "2nd"})
               </span>
               <span className={`text-[10px] font-bold ${isMyTurn ? "text-emerald-400 animate-pulse" : "text-[var(--foreground)] opacity-50"}`}>
                 {isMyTurn ? "👉 YOUR TURN!" : "Waiting..."}
@@ -221,15 +227,14 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
           </div>
 
           {/* Partner */}
-          <div className={`p-2 rounded-xl border flex items-center gap-2 transition ${
-            !isMyTurn && status === "playing"
-              ? "bg-purple-500/15 border-purple-400 ring-2 ring-purple-400/50 shadow-md"
-              : "bg-[var(--card)] border-[var(--border)] opacity-70"
-          }`}>
+          <div className={`p-2 rounded-xl border flex items-center gap-2 transition ${!isMyTurn && status === "playing"
+            ? "bg-purple-500/15 border-purple-400 ring-2 ring-purple-400/50 shadow-md"
+            : "bg-[var(--card)] border-[var(--border)] opacity-70"
+            }`}>
             <span className="text-xl">{playerSymbol === "R" ? "🟡" : "🔴"}</span>
             <div className="flex flex-col text-left">
               <span className="text-[11px] font-black text-[var(--foreground)]">
-                Partner ({playerSymbol === "R" ? "Yellow - 2nd" : "Red - 1st"})
+                Partner ({playerSymbol === "R" ? "2nd" : "1st"})
               </span>
               <span className={`text-[10px] font-bold ${!isMyTurn && status === "playing" ? "text-purple-400 animate-pulse" : "text-[var(--foreground)] opacity-50"}`}>
                 {!isMyTurn && status === "playing" ? "👉 PARTNER'S TURN" : "Waiting..."}
@@ -251,11 +256,10 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
                 onClick={() => handleDropToken(colIdx)}
                 onMouseEnter={() => setHoveredCol(colIdx)}
                 onMouseLeave={() => setHoveredCol(null)}
-                className={`h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer ${
-                  isMyTurn
-                    ? "bg-[var(--accent)]/20 hover:bg-[var(--accent)] text-white shadow-sm"
-                    : "opacity-30 cursor-not-allowed bg-[var(--muted)]"
-                }`}
+                className={`h-7 rounded-lg transition-all flex items-center justify-center cursor-pointer ${isMyTurn
+                  ? "bg-[var(--accent)]/20 hover:bg-[var(--accent)] text-white shadow-sm"
+                  : "opacity-30 cursor-not-allowed bg-[var(--muted)]"
+                  }`}
               >
                 <span className="text-[10px] font-bold">⬇️</span>
               </button>
@@ -278,11 +282,10 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
                         initial={{ y: -60, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                        className={`w-full h-full rounded-full shadow-inner ${
-                          cell === "R"
-                            ? "bg-gradient-to-tr from-rose-600 via-rose-500 to-pink-400 border border-rose-300"
-                            : "bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-300 border border-yellow-200"
-                        } ${isWinning ? "ring-4 ring-white animate-pulse" : ""}`}
+                        className={`w-full h-full rounded-full shadow-inner ${cell === "R"
+                          ? "bg-gradient-to-tr from-rose-600 via-rose-500 to-pink-400 border border-rose-300"
+                          : "bg-gradient-to-tr from-amber-500 via-yellow-400 to-amber-300 border border-yellow-200"
+                          } ${isWinning ? "ring-4 ring-white animate-pulse" : ""}`}
                       />
                     )}
                   </div>
@@ -373,11 +376,10 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
                 comments.map((c) => (
                   <div
                     key={c.id}
-                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${
-                      c.senderId === currentUserId
-                        ? "bg-[var(--accent)] text-white self-end"
-                        : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
-                    }`}
+                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${c.senderId === currentUserId
+                      ? "bg-[var(--accent)] text-white self-end"
+                      : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
+                      }`}
                   >
                     {c.text}
                   </div>

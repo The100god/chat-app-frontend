@@ -23,6 +23,8 @@ import {
   MessageSquare,
   Send,
   Loader2,
+  RotateCw,
+  Smartphone,
 } from "lucide-react";
 
 interface WatchBoardProps {
@@ -102,12 +104,44 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
 
+  const [isRotated, setIsRotated] = useState(false);
+
+  const handleToggleRotate = async () => {
+    const nextRotated = !isRotated;
+    setIsRotated(nextRotated);
+
+    if (typeof window !== "undefined" && window.screen && (window.screen as any).orientation) {
+      try {
+        if (nextRotated) {
+          if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            await document.documentElement.requestFullscreen().catch(() => {});
+          }
+          await ((window.screen as any).orientation as any).lock("landscape").catch(() => {});
+        } else {
+          if (document.exitFullscreen && document.fullscreenElement) {
+            await document.exitFullscreen().catch(() => {});
+          }
+          await ((window.screen as any).orientation as any).unlock().catch(() => {});
+        }
+      } catch (err) {
+        console.log("Native screen orientation lock not supported, using visual rotated view");
+      }
+    }
+  };
+
   const [commentText, setCommentText] = useState("");
-  const commentsEndRef = useRef<HTMLDivElement | null>(null);
+  const commentsContainerRef = useRef<HTMLDivElement | null>(null);
   const comments = watchState?.comments || [];
+  const prevCommentsLength = useRef(comments.length);
 
   useEffect(() => {
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (comments.length > prevCommentsLength.current) {
+      const container = commentsContainerRef.current;
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+      }
+    }
+    prevCommentsLength.current = comments.length;
   }, [comments.length]);
 
   const handleSendComment = (textToSend?: string) => {
@@ -366,22 +400,22 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Video Header & Status Bar */}
-      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-xl flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0 w-full sm:w-auto">
           <div className="w-9 h-9 rounded-xl bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0">
             <Film size={20} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h3 className="text-sm font-extrabold text-[var(--foreground)] truncate flex items-center gap-2">
-              <span>{watchState?.mediaTitle || "Select a Video"}</span>
+              <span className="truncate">{watchState?.mediaTitle || "Select a Video"}</span>
             </h3>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-400">
                 <Radio size={12} className="animate-pulse" />
                 {watchState?.playing ? "Playing Synced" : "Paused"}
               </span>
               {syncNotice && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 animate-pulse">
+                <span className="w-full sm:w-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 animate-pulse block">
                   {syncNotice}
                 </span>
               )}
@@ -389,27 +423,49 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
           </div>
         </div>
 
-        {/* Top Control Buttons */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Top Control Buttons (Icons only on mobile) */}
+        <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+          <button
+            onClick={handleToggleRotate}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold shadow transition cursor-pointer ${
+              isRotated
+                ? "bg-red-500/20 border-red-500 text-red-400"
+                : "bg-[var(--muted)] border-[var(--border)] text-[var(--foreground)] hover:border-red-500/40"
+            }`}
+            title="Rotate Screen orientation"
+          >
+            <RotateCw size={14} className={isRotated ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">{isRotated ? "Portrait" : "Rotate Screen"}</span>
+          </button>
+
           <button
             onClick={handlePlayToggle}
             className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold shadow transition cursor-pointer"
+            title={watchState?.playing ? "Pause Sync" : "Play Sync"}
           >
             {watchState?.playing ? <Pause size={14} /> : <Play size={14} />}
-            <span>{watchState?.playing ? "Pause Sync" : "Play Sync"}</span>
+            <span className="hidden sm:inline">{watchState?.playing ? "Pause Sync" : "Play Sync"}</span>
           </button>
+
           <button
             onClick={() => setShowMediaModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-500 to-orange-600 text-white text-xs font-bold shadow hover:opacity-90 transition cursor-pointer"
+            title="Change Video Source"
           >
             <Tv size={14} />
-            <span>Change Video</span>
+            <span className="hidden sm:inline">Change Video</span>
           </button>
         </div>
       </div>
 
       {/* Main Video Viewport Container */}
-      <div className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-[var(--border)] group">
+      <div
+        className={`relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-[var(--border)] group ${
+          isRotated
+            ? "fixed inset-0 z-50 w-screen h-screen rounded-none flex items-center justify-center bg-black aspect-none"
+            : ""
+        }`}
+      >
         {/* Cloudinary Upload Loader Overlay */}
         <AnimatePresence>
           {isUploading && (
@@ -458,7 +514,6 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
               setSyncNotice("Error playing video file. Format or codec may be unsupported.");
             }}
             preload="auto"
-            controls
             playsInline
             className="w-full h-full object-contain"
           />
@@ -476,6 +531,16 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
               Choose Video Now 🎬
             </button>
           </div>
+        )}
+
+        {/* Floating Rotation Reset Toggle (When in rotated mode) */}
+        {isRotated && (
+          <button
+            onClick={handleToggleRotate}
+            className="absolute top-4 right-4 z-50 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-black shadow-2xl flex items-center gap-1.5 hover:bg-red-700 transition"
+          >
+            <RotateCcw size={14} /> Exit Rotate View
+          </button>
         )}
 
         {/* Central Play Overlay when Paused (Native HTML5 Video) */}
@@ -542,10 +607,19 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
 
               <div className="flex items-center gap-2 text-white">
                 {isHost && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 hidden sm:flex items-center gap-1">
                     <Crown size={10} /> Host Control
                   </span>
                 )}
+
+                <button
+                  onClick={handleToggleRotate}
+                  className="p-1.5 hover:text-red-400 transition cursor-pointer"
+                  title="Rotate Screen"
+                >
+                  <RotateCw size={18} className={isRotated ? "text-red-400" : ""} />
+                </button>
+
                 <button
                   onClick={handleFullscreen}
                   className="p-1.5 hover:text-red-400 transition cursor-pointer"
@@ -584,7 +658,7 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
         </div>
 
         {/* Comments Stream List */}
-        <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+        <div ref={commentsContainerRef} className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
           {comments.length === 0 ? (
             <p className="text-xs text-[var(--foreground)] opacity-50 italic py-2 text-center">
               No live comments yet. React or send a comment while watching!
@@ -603,7 +677,6 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
               </div>
             ))
           )}
-          <div ref={commentsEndRef} />
         </div>
 
         {/* Live Comment Input Box */}
