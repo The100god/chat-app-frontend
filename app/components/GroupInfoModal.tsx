@@ -33,7 +33,7 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (selectedGroup) {
       setGroupName(selectedGroup.groupName);
-      setDescription(selectedGroup.description || "Hey there! We are using Chugli 💬");
+      setDescription(selectedGroup.description || "Hey there! We are using Chugli.");
       setGroupProfilePic(selectedGroup.groupProfilePic);
     }
   }, [selectedGroup]);
@@ -348,7 +348,7 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
                     />
                   ) : (
                     <p className="text-sm text-[var(--foreground)]/80 bg-[var(--accent)]/5 p-4 rounded-xl border border-[var(--accent)]/10 italic">
-                      {selectedGroup.description || "Hey there! We are using Chugli 💬"}
+                      {selectedGroup.description || "Hey there! We are using Chugli."}
                     </p>
                   )}
                 </div>

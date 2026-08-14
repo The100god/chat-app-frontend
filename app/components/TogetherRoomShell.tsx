@@ -31,6 +31,7 @@ import { ActivityBoard } from "./activities/ActivityBoard";
 import { WatchBoard } from "./watch/WatchBoard";
 import { ListenBoard } from "./music/ListenBoard";
 import { GameSelector } from "./games/GameSelector";
+import { TogetherChatBox, TogetherComment } from "./TogetherChatBox";
 
 import { getGameDefinition } from "./games/registry";
 
@@ -82,6 +83,52 @@ const TogetherRoomShell: React.FC = () => {
     if (pid === userId) return "You";
     const friend = friends.find((f) => f.friendId === pid);
     return friend?.username || "User";
+  };
+
+  const getRoomComments = (): TogetherComment[] => {
+    const c =
+      room.type === "game"
+        ? (room.state.ticTacToe?.comments ||
+           room.state.rps?.comments ||
+           room.state.connect4?.comments ||
+           room.state.memoryMatch?.comments ||
+           room.state.drawing?.comments ||
+           room.state.quiz?.comments ||
+           room.state.comments)
+        : room.type === "activity"
+        ? (room.state.activity?.comments || room.state.comments)
+        : room.state.comments;
+
+    return Array.isArray(c) ? (c as TogetherComment[]) : [];
+  };
+
+  const handleRoomSendComment = (text: string) => {
+    if (room.type === "game" && room.gameId) {
+      emit("together:game:comment", {
+        roomId: room.roomId,
+        gameId: room.gameId,
+        text,
+        username: userId === room.hostId ? "Host" : "Partner",
+      });
+    } else if (room.type === "activity") {
+      emit("together:activity:comment", {
+        roomId: room.roomId,
+        text,
+        username: userId === room.hostId ? "Host" : "Partner",
+      });
+    } else {
+      const existing = getRoomComments();
+      const newComment = {
+        id: `c-${Date.now()}`,
+        username: userId === room.hostId ? "Host" : "Partner",
+        text,
+        timestamp: Date.now(),
+      };
+      emit("together:update", {
+        roomId: room.roomId,
+        patch: { comments: [...existing, newComment] },
+      });
+    }
   };
 
   return (
@@ -246,6 +293,20 @@ const TogetherRoomShell: React.FC = () => {
           currentUserId={userId || ""}
           onEmit={emit}
           onLeaveRoom={leaveRoom}
+        />
+      )}
+
+      {/* Room Live WhatsApp Chat for Games & Activities */}
+      {(room.type === "game" || room.type === "activity") && (
+        <TogetherChatBox
+          comments={getRoomComments()}
+          currentUserId={userId || ""}
+          hostId={room.hostId}
+          onSendMessage={handleRoomSendComment}
+          title={`${room.type === "game" ? "Game" : "Activity"} Room Live Chat`}
+          accentColor={room.type === "game" ? "#8b5cf6" : "#ec4899"}
+          collapsible={true}
+          defaultExpanded={true}
         />
       )}
 

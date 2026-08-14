@@ -13,6 +13,8 @@ import {
 } from "../states/States";
 import { useAtom } from "jotai";
 
+import { MessageSquare } from "lucide-react";
+
 interface Friend {
   friendId: string;
   username: string;
@@ -26,20 +28,18 @@ interface FriendsListProps {
 }
 
 const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
-  const [, setSelectedFriend] = useAtom(selectedFriendAtom);
+  const [selectedFriend, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [friends, setFriends] = useAtom(friendsAtom);
   const [, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [userId] = useAtom(userIdAtom);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
-  // ✅ import and use atoms for find friend redirection
   const [, setFindFriend] = useAtom(findFriendAtom);
   const [, setFindFriendWithChat] = useAtom(findFriendWithChatAtom);
   const safeFriends = Array.isArray(friends) ? friends : [];
-  // 🔁 Automatically redirect new users to “Find Friend”
+
   useEffect(() => {
     if (!loading && friends.length === 0) {
-      // console.log("🟢 No friends found. Redirecting to Find Friend...");
       setFindFriend(true);
       setFindFriendWithChat(false);
     }
@@ -49,9 +49,6 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
     setSelectedFriend(friend);
     setShowLeft(false);
 
-    // Sync to backend and mark messages as read
-    // const userId = localStorage.getItem("userId");
-    // console.log("ids");
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/mark-read`, {
         method: "PUT",
@@ -62,7 +59,6 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
       });
     }
 
-    // Update global state to reset unread count
     setFriends((prev) =>
       prev.map((f) =>
         f.friendId === friend.friendId ? { ...f, unreadMessagesCount: 0 } : f
@@ -72,52 +68,86 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
   };
 
   return (
-    <div className="p-4 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
-      {loading ? (
-        <ScaleTN rows={5} />
-      ) : safeFriends.length < 1 ? (
-        <div className="text-center mt-10 text-[var(--foreground)]/70">
-          <p>No friends found 🫠</p>
-          <p className="text-sm mt-2">Redirecting to Find Friends...</p>
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {safeFriends && safeFriends.map((friend) => (
-            <li
-              key={friend?.friendId}
-              onClick={() => handleSelectFriend(friend)}
-              className="flex items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 p-2 rounded-xl cursor-pointer transition duration-200 border border-[var(--foreground)] hover:border-[var(--accent)]"
-            >
-              <Image
-                src={friend?.profilePic || "/default-profile-pic.jpg"}
-                alt={friend?.username || "Friend profile picture"}
-                className="w-12 h-12 rounded-full border-2 border-[var(--accent)] mr-4 object-cover"
-                width={48}
-                height={48}
-              />
-              <div className="flex-1">
-                <p
-                  className={`text-sm ${friend?.unreadMessagesCount > 0
-                      ? "font-bold text-[var(--foreground)]"
-                      : "font-medium text-[var(--foreground)]"
+    <div className="bg-[var(--card)] text-[var(--foreground)] h-full w-full rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-xs">
+      {/* Header bar for conversation list */}
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
+        <h2 className="text-base font-bold tracking-tight text-[var(--foreground)]">Chats</h2>
+        {/* <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] font-semibold">
+          {safeFriends.length} contacts
+        </span> */}
+      </div>
+
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+        {loading ? (
+          <ScaleTN rows={5} />
+        ) : safeFriends.length < 1 ? (
+          <div className="text-center py-12 px-4 text-[var(--foreground)]/70">
+            <MessageSquare className="w-8 h-8 opacity-40 mx-auto mb-2 text-[var(--accent)]" />
+            <p className="font-semibold text-sm">No chats started yet</p>
+            <p className="text-xs opacity-60 mt-1">Redirecting to Find Friends...</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-[var(--border)]/40">
+            {safeFriends && safeFriends.map((friend) => {
+              const isSelected = selectedFriend?.friendId === friend?.friendId;
+              const hasUnread = (friend?.unreadMessagesCount || 0) > 0;
+
+              return (
+                <li
+                  key={friend?.friendId}
+                  onClick={() => handleSelectFriend(friend)}
+                  className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${isSelected
+                      ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
+                      : "hover:bg-[var(--muted)]"
                     }`}
                 >
-                  {friend.username}
-                </p>
-                <div className="flex items-center text-xs mt-1">
-                  {friend?.unreadMessagesCount > 0 ? (
-                    <span className="bg-green-600 text-white px-2 py-0.5 rounded-full">
-                      {friend?.unreadMessagesCount} unread
-                    </span>
-                  ) : (
-                    <span className="text-[var(--foreground)]/50">No unread messages</span>
-                  )}
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                  {/* WhatsApp Profile Avatar */}
+                  <div className="relative mr-3.5 flex-shrink-0">
+                    <Image
+                      src={friend?.profilePic || "/default-profile-pic.jpg"}
+                      alt={friend?.username || "Friend profile picture"}
+                      className="w-12 h-12 rounded-full border border-[var(--border)] object-cover shadow-2xs"
+                      width={48}
+                      height={48}
+                    />
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-[var(--card)] rounded-full"></span>
+                  </div>
+
+                  {/* Chat Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <p
+                        className={`text-sm truncate ${hasUnread || isSelected
+                            ? "font-bold text-[var(--foreground)]"
+                            : "font-medium text-[var(--foreground)]"
+                          }`}
+                      >
+                        {friend.username}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-[var(--foreground)]/60">
+                      <p className="truncate text-xs opacity-75 max-w-[180px]">
+                        {hasUnread ? (
+                          <span className="text-[var(--accent)] font-semibold">New message</span>
+                        ) : (
+                          "Tap to chat"
+                        )}
+                      </p>
+
+                      {hasUnread && (
+                        <span className="bg-[var(--accent)] text-white text-[11px] font-bold rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center shadow-2xs ml-2 flex-shrink-0">
+                          {friend?.unreadMessagesCount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
     </div>
   );
 };

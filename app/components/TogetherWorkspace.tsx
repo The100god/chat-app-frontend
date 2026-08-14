@@ -116,7 +116,6 @@ const TogetherWorkspace: React.FC = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState("");
-
   // Create & Invite state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [pendingRoomType, setPendingRoomType] = useState<TogetherRoomType>("game");
@@ -229,104 +228,129 @@ const TogetherWorkspace: React.FC = () => {
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--background)]">
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar (Matches exact Chats Left Section UI) */}
       {!isMobile && (
         <nav
-          className="flex flex-col w-[260px] min-w-[220px] bg-[var(--card)] border-r border-[var(--border)] p-4 gap-1"
+          className="w-[340px] min-w-[280px] max-w-[360px] p-4 flex flex-col h-full flex-shrink-0 select-none"
           aria-label="Together workspace navigation"
         >
-          <div className="flex items-center gap-2 px-3 py-3 mb-4">
-            <Sparkles size={22} className="text-[var(--accent)]" />
-            <h2 className="text-lg font-bold text-[var(--foreground)]">
-              Together
-            </h2>
-          </div>
+          <div className="bg-[var(--card)] text-[var(--foreground)] mb-2 h-full w-full rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-xs">
+            {/* Header bar */}
+            <div className="px-4 py-3.5 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
+              <h2 className="text-base font-bold tracking-tight text-[var(--foreground)]">
+                Together
+              </h2>
+            </div>
 
-          {sections.map((section) => {
-            const isActive = activeSection === section.id;
-            return (
+            {/* Activities / Sections List */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
+              <ul className="divide-y divide-[var(--border)]/40">
+                {sections.map((section) => {
+                  const isActive = activeSection === section.id;
+                  const inviteCount = invites.filter((i) => i.roomType === section.roomType).length;
+                  const hasTypeInvites = section.id !== "home" && inviteCount > 0;
+
+                  return (
+                    <li
+                      key={section.id}
+                      onClick={() => setActiveSection(section.id)}
+                      className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${isActive
+                        ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
+                        : "hover:bg-[var(--muted)]"
+                        }`}
+                    >
+                      {/* Circular Avatar with Green Online Indicator */}
+                      <div className="relative mr-3.5 flex-shrink-0">
+                        <div
+                          className="w-12 h-12 rounded-full border border-[var(--border)] flex items-center justify-center text-xl shadow-2xs transition-transform"
+                          style={{
+                            backgroundColor: isActive ? `${section.color}20` : "var(--muted)",
+                            color: section.color,
+                          }}
+                        >
+                          {section.icon}
+                        </div>
+                      </div>
+
+                      {/* Section Info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <p
+                            className={`text-sm truncate ${isActive ? "font-bold text-[var(--foreground)]" : "font-semibold text-[var(--foreground)]"
+                              }`}
+                          >
+                            {section.label}
+                          </p>
+                          {hasTypeInvites && (
+                            <span className="ml-2 text-[10px] bg-[var(--accent)] text-white font-bold px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">
+                              {inviteCount}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* Footer Action Buttons */}
+            <div className="p-3 border-t border-[var(--border)] bg-[var(--card)] flex flex-col gap-2">
               <button
-                key={section.id}
-                onClick={() => setActiveSection(section.id)}
-                aria-label={section.label}
-                aria-current={isActive ? "page" : undefined}
-                className={`
-                  relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
-                  transition-all duration-200 cursor-pointer w-full text-left
-                  ${isActive
-                    ? "text-[var(--card-foreground)] bg-[var(--accent)]/15"
-                    : "text-[var(--foreground)] hover:bg-[var(--muted)] opacity-75 hover:opacity-100"
-                  }
-                `}
+                onClick={() => handleInitiateCreate(sections.find((s) => s.id === activeSection)?.roomType || "game")}
+                className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
               >
-                {isActive && (
-                  <motion.div
-                    layoutId="together-sidebar-indicator"
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[60%] rounded-full"
-                    style={{ backgroundColor: section.color }}
-                    transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                  />
-                )}
-                <span
-                  className="flex items-center justify-center w-8 h-8 rounded-lg"
-                  style={{
-                    backgroundColor: isActive
-                      ? `${section.color}20`
-                      : "transparent",
-                    color: isActive ? section.color : "inherit",
-                  }}
-                >
-                  {section.icon}
-                </span>
-                <span className="flex-1">{section.label}</span>
-
-                {/* Show badge on sidebar item if there are invites for that type */}
-                {section.id !== "home" && invites.some((i) => i.roomType === section.roomType) && (
-                  <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-ping" />
-                )}
+                <Plus size={16} />
+                <span>Create Room</span>
               </button>
-            );
-          })}
+
+              <button
+                onClick={() => setShowJoinModal(true)}
+                className="w-full py-2 px-3 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)]/40 text-[var(--foreground)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border)] transition cursor-pointer"
+              >
+                <LogIn size={15} />
+                <span>Join Room</span>
+              </button>
+            </div>
+          </div>
         </nav>
       )}
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Mobile Tab Bar */}
+        {/* Mobile Navigation Tab Bar (WhatsApp Mobile Tabs Style) */}
         {isMobile && (
           <nav
-            className="flex items-center justify-center gap-2 px-3 py-2 bg-[var(--card)] border-b border-[var(--border)] overflow-x-auto no-scrollbar"
+            className="flex items-center justify-around gap-1 px-2 py-2 bg-[var(--card)] border-b border-[var(--border)] overflow-x-auto scrollbar-none select-none"
             aria-label="Together workspace navigation"
           >
             {sections.map((section) => {
               const isActive = activeSection === section.id;
-              const hasTypeInvites = section.id !== "home" && invites.some((i) => i.roomType === section.roomType);
+              const inviteCount = invites.filter((i) => i.roomType === section.roomType).length;
+              const hasTypeInvites = section.id !== "home" && inviteCount > 0;
+
               return (
                 <button
                   key={section.id}
                   onClick={() => setActiveSection(section.id)}
                   aria-label={section.label}
                   aria-current={isActive ? "page" : undefined}
-                  title={section.label}
                   className={`
-                    relative flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium
-                    whitespace-nowrap transition-all duration-200 cursor-pointer flex-shrink-0
+                    relative flex flex-col items-center justify-center py-1.5 px-2.5 rounded-2xl text-xs font-semibold
+                    transition-all duration-150 cursor-pointer flex-1 min-w-[60px]
                     ${isActive
-                      ? "text-white shadow-sm"
+                      ? "bg-[var(--accent)]/15 text-[var(--accent)] font-bold shadow-xs border border-[var(--accent)]/30"
                       : "text-[var(--foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--muted)]"
                     }
                   `}
-                  style={
-                    isActive
-                      ? { backgroundColor: section.color }
-                      : undefined
-                  }
                 >
-                  <span className="flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">{section.icon}</span>
-                  <span className="hidden sm:inline">{section.id === "home" ? "Home" : section.label.split(" ")[0]}</span>
-                  {hasTypeInvites && (
-                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                  )}
+                  <div className="relative flex items-center justify-center">
+                    <span className="text-base">{section.icon}</span>
+                    {hasTypeInvites && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--accent)] border-2 border-[var(--card)] animate-ping" />
+                    )}
+                  </div>
+                  <span className="text-[10px] mt-0.5 truncate">{section.label.split(" ")[0]}</span>
                 </button>
               );
             })}
@@ -354,7 +378,7 @@ const TogetherWorkspace: React.FC = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.97 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="w-full max-w-3xl lg:max-w-5xl flex flex-col gap-6"
+                className="w-full max-w-3xl mb-4 lg:max-w-5xl flex flex-col gap-6"
               >
                 {/* Active Session Banner if in room but viewing another tab */}
                 {room && roomSectionMap[room.type] && (

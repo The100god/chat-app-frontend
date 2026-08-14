@@ -119,113 +119,125 @@ const FriendRequests = () => {
   };
 
   return (
-    <div className="p-4 bg-[var(--background)] text-[var(--foreground)] shadow-md rounded-md w-[90%]">
-      <h2 className="text-lg font-semibold mb-3">Friend Requests</h2>
+    <div className="bg-[var(--card)] text-[var(--foreground)] h-full w-full rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-xs p-4">
+      <div className="flex items-center justify-between mb-3 border-b border-[var(--border)] pb-3">
+        <h2 className="text-lg font-bold tracking-tight text-[var(--foreground)]">Friend Requests</h2>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-4">
-        <button
-          onClick={() => setActiveTab("received")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${activeTab === "received"
-            ? "bg-[var(--accent)] text-[var(--background)]"
-            : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
+        {/* WhatsApp Pill Tabs */}
+        <div className="flex bg-[var(--muted)] p-1 rounded-full border border-[var(--border)] gap-1">
+          <button
+            onClick={() => setActiveTab("received")}
+            className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition ${
+              activeTab === "received"
+                ? "bg-[var(--accent)] text-white shadow-2xs"
+                : "text-[var(--foreground)] opacity-70 hover:opacity-100"
             }`}
-        >
-          Received {requests.length > 0 && `(${requests.length})`}
-        </button>
-        <button
-          onClick={() => setActiveTab("sent")}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium cursor-pointer transition ${activeTab === "sent"
-            ? "bg-[var(--accent)] text-[var(--background)]"
-            : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--foreground)]/30 hover:border-[var(--accent)]"
+          >
+            Received {requests.length > 0 && `(${requests.length})`}
+          </button>
+          <button
+            onClick={() => setActiveTab("sent")}
+            className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition ${
+              activeTab === "sent"
+                ? "bg-[var(--accent)] text-white shadow-2xs"
+                : "text-[var(--foreground)] opacity-70 hover:opacity-100"
             }`}
-        >
-          Sent {sentRequests.length > 0 && `(${sentRequests.length})`}
-        </button>
+          >
+            Sent {sentRequests.length > 0 && `(${sentRequests.length})`}
+          </button>
+        </div>
       </div>
 
-      {/* Received Requests Tab */}
-      {activeTab === "received" && (
-        <>
-          {loading ? (
-            <ScaleTN rows={3} />
-          ) : requests.length === 0 ? (
-            <p className="text-[var(--foreground)]/50 text-sm">No new friend requests.</p>
-          ) : (
-            requests?.map((req) => (
-              <div
-                key={req?._id}
-                className="flex justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] cursor-pointer transition duration-200 p-2 rounded-md mb-2"
-              >
-                <div className="flex flex-row gap-2 items-center">
-                  <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">
-                    <Image
-                      className="flex rounded-full border-2 border-[var(--accent)] w-full h-full"
-                      src={req?.profilePic || "/default-profile-pic.jpg"}
-                      alt="pic"
-                      width={32}
-                      height={32}
-                    />
-                  </span>
-                  <p>{req?.username}</p>
-                </div>
-                <div>
-                  <button
-                    className="bg-[var(--accent)] cursor-pointer text-[var(--foreground)] px-2 py-1 rounded-md mr-2"
-                    onClick={() => handleResponse(req?._id, "accept")}
-                  >
-                    Accept
-                  </button>
-                  <button
-                    className="bg-red-500 cursor-pointer text-white px-2 py-1 rounded-md"
-                    onClick={() => handleResponse(req?._id, "declined")}
-                  >
-                    Reject
-                  </button>
-                </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
+        {/* Received Requests Tab */}
+        {activeTab === "received" && (
+          <>
+            {loading ? (
+              <ScaleTN rows={3} />
+            ) : requests.length === 0 ? (
+              <div className="text-center py-12 text-[var(--foreground)]/50 text-xs">
+                No new friend requests
               </div>
-            ))
-          )}
-        </>
-      )}
-
-      {/* Sent Requests Tab */}
-      {activeTab === "sent" && (
-        <>
-          {sentRequests.length === 0 ? (
-            <p className="text-[var(--foreground)]/50 text-sm">No pending sent requests.</p>
-          ) : (
-            sentRequests.map((req) => (
-              <div
-                key={req?._id}
-                className="flex justify-between items-center bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] cursor-pointer transition duration-200 p-2 rounded-md mb-2"
-              >
-                <div className="flex flex-row gap-2 items-center">
-                  <span className="flex border border-[var(--accent)] rounded-full w-8 h-8 p-[1px] justify-center items-center">
+            ) : (
+              requests?.map((req) => (
+                <div
+                  key={req?._id}
+                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+                >
+                  <div className="flex items-center space-x-3 min-w-0">
                     <Image
-                      className="flex rounded-full border-2 border-[var(--accent)] w-full h-full object-cover"
+                      className="rounded-full border border-[var(--border)] w-10 h-10 object-cover shadow-2xs flex-shrink-0"
                       src={req?.profilePic || "/default-profile-pic.jpg"}
                       alt="pic"
-                      width={32}
-                      height={32}
+                      width={40}
+                      height={40}
                     />
-                  </span>
-                  <div className="flex flex-col">
-                    <p className="text-sm font-medium">{req?.username}</p>
-                    <span className="text-xs text-yellow-500 font-semibold">⏳ Pending</span>
+                    <p className="text-sm font-semibold truncate text-[var(--foreground)]">
+                      {req?.username}
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <button
+                      className="bg-[var(--accent)] hover:opacity-90 cursor-pointer text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-2xs transition"
+                      onClick={() => handleResponse(req?._id, "accept")}
+                    >
+                      Accept
+                    </button>
+                    <button
+                      className="bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 cursor-pointer px-3 py-1.5 rounded-full text-xs font-semibold transition"
+                      onClick={() => handleResponse(req?._id, "declined")}
+                    >
+                      Decline
+                    </button>
                   </div>
                 </div>
-                <button
-                  className="bg-red-500/80 hover:bg-red-600 cursor-pointer text-white px-2 py-1 rounded-md text-sm"
-                  onClick={() => handleCancelRequest(req?._id)}
-                >
-                  Cancel
-                </button>
+              ))
+            )}
+          </>
+        )}
+
+        {/* Sent Requests Tab */}
+        {activeTab === "sent" && (
+          <>
+            {sentRequests.length === 0 ? (
+              <div className="text-center py-12 text-[var(--foreground)]/50 text-xs">
+                No pending sent requests
               </div>
-            ))
-          )}
-        </>
-      )}
+            ) : (
+              sentRequests.map((req) => (
+                <div
+                  key={req?._id}
+                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+                >
+                  <div className="flex items-center space-x-3 min-w-0">
+                    <Image
+                      className="rounded-full border border-[var(--border)] w-10 h-10 object-cover shadow-2xs flex-shrink-0"
+                      src={req?.profilePic || "/default-profile-pic.jpg"}
+                      alt="pic"
+                      width={40}
+                      height={40}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate text-[var(--foreground)]">
+                        {req?.username}
+                      </p>
+                      <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
+                        <span>⏳</span> Pending response
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    className="bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 cursor-pointer px-3 py-1.5 rounded-full text-xs font-semibold transition flex-shrink-0"
+                    onClick={() => handleCancelRequest(req?._id)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ))
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

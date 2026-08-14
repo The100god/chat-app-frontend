@@ -37,9 +37,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-y-auto`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden h-dvh`}
       >
-        
         <AuthProvider>
           <AppLockWrapper>
             <UnreadBadgeManager />

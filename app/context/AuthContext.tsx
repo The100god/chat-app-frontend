@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { User, userAtom, userIdAtom } from "../states/States";
 import { apiFetch } from "../utils/apiFetch";
+import { getApiUrl } from "../utils/apiUrl";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -66,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     hasCheckedRef.current = true;
     //
-    apiFetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users/me`)
+    apiFetch(`${getApiUrl()}/api/users/me`)
       .then(async (res) => {
         if (!res.ok) throw new Error("Unauthorized");
         const data = await res.json();
@@ -74,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           username: data.username,
           email: data.email,
           profilePic: data.profilePic,
-          about: data.about || "Hey there! I’m using Chugli 💬",
+          about: data.about || "Hey there! I’m using Chugli.",
         });
         setUserId(data._id); // 🔥 IMPORTANT: store userId globally
         localStorage.setItem("chatAppUserId", data._id); // optional

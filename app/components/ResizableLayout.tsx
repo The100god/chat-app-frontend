@@ -183,7 +183,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
     <div className="flex h-full w-full overflow-hidden">
       {/* Left Section */}
       <div
-        className="flex-shrink-0 bg-[var(--background)] p-2"
+        className="flex-shrink-0 bg-[var(--background)] h-full p-2 overflow-hidden"
         style={{ width: `${leftWidth}px`, minWidth: "250px", maxWidth: "75vw" }}
       >
         {leftComponent}
@@ -196,7 +196,7 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
       />
 
       {/* Right Section */}
-      <div className="flex-grow bg-[var(--background)] p-2">{rightComponent}</div>
+      <div className="flex-grow bg-[var(--background)] h-full p-2 overflow-hidden">{rightComponent}</div>
     </div>
   );
 };

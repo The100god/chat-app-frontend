@@ -7,11 +7,12 @@ import ChatArea from "./pages/chatAreas/page";
 import TogetherWorkspace from "./components/TogetherWorkspace";
 import { useEffect } from "react";
 import { useAtom } from "jotai";
-import { activeWorkspaceAtom } from "./states/States";
+import { activeWorkspaceAtom, responsiveDeviceAtom } from "./states/States";
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
+  const [showLeft] = useAtom(responsiveDeviceAtom);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";
@@ -88,8 +89,10 @@ export default function Home() {
     return <div className="text-[var(--foreground)] p-4">Redirecting...</div>;
   }
 
+  const isMobileChatOpen = activeWorkspace === "chat" && !showLeft;
+
   return (
-    <div className="flex w-full overflow-hidden" style={{ height: "calc(100vh - 84px)" }}>
+    <div className={`flex w-full overflow-hidden ${isMobileChatOpen ? "h-dvh lg:h-[calc(100dvh-64px)]" : "h-[calc(100dvh-64px)]"}`}>
       {activeWorkspace === "chat" ? (
         <ResizableLayout
           leftComponent={<LeftSection />}

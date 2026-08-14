@@ -7,7 +7,7 @@ import { showToast } from "../../components/Toast";
 import { motion } from "framer-motion";
 import Image from "next/image";
 
-const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/users`;
+import { getApiUrl } from "../../utils/apiUrl";
 
 const ProfilePage: React.FC = () => {
   const [user, setUser] = useAtom(userAtom);
@@ -32,18 +32,13 @@ const ProfilePage: React.FC = () => {
 
   const isImageNotFound = (pic?: string) => {
     if (!pic) return true;
-    return (
-      pic === "/user.jpg" ||
-      pic.includes("default-profile-pic") ||
-      pic.includes("encrypted-tbn0.gstatic.com") ||
-      pic.trim() === ""
-    );
+    return pic.trim() === "";
   };
 
   const updateUser = async (updatedData: Partial<User>) => {
     try {
       const token = localStorage.getItem("chatAppToken");
-      const res = await fetch(`${API_BASE}/updateProfile`, {
+      const res = await fetch(`${getApiUrl()}/api/users/updateProfile`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -141,6 +136,7 @@ const ProfilePage: React.FC = () => {
               onError={() => setImageError(true)}
               width={128}
               height={128}
+              unoptimized
             />
           )}
           <label
@@ -214,7 +210,7 @@ const ProfilePage: React.FC = () => {
                 />
               ) : (
                 <span className="text-lg text-[var(--background)]">
-                  {user?.about || "Hey there! I’m using Chugli 💬 "}
+                  {user?.about || "Hey there! I’m using Chugli."}
                 </span>
               )}
             </span>

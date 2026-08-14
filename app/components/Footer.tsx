@@ -2,8 +2,16 @@
 
 import React from "react";
 import { Heart } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 const Footer: React.FC = () => {
+  const pathname = usePathname();
+
+  // Hide site footer on main chat interface and chat area pages
+  if (pathname === "/" || pathname?.startsWith("/pages/chatAreas")) {
+    return null;
+  }
+
   return (
     <footer className="w-full bg-[var(--card)] border-t border-[var(--border)] py-1.5 px-4 text-center text-xs text-[var(--foreground)] opacity-80 flex items-center justify-center gap-1.5 z-30 select-none flex-shrink-0">
       <span>Crafted with</span>
