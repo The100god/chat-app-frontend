@@ -171,7 +171,7 @@ export default function LeftSection() {
 
   // console.log("friends", friends);
   return (
-    <div className="flex px-4 pt-4 flex-col bg-[var(--background)] text-[var(--foreground)] h-[calc(100%-60px)] lg:h-[calc(100%-40px)] w-full rounded-md overflow-hidden relative">
+    <div className="flex px-4 pt-4 flex-col bg-[var(--background)] text-[var(--foreground)] h-[calc(100%-40px)] lg:h-[calc(100%-40px)] xl:h-full w-full rounded-md overflow-hidden relative">
       {findFriend && <FindFriend />}
       {/* {findFriend && <FindUser />} */}
       {/* {allFriends && <AllFriends friends={friends} loading={loading} />} */}

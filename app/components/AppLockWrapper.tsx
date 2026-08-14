@@ -292,7 +292,7 @@ export default function AppLockWrapper({ children }: { children: React.ReactNode
       </AnimatePresence>
 
       {/* Main App Content - Hidden or Blurred while locked */}
-      <div className={isLocked ? "blur-md pointer-events-none select-none" : ""}>
+      <div className={`flex flex-col h-full w-full min-h-0 overflow-hidden ${isLocked ? "blur-md pointer-events-none select-none" : ""}`}>
         {children}
       </div>
     </>

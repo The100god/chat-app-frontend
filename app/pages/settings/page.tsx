@@ -302,14 +302,14 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="w-full h-full bg-[var(--background)] text-[var(--foreground)] flex flex-col">
-      <div className="p-4 border-b border-[var(--accent)] flex items-center justify-between">
+    <div className="w-full h-full max-h-full flex flex-col min-h-0 overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+      <div className="p-4 border-b border-[var(--accent)] flex items-center justify-between flex-shrink-0">
         <h2 className="text-2xl font-semibold">
           Settings
         </h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-6 touch-pan-y custom-scrollbar">
         {/* Profile Section */}
         <section>
           <h3 className="text-lg font-bold mb-3">Profile</h3>
@@ -472,8 +472,8 @@ export default function SettingsPage() {
                 onClick={handleUpdateApp}
                 disabled={updatingApp}
                 className={`px-4 py-2 cursor-pointer rounded-md text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap ${updateAvailable
-                    ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
-                    : "bg-[var(--accent)] hover:bg-[var(--accent)]/85 text-[var(--background)]"
+                  ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
+                  : "bg-[var(--accent)] hover:bg-[var(--accent)]/85 text-[var(--background)]"
                   }`}
               >
                 {updatingApp ? (
@@ -630,8 +630,8 @@ export default function SettingsPage() {
                     key={opt.val}
                     onClick={() => handleSelectTimeout(opt.val)}
                     className={`py-3 px-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${appLockTimeout === opt.val
-                        ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)]"
-                        : "bg-[var(--card)] border-[var(--foreground)]/10 hover:border-[var(--accent)]"
+                      ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)]"
+                      : "bg-[var(--card)] border-[var(--foreground)]/10 hover:border-[var(--accent)]"
                       }`}
                   >
                     {opt.label}
@@ -661,8 +661,8 @@ export default function SettingsPage() {
                     <div
                       key={index}
                       className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${active
-                          ? "bg-[var(--accent)] border-[var(--accent)] scale-110 shadow-[0_0_8px_var(--accent)]"
-                          : "border-gray-600 bg-transparent"
+                        ? "bg-[var(--accent)] border-[var(--accent)] scale-110 shadow-[0_0_8px_var(--accent)]"
+                        : "border-gray-600 bg-transparent"
                         }`}
                     />
                   );

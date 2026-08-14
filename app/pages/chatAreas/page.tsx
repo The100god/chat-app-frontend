@@ -1484,7 +1484,7 @@ export default function ChatArea() {
 
       {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 shadow-xs lg:mb-[1rem]">
+        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 shadow-xs lg:mb-[1rem] xl:mb-0">
           <input
             type="file"
             name="media"
