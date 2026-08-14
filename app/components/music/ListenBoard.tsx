@@ -25,6 +25,7 @@ import {
   Send,
   Loader2,
 } from "lucide-react";
+import { TogetherChatBox } from "../TogetherChatBox";
 
 interface ListenBoardProps {
   room: TogetherRoom;
@@ -592,75 +593,14 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
       </div>
 
       {/* ─── Live Music Comments & Quick Reactions ─── */}
-      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-lg flex flex-col gap-3">
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
-          <h4 className="text-xs font-black uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-            <MessageSquare size={15} /> Live Music Chat ({comments.length})
-          </h4>
-          <span className="text-[10px] text-[var(--foreground)] opacity-50 font-semibold">
-            Real-time synchronized
-          </span>
-        </div>
-
-        {/* Quick Reaction Bar */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-          {["🎵 Jamming!", "🔥 Fire Track", "❤️ Love this song", "💃 Dancing", "🎧 Vibe", "✨ Perfect"].map((emoji) => (
-            <button
-              key={emoji}
-              onClick={() => handleSendComment(emoji)}
-              className="px-2.5 py-1 rounded-xl bg-[var(--muted)] hover:bg-cyan-500/10 border border-[var(--border)] hover:border-cyan-500/30 text-xs font-bold text-[var(--foreground)] transition cursor-pointer flex-shrink-0"
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-
-        {/* Comments Stream List */}
-        <div ref={commentsContainerRef} className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
-          {comments.length === 0 ? (
-            <p className="text-xs text-[var(--foreground)] opacity-50 italic py-2 text-center">
-              No live comments yet. React or send a comment while listening!
-            </p>
-          ) : (
-            comments.map((c) => (
-              <div
-                key={c.id}
-                className="flex flex-col p-2 rounded-xl bg-[var(--muted)] border border-[var(--border)] text-xs gap-0.5"
-              >
-                <div className="flex items-center justify-between text-[10px] opacity-70">
-                  <span className="font-bold text-cyan-400">{c.username}</span>
-                  <span>{new Date(c.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <p className="text-xs font-medium text-[var(--foreground)]">{c.text}</p>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Live Comment Input Box */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSendComment();
-          }}
-          className="flex items-center gap-2 pt-1 border-t border-[var(--border)]"
-        >
-          <input
-            type="text"
-            value={commentText}
-            onChange={(e) => setCommentText(e.target.value)}
-            placeholder="Write a live comment..."
-            className="flex-1 p-2 rounded-xl bg-[var(--muted)] border border-[var(--border)] text-xs text-[var(--foreground)] outline-none focus:border-cyan-500 transition"
-          />
-          <button
-            type="submit"
-            disabled={!commentText.trim()}
-            className="p-2 rounded-xl bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-white transition cursor-pointer"
-          >
-            <Send size={15} />
-          </button>
-        </form>
-      </div>
+      <TogetherChatBox
+        comments={comments}
+        currentUserId={currentUserId}
+        hostId={room.hostId}
+        onSendMessage={(text) => handleSendComment(text)}
+        title="Listen Together Live Chat"
+        accentColor="#06b6d4"
+      />
 
       {/* Add Track Modal */}
       <AnimatePresence>

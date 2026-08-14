@@ -183,42 +183,79 @@ const GroupChatPage = () => {
 
   // console.log("groups", groups);
   return (
-    <div className="flex p-2 flex-col space-y-5 bg-[var(--background)] text-[var(--foreground)] h-full w-full rounded-md overflow-y-auto">
-      <div
-        className="flex justify-center items-center text-center h-fit w-fit px-2 py-1 rounded-lg bg-[var(--accent)] hover:bg-[var(--accent)]/15 border-amber-50 cursor-pointer"
-        onClick={() => setIsNewGroupWindow(true)}
-      >
-        {" "}
-        + create new group
+    <div className="bg-[var(--card)] text-[var(--foreground)] h-full w-full rounded-2xl border border-[var(--border)] overflow-hidden flex flex-col shadow-xs">
+      {/* WhatsApp Groups List Header */}
+      <div className="px-4 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[var(--card)]">
+        <h2 className="text-base font-bold tracking-tight text-[var(--foreground)]">Groups</h2>
+        <button
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--accent)] hover:opacity-90 text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
+          onClick={() => setIsNewGroupWindow(true)}
+        >
+          <span>+ New Group</span>
+        </button>
       </div>
+
       {isNewGroupWindow && (
         <GroupFormModal
           handleCreateGroupModalSubmit={handleCreateGroupModalSubmit}
         />
       )}
 
-      <div className="flex flex-col h-[70vh] w-full overflow-auto space-y-4">
-        {groups &&
-          groups?.map((g, i) => (
-            <div
-              key={i}
-              className="flex items-center space-x-4 p-3 bg-[var(--card)] text-[var(--foreground)] rounded-md shadow-sm hover:bg-[var(--accent)]/15 border border-[var(--foreground)] hover:border-[var(--accent)] transition cursor-pointer"
-              onClick={() => {
-                setSelectedFriend(null);
-                setSelectedGroup(g);
-                setShowLeft(false);
-              }}
-            >
-              <Image
-                src={g?.groupProfilePic || "/user.jpg"}
-                alt="Group"
-                className="w-12 h-12 rounded-full border-2 border-[var(--accent)] object-cover"
-                width={48}
-                height={48}
-              />
-              <span className="text-lg text-[var(--foreground)] font-medium">{g?.groupName}</span>
-            </div>
-          ))}
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-1.5">
+        {!groups || groups.length === 0 ? (
+          <div className="text-center py-12 px-4 text-[var(--foreground)]/70">
+            <p className="text-2xl mb-2">👥</p>
+            <p className="font-semibold text-sm">No groups yet</p>
+            <p className="text-xs opacity-60 mt-1">Create a group to start chatting together</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--border)]/40">
+            {groups.map((g, i) => {
+              const isSelected = selectedGroup?._id === g?._id;
+              const memberCount = g?.groupMember?.length || 0;
+
+              return (
+                <div
+                  key={g?._id || i}
+                  className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${
+                    isSelected
+                      ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
+                      : "hover:bg-[var(--muted)]"
+                  }`}
+                  onClick={() => {
+                    setSelectedFriend(null);
+                    setSelectedGroup(g);
+                    setShowLeft(false);
+                  }}
+                >
+                  <div className="relative mr-3.5 flex-shrink-0">
+                    <Image
+                      src={g?.groupProfilePic || "/user.jpg"}
+                      alt="Group"
+                      className="w-12 h-12 rounded-full border border-[var(--border)] object-cover shadow-2xs"
+                      width={48}
+                      height={48}
+                    />
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-[var(--accent)] border-2 border-[var(--card)] rounded-full flex items-center justify-center text-[8px] text-white">
+                      👥
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className={`text-sm truncate ${isSelected ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--foreground)]"}`}>
+                        {g?.groupName}
+                      </span>
+                    </div>
+                    <p className="text-xs text-[var(--foreground)]/60 truncate">
+                      {memberCount} {memberCount === 1 ? "member" : "members"}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

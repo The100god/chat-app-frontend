@@ -41,7 +41,7 @@ export default function SettingsPage() {
       if ("serviceWorker" in navigator) {
         const registrations = await navigator.serviceWorker.getRegistrations();
         for (const reg of registrations) {
-          await reg.update().catch(() => {});
+          await reg.update().catch(() => { });
         }
       }
 
@@ -51,7 +51,7 @@ export default function SettingsPage() {
       }
 
       setUpdateMessage("Applying latest version...");
-      showToast("✨ App updated successfully! Reloading...", "success", 2000);
+      showToast("App updated successfully! Reloading...", "success", 2000);
 
       setTimeout(() => {
         setUpdateAvailable(false);
@@ -116,7 +116,7 @@ export default function SettingsPage() {
         const result = await Notification.requestPermission();
         if (result === "granted") {
           setNotifications(true);
-          showToast("✨ Notification & App Icon Badge permissions granted!", "success");
+          showToast("Notification & App Icon Badge permissions granted!", "success");
         } else {
           showToast("Notification permission was denied in browser settings.", "warning");
         }
@@ -305,7 +305,7 @@ export default function SettingsPage() {
     <div className="w-full h-full bg-[var(--background)] text-[var(--foreground)] flex flex-col">
       <div className="p-4 border-b border-[var(--accent)] flex items-center justify-between">
         <h2 className="text-2xl font-semibold">
-          Settings ⚙️
+          Settings
         </h2>
       </div>
 
@@ -400,21 +400,21 @@ export default function SettingsPage() {
                 } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
               onClick={() => handleThemeToggle("light")}
             >
-              🌞 Light
+              Light
             </button>
             <button
               className={`flex w-full justify-center items-center cursor-pointer ${mode === "dark" ? "bg-[var(--accent)]/15" : "bg-[var(--card)]"
                 } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
               onClick={() => handleThemeToggle("dark")}
             >
-              🌙 Dark
+              Dark
             </button>
             <button
               className={`flex w-full justify-center items-center cursor-pointer ${mode === "aurora" ? "bg-[var(--accent)]/15" : "bg-[var(--card)]"
                 } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
               onClick={() => handleThemeToggle("aurora")}
             >
-              🌌 Aurora
+              Aurora
             </button>
             {/* <ToggleItem
               icon={darkMode ? <Moon /> : <Sun />}
@@ -463,7 +463,7 @@ export default function SettingsPage() {
                   </span>
                   <span className="text-xs text-[var(--foreground)]/60 block mt-0.5">
                     {updateAvailable
-                      ? "✨ A new app update is ready! Click Update Now to install."
+                      ? "A new app update is ready! Click Update Now to install."
                       : updateMessage || "Instantly fetch & apply latest app features without uninstalling."}
                   </span>
                 </div>
@@ -471,11 +471,10 @@ export default function SettingsPage() {
               <button
                 onClick={handleUpdateApp}
                 disabled={updatingApp}
-                className={`px-4 py-2 cursor-pointer rounded-md text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap ${
-                  updateAvailable
+                className={`px-4 py-2 cursor-pointer rounded-md text-xs font-bold transition flex items-center gap-1.5 shadow-sm whitespace-nowrap ${updateAvailable
                     ? "bg-red-500 hover:bg-red-600 text-white animate-pulse"
                     : "bg-[var(--accent)] hover:bg-[var(--accent)]/85 text-[var(--background)]"
-                }`}
+                  }`}
               >
                 {updatingApp ? (
                   <>
@@ -504,7 +503,7 @@ export default function SettingsPage() {
 
         {/* Danger Zone — Delete Account */}
         <section>
-          <h3 className="text-lg font-bold mb-3 text-red-500">⚠️ Danger Zone</h3>
+          <h3 className="text-lg font-bold mb-3 text-red-500">Danger Zone</h3>
           <div
             onClick={() => setDeleteAccountOpen(true)}
             className="flex justify-between items-center bg-red-950/30 hover:bg-red-900/40 text-red-400 border border-red-800 hover:border-red-500 rounded-lg px-4 py-3 cursor-pointer transition"
@@ -519,11 +518,6 @@ export default function SettingsPage() {
             This will permanently delete your account, messages, friends, and all data. This action cannot be undone.
           </p>
         </section>
-      </div>
-
-      {/* Footer */}
-      <div className="text-center text-[var(--foreground)]/30 text-sm py-4 border-t border-gray-700">
-        Gappo Chat App • v1.0.0
       </div>
 
       {/* Change Password Modal */}
@@ -552,7 +546,7 @@ export default function SettingsPage() {
       >
         <div className="bg-[var(--background)] border border-red-800 p-6 rounded-xl shadow-2xl w-full max-w-md mx-4">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-red-500">🗑️ Delete Account</h2>
+            <h2 className="text-xl font-semibold text-red-500">Delete Account</h2>
             <button
               onClick={() => {
                 setDeleteAccountOpen(false);
@@ -590,8 +584,8 @@ export default function SettingsPage() {
               onClick={handleDeleteAccount}
               disabled={deleteConfirmText !== "DELETE" || deleting}
               className={`flex-1 py-2 rounded-md cursor-pointer font-semibold text-sm transition ${deleteConfirmText === "DELETE" && !deleting
-                  ? "bg-red-600 hover:bg-red-700 text-white"
-                  : "bg-red-900/30 text-red-800 cursor-not-allowed"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-red-900/30 text-red-800 cursor-not-allowed"
                 }`}
             >
               {deleting ? "Deleting..." : "Delete My Account"}
@@ -635,11 +629,10 @@ export default function SettingsPage() {
                   <button
                     key={opt.val}
                     onClick={() => handleSelectTimeout(opt.val)}
-                    className={`py-3 px-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${
-                      appLockTimeout === opt.val
+                    className={`py-3 px-2 rounded-lg text-xs font-semibold border transition cursor-pointer ${appLockTimeout === opt.val
                         ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)]"
                         : "bg-[var(--card)] border-[var(--foreground)]/10 hover:border-[var(--accent)]"
-                    }`}
+                      }`}
                   >
                     {opt.label}
                   </button>
@@ -667,11 +660,10 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={index}
-                      className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${
-                        active
+                      className={`w-3.5 h-3.5 rounded-full border-2 transition-all duration-150 ${active
                           ? "bg-[var(--accent)] border-[var(--accent)] scale-110 shadow-[0_0_8px_var(--accent)]"
                           : "border-gray-600 bg-transparent"
-                      }`}
+                        }`}
                     />
                   );
                 })}
@@ -761,7 +753,7 @@ export default function SettingsPage() {
           </div>
           <h2 className="text-xl font-bold mb-2">Mobile App Feature</h2>
           <p className="text-sm text-[var(--foreground)]/70 mb-5 leading-relaxed">
-            App Lock is designed specifically for **installed mobile apps (PWA)** to protect your chats on iOS or Android. 
+            App Lock is designed specifically for **installed mobile apps (PWA)** to protect your chats on iOS or Android.
             <br /><br />
             To use it:
             1. Open Chugli in your mobile browser.

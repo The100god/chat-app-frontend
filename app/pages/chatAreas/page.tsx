@@ -18,7 +18,7 @@ import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
 import { showToast } from "../../components/Toast";
-import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2, ArrowLeft, Settings } from "lucide-react";
+import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2, ArrowLeft, Settings, Trash2 } from "lucide-react";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -49,11 +49,12 @@ interface Message {
 
 // Disappearing message timer options (hours)
 const DISAPPEAR_OPTIONS = [
-  { label: "1h", value: 1 },
-  { label: "4h", value: 4 },
-  { label: "8h", value: 8 },
-  { label: "12h", value: 12 },
-  { label: "24h", value: 24 },
+  // { label: "Off", value: 0 },
+  { label: "1 hour", value: 1 },
+  { label: "4 hours", value: 4 },
+  { label: "8 hours", value: 8 },
+  { label: "12 hours", value: 12 },
+  { label: "24 hours", value: 24 },
 ];
 
 // Helper: format remaining time for countdown
@@ -64,9 +65,20 @@ function formatCountdown(expiresAt: string): string {
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-  if (hours > 0) return `⏳ ${hours}h ${minutes}m`;
-  if (minutes > 0) return `⏳ ${minutes}m ${seconds}s`;
-  return `⏳ ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+// Helper: format message timestamp (e.g., 10:42 AM)
+function formatMessageTime(createdAt?: string): string {
+  if (!createdAt) return "";
+  try {
+    const d = new Date(createdAt);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return "";
+  }
 }
 
 export interface Friend {
@@ -127,6 +139,7 @@ export default function ChatArea() {
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const actionsDropdownRef = useRef<HTMLDivElement | null>(null);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [showDisappearSubmenu, setShowDisappearSubmenu] = useState(false);
   const settingsDropdownRef = useRef<HTMLDivElement | null>(null);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -212,8 +225,8 @@ export default function ChatArea() {
 
           // Mark messages as read in DB
           if (selectedFriend?.friendId) {
-            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/markMessage`, {
-              method: "POST",
+            fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/message/mark-read`, {
+              method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 senderId: selectedFriend.friendId,
@@ -1016,11 +1029,11 @@ export default function ChatArea() {
   // console.log("selectedFriend", selectedFriend)
   // console.log("messages", messages);
   return (
-    <div className="flex flex-col bg-[var(--background)] h-full p-2 pb-5 rounded-md overflow-hidden">
+    <div className="flex flex-col bg-[var(--background)] h-full rounded-md overflow-hidden relative">
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="w-full flex flex-row items-center justify-between p-3 border-b border-[var(--accent)]/20 relative min-h-[58px]">
-          {/* Left: Back Button */}
-          <div className="flex items-center">
+        <div className="w-full flex items-center justify-between rounded-md px-4 py-2.5 bg-[var(--card)] border-b border-[var(--border)] relative z-20 shadow-2xs min-h-[60px]">
+          {/* Left: Back Button + Avatar + Contact Info */}
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => {
                 setShowLeft(true);
@@ -1031,163 +1044,184 @@ export default function ChatArea() {
                   window.history.back();
                 }
               }}
-              className="p-2 hover:bg-[var(--accent)]/15 rounded-lg text-[var(--foreground)] transition-all cursor-pointer flex items-center justify-center"
+              className="p-1.5 hover:bg-[var(--muted)] rounded-full text-[var(--foreground)] transition cursor-pointer flex items-center justify-center lg:hidden"
               title="Back"
             >
               <ArrowLeft size={20} />
             </button>
+
+            <div
+              onClick={() => {
+                setShowEmoji(false);
+                if (selectedGroup) {
+                  setShowGroupInfo(true);
+                }
+              }}
+              className={`flex items-center gap-3 p-1 rounded-xl transition ${selectedGroup ? "cursor-pointer hover:bg-[var(--muted)]" : ""}`}
+            >
+              <div className="relative flex-shrink-0">
+                <Image
+                  src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
+                  alt="avatar"
+                  className="w-10 h-10 object-cover rounded-full border border-[var(--border)] shadow-2xs"
+                  width={40}
+                  height={40}
+                />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[var(--card)] rounded-full"></span>
+              </div>
+
+              <div className="min-w-0 flex flex-col justify-center">
+                <h2 className="text-sm font-bold text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[280px] leading-tight">
+                  {username}
+                </h2>
+                <p className="text-[11px] text-[var(--foreground)]/60 truncate font-medium">
+                  {isTyping ? (
+                    <span className="text-[var(--accent)] font-semibold animate-pulse">typing...</span>
+                  ) : selectedGroup ? (
+                    "Tap for group info"
+                  ) : (
+                    "online"
+                  )}
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* Center: Profile Pic + Name */}
-          <div
-            onClick={() => {
-              setShowEmoji(false);
-              if (selectedGroup) {
-                setShowGroupInfo(true);
-              }
-            }}
-            className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-row items-center gap-2 px-3 py-1.5 rounded-xl transition duration-200 ${selectedGroup ? "cursor-pointer hover:bg-[var(--accent)]/15" : ""
-              }`}
-          >
-            <Image
-              src={selectedFriend?.profilePic || selectedGroup?.groupProfilePic || "/user.jpg"}
-              alt="avatar"
-              className="w-[30px] h-[30px] object-cover rounded-full border border-[var(--accent)] flex-shrink-0"
-              width={30}
-              height={30}
-            />
-
-            <h2 className="flex items-center text-lg font-semibold space-x-1 text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[250px]">
-              <div className="flex">
-                {username.split("").map((char, i) => (
-                  <motion.span
-                    key={i}
-                    className={`${colors[i % colors.length]} inline-block`}
-                    animate={{
-                      y: [0, -6, 0], // Jump up and down
-                    }}
-                    transition={{
-                      duration: 0.6,
-                      delay: i * 0.1, // Stagger each letter
-                      repeat: Infinity,
-                      repeatDelay: 2,
-                      ease: "easeInOut",
-                    }}
-                  >
-                    {char === " " ? "\u00A0" : char}
-                  </motion.span>
-                ))}
-              </div>
-            </h2>
-
-            {/* Disappearing messages indicator — only for 1-1 chats */}
+          {/* Right: Disappearing Badge + Settings */}
+          <div className="flex items-center gap-2">
             {selectedFriend && disappearDuration > 0 && (
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent)]/20 text-[var(--accent)] border border-[var(--accent)]/30 flex items-center gap-0.5">
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold flex items-center gap-1">
                 <Timer size={10} />
                 {disappearDuration}h
               </span>
             )}
-          </div>
 
-          {/* Right: Settings Icon & Dropdown */}
-          <div className="relative" ref={settingsDropdownRef}>
-            <button
-              onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
-              className={`p-2 rounded-lg transition-all cursor-pointer flex items-center justify-center ${showSettingsDropdown
+            <div className="relative" ref={settingsDropdownRef}>
+              <button
+                onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                className={`p-2 rounded-full transition cursor-pointer flex items-center justify-center ${showSettingsDropdown
                   ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                  : "hover:bg-[var(--accent)]/15 text-[var(--foreground)]"
-                }`}
-              title="Settings"
-            >
-              <Settings size={20} />
-            </button>
+                  : "hover:bg-[var(--muted)] text-[var(--foreground)]/80 hover:text-[var(--foreground)]"
+                  }`}
+                title="Settings"
+              >
+                <Settings size={19} />
+              </button>
 
-            <AnimatePresence>
-              {showSettingsDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 mt-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[200px] z-50 flex flex-col gap-1"
-                >
-                  {/* Disappearing Messages Settings */}
-                  {selectedFriend && (
-                    <div className="px-1 py-1">
-                      <div className="text-[10px] text-[var(--foreground)]/50 px-3 py-1 font-semibold uppercase tracking-wider flex items-center gap-1">
-                        <Timer size={10} /> Disappearing messages
+              <AnimatePresence>
+                {showSettingsDropdown && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--border)] rounded-xl shadow-2xl py-2 px-1 min-w-[200px] z-50 flex flex-col gap-1"
+                  >
+                    {selectedFriend && (
+                      <div>
+                        {/* Parent Dropdown Button */}
+                        <button
+                          onClick={() => setShowDisappearSubmenu((prev) => !prev)}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between text-[var(--foreground)] hover:bg-[var(--accent)]/10 font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Timer size={14} className="text-[var(--accent)]" />
+                            <span>Disappear Messages</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[var(--foreground)]/60 text-[11px]">
+                            <span className="font-semibold text-[var(--accent)]">
+                              {DISAPPEAR_OPTIONS.find((o) => o.value === disappearDuration)?.label || (disappearDuration ? `${disappearDuration}h` : "Off")}
+                            </span>
+                            <ChevronDown
+                              size={14}
+                              className={`transition-transform duration-200 ${showDisappearSubmenu ? "rotate-180" : ""}`}
+                            />
+                          </div>
+                        </button>
+
+                        {/* Child Time Options Sub-Dropdown */}
+                        <AnimatePresence>
+                          {showDisappearSubmenu && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="overflow-hidden pl-3 pr-1 py-1 flex flex-col gap-0.5 border-l-2 border-[var(--accent)]/30 ml-4 my-1"
+                            >
+                              {DISAPPEAR_OPTIONS.map((opt) => (
+                                <button
+                                  key={opt.value}
+                                  onClick={() => {
+                                    setDisappearDuration(opt.value);
+                                    setShowSettingsDropdown(false);
+                                    setShowDisappearSubmenu(false);
+                                  }}
+                                  className={`w-full text-left px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
+                                    ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
+                                    : "text-[var(--foreground)]/80 hover:bg-[var(--accent)]/10 hover:text-[var(--foreground)]"
+                                    }`}
+                                >
+                                  <span>{opt.label}</span>
+                                  {disappearDuration === opt.value && (
+                                    <span className="text-[var(--accent)] text-xs font-bold">✓</span>
+                                  )}
+                                </button>
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                      <div className="flex flex-col gap-0.5">
-                        {DISAPPEAR_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.value}
-                            onClick={() => {
-                              setDisappearDuration(opt.value);
-                              setShowSettingsDropdown(false);
-                            }}
-                            className={`w-full text-left px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-all flex items-center justify-between ${disappearDuration === opt.value
-                                ? "bg-[var(--accent)]/20 text-[var(--accent)] font-semibold"
-                                : "text-[var(--foreground)] hover:bg-[var(--accent)]/10"
-                              }`}
-                          >
-                            <span>⏱️ {opt.label} timer</span>
-                            {disappearDuration === opt.value && (
-                              <span className="text-[var(--accent)]">✓</span>
-                            )}
-                          </button>
-                        ))}
+                    )}
+
+                    {chatId && (
+                      <div className={selectedFriend ? "border-t border-[var(--border)] mt-1 pt-1" : ""}>
+                        <button
+                          onClick={() => {
+                            setShowSettingsDropdown(false);
+                            handleDeleteChat();
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
+                        >
+                          <Trash2 size={14} />
+                          <span>Clear Chat</span>
+                        </button>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {/* Delete Chat */}
-                  {chatId && (
-                    <div className={selectedFriend ? "border-t border-[var(--accent)]/20 mt-1 pt-1" : ""}>
-                      <button
-                        onClick={() => {
-                          setShowSettingsDropdown(false);
-                          handleDeleteChat();
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
-                      >
-                        <span>🗑️</span>
-                        <span>Clear Chat</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Remove Friend */}
-                  {selectedFriend && (
-                    <div className="border-t border-[var(--accent)]/20 mt-1 pt-1">
-                      <button
-                        onClick={() => {
-                          setShowSettingsDropdown(false);
-                          handleRemoveFriend();
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
-                      >
-                        <span>👤❌</span>
-                        <span>Remove Friend</span>
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
+                    {selectedFriend && (
+                      <div className="border-t border-[var(--border)] mt-1 pt-1">
+                        <button
+                          onClick={() => {
+                            setShowSettingsDropdown(false);
+                            handleRemoveFriend();
+                          }}
+                          className="w-full text-left px-3 py-2 rounded-lg text-xs text-rose-500 hover:bg-rose-500/10 cursor-pointer transition-all flex items-center gap-2 font-medium"
+                        >
+                          <span>Remove Friend</span>
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Disappearing messages banner — only for 1-1 chats */}
+      {/* Disappearing messages banner */}
       {!loadingMessages && selectedFriend && disappearDuration > 0 && (
-        <div className="flex items-center justify-center gap-2 py-1.5 px-3 mx-2 mb-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
-          <span className="text-xs text-[var(--accent)]">
-            🔒 Messages will disappear {disappearDuration}h after being seen
+        <div className="flex items-center justify-center gap-2 py-1.5 px-3 mx-2 my-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+          <span className="text-xs text-[var(--accent)] font-medium">
+            Messages will disappear {disappearDuration}h after being seen
           </span>
         </div>
       )}
+
       {!loadingMessages && (selectedFriend || selectedGroup) ? (
-        <div className="flex-1 min-h-0 bg-[var(--background)] p-2 rounded-md shadow-inner space-y-2">
+        <div className="flex-1 min-h-0 relative flex flex-col">
+          {/* Chat Container + Animated Floating Emojis Background */}
           <div
             ref={chatContainerRef}
             onClick={() => {
@@ -1199,15 +1233,15 @@ export default function ChatArea() {
                 const nearBottom =
                   el.scrollHeight - el.scrollTop - el.clientHeight < 150;
                 if (!nearBottom) {
-                  setHasAutoScrolled(true); // User scrolled up
+                  setHasAutoScrolled(true);
                 } else {
-                  setHasAutoScrolled(false); // User is at bottom
+                  setHasAutoScrolled(false);
                 }
               }
             }}
-            className="relative h-full bg-[var(--muted)] p-4 rounded-lg shadow-inner overflow-y-auto space-y-2 select-text"
+            className="relative h-full bg-[var(--background)] p-4 overflow-y-auto space-y-3 select-text custom-scrollbar"
           >
-            {/* 🌸 Floating faint emojis */}
+            {/* Floating faint emojis animation */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
               {floatingEmojis.map((e) => (
                 <motion.span
@@ -1256,31 +1290,16 @@ export default function ChatArea() {
                     ? url.includes("audio")
                     : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a"));
                 }));
-                // const isFromFriend = senderId === selectedFriend?.friendId;
 
-                // Only render messages sent by you or the selected friend
                 if (!isSentByUser && !isFromFriend && !isGroupChat) return null;
-                // console.log("msg", msg)
+
                 return (
                   <div
                     key={msg?._id || idx}
-                    className={` p-3 pr-8 relative rounded-md max-w-[70%] w-fit break-words whitespace-pre-wrap group ${hasAudio ? "min-w-[285px] md:min-w-[325px]" : ""
-                      }`}
-                    // ${
-                    //   isSentByUser
-                    //     ? "bg-lime-400 ml-auto"
-                    //     : "bg-lime-100 mr-auto"
-                    // }
-                    style={{
-                      backgroundColor: isSentByUser
-                        ? "var(--primary)"
-                        : "var(--card)",
-                      color: isSentByUser
-                        ? "var(--card-foreground)"
-                        : "var(--foreground)",
-                      marginLeft: isSentByUser ? "auto" : "0",
-                      marginRight: isSentByUser ? "0" : "auto",
-                    }}
+                    className={`p-3 relative max-w-[82%] sm:max-w-[70%] w-fit break-words whitespace-pre-wrap group rounded-2xl shadow-xs z-10 transition-all ${isSentByUser
+                      ? "whatsapp-bubble-sent ml-auto rounded-tr-xs bg-[var(--bubble-sent)] text-[var(--bubble-sent-text)] border border-[var(--accent)]/15"
+                      : "whatsapp-bubble-received mr-auto rounded-tl-xs bg-[var(--bubble-received)] text-[var(--bubble-received-text)] border border-[var(--border)]/40"
+                      } ${hasAudio ? "min-w-[280px] sm:min-w-[325px]" : ""}`}
                   >
                     {/* Delete Message Button */}
                     <button
@@ -1288,19 +1307,25 @@ export default function ChatArea() {
                         e.stopPropagation();
                         handleDeleteMessage(msg?._id, !!selectedGroup);
                       }}
-                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 max-md:opacity-60 bg-black/40 hover:bg-black/60 text-white rounded p-0.5 transition-all text-[10px] cursor-pointer z-20"
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 max-md:opacity-60 bg-black/40 hover:bg-black/60 text-white rounded p-1 transition-all text-[10px] cursor-pointer z-20"
                       title="Delete Message"
                     >
-                      🗑️
+                      <Trash2 size={11} />
                     </button>
 
+                    {/* Sender Name in Group Chat */}
+                    {isGroupChat && !isSentByUser && typeof msg.sender === "object" && (
+                      <p className={`text-xs font-bold mb-1 ${colors[idx % colors.length]}`}>
+                        {msg.sender.username}
+                      </p>
+                    )}
+
+                    {/* Media Attachments */}
                     {msg.media && msg.media?.length > 0 && (
-                      <div className="relative">
+                      <div className="relative mb-1.5">
                         <div
-                          className={`grid ${msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"
-                            } gap-2`}
+                          className={`grid ${msg.media?.length > 1 ? "grid-cols-2" : "grid-cols-1"} gap-2`}
                           onClick={(e) => {
-                            // Find the index of the clicked child
                             const target = e.target as HTMLMediaElement;
                             const children = Array.from(e.currentTarget.children);
                             const index = children.findIndex(
@@ -1334,14 +1359,13 @@ export default function ChatArea() {
                                 key={index}
                                 src={cleanUrl}
                                 onClick={openModal}
-                                className="w-24 h-24 cursor-pointer rounded-md border border-[var(--accent)] object-cover"
+                                className="w-28 h-28 cursor-pointer rounded-xl border border-[var(--border)] object-cover shadow-2xs"
                               />
                             ) : isAudio ? (
-                              <div key={index} className="flex items-center gap-2 p-1 bg-black/10 dark:bg-white/10 rounded-lg w-full">
-                                {/* <span className="text-xl pl-1" title="Voice Message">🎙️</span> */}
+                              <div key={index} className="flex items-center gap-2 p-1.5 bg-black/5 dark:bg-white/10 rounded-xl w-full">
                                 <audio
                                   src={cleanUrl}
-                                  className="w-full h-8 outline-none filter invert-0"
+                                  className="w-full h-8 outline-none"
                                   controls
                                 />
                               </div>
@@ -1352,7 +1376,7 @@ export default function ChatArea() {
                                 src={cleanUrl}
                                 onClick={openModal}
                                 alt="attachment"
-                                className="w-24 h-24 rounded cursor-pointer border border-[var(--accent)] object-cover"
+                                className="w-28 h-28 rounded-xl cursor-pointer border border-[var(--border)] object-cover shadow-2xs"
                               />
                             );
                           })}
@@ -1364,96 +1388,103 @@ export default function ChatArea() {
                                 setCurrentMediaIndex(3);
                                 setShowMediaModal(true);
                               }}
-                              className="w-24 h-24 flex items-center justify-center bg-[var(--background)] bg-opacity-60 text-[var(--foreground)] rounded cursor-pointer"
+                              className="w-28 h-28 flex items-center justify-center bg-black/40 text-white font-bold text-sm rounded-xl cursor-pointer"
                             >
                               +{(msg.media?.length || 0) - 3}
                             </div>
                           )}
                         </div>
                         {msg.uploading && (
-                          <div className="absolute inset-0 bg-black/45 rounded-md flex items-center justify-center z-10 pointer-events-none">
+                          <div className="absolute inset-0 bg-black/45 rounded-xl flex items-center justify-center z-10 pointer-events-none">
                             <Loader2 className="animate-spin text-white" size={24} />
                           </div>
                         )}
                       </div>
                     )}
-                    {msg.content}
-                    {/* Disappearing message countdown */}
-                    {msg.expiresAt && (
-                      <div className="flex items-center gap-1 mt-1 text-[10px] opacity-70" style={{ color: isSentByUser ? 'var(--card-foreground)' : 'var(--foreground)' }}>
-                        <Timer size={10} />
-                        <span>{formatCountdown(msg.expiresAt)}</span>
-                      </div>
-                    )}
-                    {isSentByUser && msg.isRead && selectedFriend && (
-                      <span className="text-xs absolute right-0 bottom-0 text-[var(--muted)] ml-2">
-                        👀
-                      </span>
-                    )}
 
-                    {selectedGroup && msg.seenBy && msg.seenBy.length > 0 && (
-                      <div className="flex items-center space-x-1 mt-1">
-                        {msg.seenBy
-                          .filter((u) => u._id !== userId)
-                          .slice(0, 3)
-                          .map((user, i) => (
-                            <Image
-                              key={i}
-                              src={user.profilePic || "/user.jpg"}
-                              title={user.username}
-                              alt="Seen by avatar"
-                              className="w-4 h-4 rounded-full border border-[var(--accent)]"
-                              width={16}
-                              height={16}
-                            />
-                          ))}
-                        {msg.seenBy.length > 4 && (
-                          <span className="text-xs text-[var(--muted)]">
-                            +{msg.seenBy.length - 4}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                    {/* Text content */}
+                    {msg.content && <p className="text-sm leading-relaxed">{msg.content}</p>}
+
+                    {/* Bubble Metadata Footer */}
+                    <div className="flex items-center justify-end gap-1.5 mt-1 text-[10px] opacity-70 select-none">
+                      {msg.expiresAt && (
+                        <span className="flex items-center gap-0.5 text-amber-500 font-medium">
+                          <Timer size={10} /> {formatCountdown(msg.expiresAt)}
+                        </span>
+                      )}
+
+                      {msg.createdAt && (
+                        <span>{formatMessageTime(msg.createdAt)}</span>
+                      )}
+
+                      {isSentByUser && (
+                        <span className={msg.isRead ? "text-sky-500 font-bold" : "opacity-60"}>
+                          ✓✓
+                        </span>
+                      )}
+
+                      {selectedGroup && msg.seenBy && msg.seenBy.length > 0 && (
+                        <div className="flex items-center space-x-0.5 ml-1">
+                          {msg.seenBy
+                            .filter((u) => u._id !== userId)
+                            .slice(0, 3)
+                            .map((user, i) => (
+                              <Image
+                                key={i}
+                                src={user.profilePic || "/user.jpg"}
+                                title={user.username}
+                                alt="Seen by avatar"
+                                className="w-3.5 h-3.5 rounded-full border border-[var(--card)]"
+                                width={14}
+                                height={14}
+                              />
+                            ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             {typingFriend && (
-              <div className="text-sm italic text-[var(--accent)]">
-                Typing...
+              <div className="text-xs italic text-[var(--accent)] font-semibold bg-[var(--card)] px-3 py-1.5 rounded-full w-fit shadow-xs">
+                {typingFriend} is typing...
               </div>
             )}
             <div ref={bottomRef} />
           </div>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 bg-[var(--muted)] p-4 rounded-lg flex items-center justify-center text-[var(--foreground)] text-sm">
+        <div className="flex-1 min-h-0 bg-[var(--background)] p-4 flex items-center justify-center">
           <ScaleTN variant="chat" />
         </div>
       )}
+
+      {/* Media Previews Bar */}
       {!loadingMessages &&
         (selectedFriend || selectedGroup) &&
         previewVisible &&
         mediaFiles.length > 0 && (
-          <div className=" relative flex flex-wrap gap-2 mb-2">
+          <div className="relative flex flex-wrap gap-2 p-2 bg-[var(--card)] border-t border-[var(--border)]">
             {renderMediaPreviews()}
-            <span className="text-[var(--foreground)] absolute bottom-1 right-0 text-sm ml-2">
-              {mediaFiles.length} selected
+            <span className="text-[var(--foreground)] text-xs font-medium ml-2 self-center">
+              {mediaFiles.length} file(s) attached
             </span>
 
             <div
-              className="absolute top-1 right-0 cursor-pointer"
+              className="absolute top-2 right-2 cursor-pointer p-1 rounded-full hover:bg-[var(--muted)]"
               onClick={() => {
                 setPreviewVisible(false);
                 setMediaFiles([]);
               }}
             >
-              <X className="hover:text-[var(--accent)]" />
+              <X size={16} className="text-[var(--foreground)]" />
             </div>
           </div>
         )}
 
+      {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="flex flex-row items-center justify-center mt-4 gap-2">
+        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 shadow-xs lg:mb-[1rem]">
           <input
             type="file"
             name="media"
@@ -1465,83 +1496,15 @@ export default function ChatArea() {
             id="upload"
           />
 
-          {/* Desktop-only action buttons */}
-          <div className="hidden lg:flex flex-row items-center gap-2">
-            <label
-              htmlFor="upload"
-              title="Send Media"
-              aria-label="Send media"
-              className="flex justify-center items-center cursor-pointer px-4 py-2 border-1 border-[var(--accent)] hover:bg-[var(--accent)]/15 text-[var(--foreground)] bg-[var(--card)] rounded"
-            >
-              📷
-            </label>
-
-            {/* Voice Recorder Button */}
-            <VoiceRecorder
-              onSend={(audioFile) => {
-                setMediaFiles((prev) => [...prev, audioFile]); // Add to mediaFiles
-                setPreviewVisible(true); // Show in preview
-              }}
-            />
-          </div>
-
-          {/* Mobile-only Action Dropdown */}
-          <div className="flex lg:hidden relative" ref={actionsDropdownRef}>
-            <button
-              onClick={() => setShowActionsDropdown(!showActionsDropdown)}
-              className={`flex justify-center items-center cursor-pointer p-2.5 border border-[var(--accent)] rounded-lg transition-all ${showActionsDropdown
-                ? "bg-[var(--accent)]/20 text-[var(--accent)]"
-                : "bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--accent)]/15"
-                }`}
-              title="More actions"
-            >
-              <Plus size={20} />
-            </button>
-
-            <AnimatePresence>
-              {showActionsDropdown && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute bottom-full mb-2 left-0 bg-[var(--card)]/95 backdrop-blur-md border border-[var(--accent)]/30 rounded-xl shadow-2xl py-2 px-1 min-w-[200px] z-50 flex flex-col gap-1"
-                >
-                  {/* Send Media */}
-                  <label
-                    htmlFor="upload"
-                    onClick={() => setShowActionsDropdown(false)}
-                    className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-lg text-sm text-[var(--foreground)] hover:bg-[var(--accent)]/10 cursor-pointer transition-all"
-                  >
-                    <span className="text-lg">📷</span>
-                    <span>Send Media</span>
-                  </label>
-
-                  {/* Voice Recorder */}
-                  <div className="flex items-center gap-3 w-full px-3 py-1.5 rounded-lg hover:bg-[var(--accent)]/10 transition-all">
-                    <VoiceRecorder
-                      onSend={(audioFile) => {
-                        setMediaFiles((prev) => [...prev, audioFile]);
-                        setPreviewVisible(true);
-                        setShowActionsDropdown(false);
-                      }}
-                    />
-                    <span className="text-sm text-[var(--foreground)]">Record Voice</span>
-                  </div>
-
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Emoji button */}
+          {/* Emoji Picker toggle button */}
           <div className="relative">
-            <div
-              className="cursor-pointer px-4 py-2 text-[var(--foreground)] hover:bg-[var(--accent)]/15 border-1 border-[var(--accent)] bg-[var(--card)] rounded"
+            <button
               onClick={() => setShowEmoji(!showEmoji)}
+              className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/80 hover:text-[var(--foreground)] transition cursor-pointer text-xl flex items-center justify-center"
+              title="Choose Emoji"
             >
               😀
-            </div>
+            </button>
             {showEmoji && (
               <EmojiPicker
                 onEmojiClick={(emoji) => setMessageInput((prev) => prev + emoji)}
@@ -1549,27 +1512,41 @@ export default function ChatArea() {
             )}
           </div>
 
-          {isRecordingVoice ? (
-            <div className="flex-1 px-4 py-2 rounded-md bg-rose-500/10 text-rose-500 flex items-center gap-2 animate-pulse font-medium text-sm border border-rose-500/20 select-none">
-              <span>🔴</span>
-              <span>Recording...</span>
-            </div>
-          ) : (
-            <textarea
-              value={messageInput}
-              onChange={handleInputChange}
-              onFocus={() => setShowEmoji(false)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault(); // Prevent newline
-                  sendMessage();
-                }
-              }}
-              className="flex-1 px-4 py-2 rounded-md bg-[var(--card)] text-[var(--foreground)] outline-none resize-none"
-              placeholder="Type a message..."
-              rows={1}
-            />
-          )}
+          {/* Attachment Clip button */}
+          <label
+            htmlFor="upload"
+            className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/80 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center"
+            title="Attach Media"
+          >
+            <Plus size={22} />
+          </label>
+
+          {/* WhatsApp Textarea Input */}
+          <div className="flex-1 min-w-0 bg-[var(--input)] border border-[var(--border)] focus-within:border-[var(--accent)] rounded-2xl px-4 py-1.5 transition flex items-center">
+            {isRecordingVoice ? (
+              <div className="flex-1 text-rose-500 flex items-center gap-2 animate-pulse font-medium text-xs py-1 select-none">
+                <span>🔴</span>
+                <span>Recording voice message...</span>
+              </div>
+            ) : (
+              <textarea
+                value={messageInput}
+                onChange={handleInputChange}
+                onFocus={() => setShowEmoji(false)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                className="w-full bg-transparent text-[var(--foreground)] outline-none resize-none text-sm placeholder:text-[var(--foreground)]/40 max-h-24 custom-scrollbar"
+                placeholder="Type a message..."
+                rows={1}
+              />
+            )}
+          </div>
+
+          {/* Dynamic Send / Mic Action Button */}
           <button
             onMouseDown={handlePressStart}
             onMouseUp={handlePressEnd}
@@ -1590,11 +1567,22 @@ export default function ChatArea() {
               e.preventDefault();
               handlePressEnd(e);
             }}
-            className={`ml-2 p-3 rounded-full cursor-pointer hover:opacity-90 transition-all flex items-center justify-center ${isRecordingVoice
-              ? "bg-rose-600 animate-pulse text-white shadow-lg shadow-rose-500/30"
-              : "bg-[var(--accent)] text-[var(--card-foreground)]"
+            onClick={() => {
+              if (messageInput.trim() || mediaFiles.length > 0) {
+                sendMessage();
+              }
+            }}
+            className={`p-3 rounded-full cursor-pointer transition-all flex items-center justify-center shadow-2xs ${isRecordingVoice
+              ? "bg-rose-600 animate-pulse text-white shadow-rose-500/30"
+              : "bg-[var(--accent)] hover:opacity-90 text-white"
               }`}
-            title={isRecordingVoice ? "Release to Preview" : "Hold 3s to Record / Click to Send"}
+            title={
+              isRecordingVoice
+                ? "Release to Preview"
+                : messageInput.trim() || mediaFiles.length > 0
+                  ? "Send Message"
+                  : "Hold to record voice"
+            }
           >
             {isRecordingVoice ? (
               <Loader2 className="animate-spin" size={18} />

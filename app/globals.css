@@ -5,36 +5,46 @@
 
 
 :root {
-  --background: #ededed;
-  --foreground: #000000;
-  --primary: #0aa38c; /* blue-700 */
-  --secondary: #9333ea; /* purple-600 */
-  --accent: #10b981; /* green-500 */
-  --muted: #f3f4f6; /* gray-100 */
+  --background: #efeae2;
+  --foreground: #111b21;
+  --primary: #00a884;
+  --secondary: #25d366;
+  --accent: #00a884;
+  --muted: #f0f2f5;
   --card: #ffffff;
-  --card-foreground: #111827;
+  --card-foreground: #111b21;
   --popover: #ffffff;
-  --popover-foreground: #111827;
-  --border: #e5e7eb;
-  --input: #ffffff;
-  --ring: #1d4ed8; /* blue-700 */
+  --popover-foreground: #111b21;
+  --border: #e9edef;
+  --input: #f0f2f5;
+  --ring: #00a884;
+  --bubble-sent: #d9fdd3;
+  --bubble-sent-text: #111b21;
+  --bubble-received: #ffffff;
+  --bubble-received-text: #111b21;
+  --chat-pattern-opacity: 0.06;
 }
 
 /* ---------- Dark Theme ---------- */
 [data-theme="dark"] {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --primary: #0aa38c; /* blue-500 */
-  --secondary: #a855f7; /* purple-500 */
-  --accent: #22c55e; /* green-400 */
-  --muted: #1f2937; /* gray-800 */
-  --card: #1a1a1a;
-  --card-foreground: #f3f4f6;
-  --popover: #1a1a1a;
-  --popover-foreground: #f3f4f6;
-  --border: #1f2937;
-  --input: #1a1a1a;
-  --ring: #3b82f6; /* blue-500 */
+  --background: #0b141a;
+  --foreground: #e9edef;
+  --primary: #00a884;
+  --secondary: #00a884;
+  --accent: #00a884;
+  --muted: #111b21;
+  --card: #202c33;
+  --card-foreground: #e9edef;
+  --popover: #202c33;
+  --popover-foreground: #e9edef;
+  --border: #222d34;
+  --input: #2a3942;
+  --ring: #00a884;
+  --bubble-sent: #005c4b;
+  --bubble-sent-text: #e9edef;
+  --bubble-received: #202c33;
+  --bubble-received-text: #e9edef;
+  --chat-pattern-opacity: 0.03;
 }
 
 /* ---------- Custom Theme Example (e.g. “Aurora”) ---------- */
@@ -52,6 +62,11 @@
   --border: #1e293b;
   --input: #17212b;
   --ring: #00bcd4;
+  --bubble-sent: #1e3a5f;
+  --bubble-sent-text: #e0f7fa;
+  --bubble-received: #17212b;
+  --bubble-received-text: #e0f7fa;
+  --chat-pattern-opacity: 0.05;
 }
 
 @theme inline {
@@ -67,6 +82,14 @@
     --foreground: #ededed;
   }
 } */
+
+html,
+body {
+  height: 100%;
+  max-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
 
 body {
   background: var(--background);
@@ -154,7 +177,41 @@ textarea,
   }
 }
 
-/* Utility classes */
+/* ---------- WhatsApp Custom Styles ---------- */
+.whatsapp-bubble-sent {
+  background-color: var(--bubble-sent);
+  color: var(--bubble-sent-text);
+  border-radius: 12px 12px 0px 12px;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+.whatsapp-bubble-received {
+  background-color: var(--bubble-received);
+  color: var(--bubble-received-text);
+  border-radius: 12px 12px 12px 0px;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+/* Thin subtle scrollbar for WhatsApp chat list */
+.custom-scrollbar::-webkit-scrollbar {
+  display: block !important;
+  width: 6px !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(134, 150, 160, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(134, 150, 160, 0.5);
+}
+
+/* ---------- Utility classes ---------- */
 .animate-fadeInOut {
   animation: fadeInOut 3s infinite ease-in-out;
 }
