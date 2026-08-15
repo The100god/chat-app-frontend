@@ -20,11 +20,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Let the browser handle web socket connections and non-HTTP requests normally
-  if (!event.request.url.startsWith("http")) return;
-
-  // Do not intercept or cache development HMR resources, socket connections, or API endpoints
+  // Let browser handle non-GET, non-http(s), socket, and dev build requests
   if (
+    !event.request.url.startsWith("http") ||
+    event.request.method !== "GET" ||
     event.request.url.includes("/_next/") ||
     event.request.url.includes("webpack") ||
     event.request.url.includes("/api/") ||
@@ -53,7 +52,7 @@ self.addEventListener("fetch", (event) => {
           if (cachedResponse) {
             return cachedResponse;
           }
-          // Let it fail if offline and not in cache
+          return new Response(null, { status: 504, statusText: "Gateway Timeout" });
         });
       })
   );

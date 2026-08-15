@@ -86,6 +86,11 @@ export function useTogetherRoom() {
     const socket = getActiveSocket();
     if (!socket) return;
 
+    if ((socket as any)._togetherListenersAttached) {
+      return;
+    }
+    (socket as any)._togetherListenersAttached = true;
+
     const handleState = (roomState: TogetherRoom | null) => {
       setRoom(roomState);
       if (roomState?.roomId) {
@@ -182,6 +187,7 @@ export function useTogetherRoom() {
       socket.off("together:error", handleError);
       socket.off("together:inviteReceived", handleInviteReceived);
       socket.off("together:rejoinableRooms", handleRejoinableRooms);
+      delete (socket as any)._togetherListenersAttached;
     };
   }, [userId, getActiveSocket, setRoom, setInvites]);
 
