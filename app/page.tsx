@@ -92,7 +92,7 @@ export default function Home() {
   const isMobileChatOpen = activeWorkspace === "chat" && !showLeft;
 
   return (
-    <div className={`flex w-full overflow-hidden ${isMobileChatOpen ? "h-dvh lg:h-[calc(100dvh-64px)]" : "h-[calc(100dvh-64px)]"}`}>
+    <div className="flex w-full h-full min-h-0 flex-1 overflow-hidden">
       {activeWorkspace === "chat" ? (
         <ResizableLayout
           leftComponent={<LeftSection />}
