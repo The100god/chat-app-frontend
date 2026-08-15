@@ -2,17 +2,32 @@ import { default as io, Socket } from "socket.io-client";
 import { DefaultEventsMap } from "@socket.io/component-emitter";
 
 let socket: Socket<DefaultEventsMap, DefaultEventsMap> | null = null;
+let currentUserId: string | null = null;
 
 export const connectSocket = (
   userId: string | null
 ): Socket<DefaultEventsMap, DefaultEventsMap> | null => {
-  if (!socket && userId) {
-    socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000");
-    // console.log("socketconnect", socket)
-    socket.emit("join", userId);
+  if (userId) {
+    currentUserId = userId;
   }
-  if (userId && socket) {
-    socket.emit("join", userId); // Join personal room for unseen updates
+
+  if (!socket && userId) {
+    socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
+
+    socket.on("connect", () => {
+      if (currentUserId && socket) {
+        socket.emit("join", currentUserId);
+      }
+    });
+
+    socket.emit("join", userId);
+  } else if (userId && socket) {
+    socket.emit("join", userId);
   }
 
   return socket;
@@ -29,5 +44,6 @@ export const disconnectSocket = () => {
   if (socket) {
     socket.disconnect();
     socket = null;
+    currentUserId = null;
   }
 };

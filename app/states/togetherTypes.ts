@@ -87,6 +87,8 @@ export interface DrawingElement {
   points?: Array<{ x: number; y: number }>;
   x?: number;
   y?: number;
+  xPct?: number;
+  yPct?: number;
   size?: number;
   icon?: string;
   userId: string;

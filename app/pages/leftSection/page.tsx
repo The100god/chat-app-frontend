@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useAtom } from "jotai";
 import {
@@ -165,13 +165,21 @@ export default function LeftSection() {
 
   // }, [isAuthenticated]);
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Auto-scroll section container to top whenever navigation tab changes
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [findFriend, friendsRequests, allFriends, groupChatOpen, findFriendWithChat]);
+
   if (!isAuthenticated) {
     return null; // Don't show anything if not authenticated
   }
 
-  // console.log("friends", friends);
   return (
-    <div className="flex px-4 pt-4 flex-col bg-[var(--background)] text-[var(--foreground)] h-[calc(100%-40px)] lg:h-[calc(100%-40px)] xl:h-full w-full rounded-md overflow-hidden relative">
+    <div ref={containerRef} className="flex px-4 pt-4 flex-col bg-[var(--background)] text-[var(--foreground)] h-[calc(100%-40px)] lg:h-[calc(100%-40px)] xl:h-full w-full rounded-md overflow-hidden relative">
       {findFriend && <FindFriend />}
       {/* {findFriend && <FindUser />} */}
       {/* {allFriends && <AllFriends friends={friends} loading={loading} />} */}

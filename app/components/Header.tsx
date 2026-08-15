@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import Link from "next/link";
@@ -95,7 +95,31 @@ const Header: React.FC = () => {
   const friendCount = friendsCounts;
   const profilePic = user.profilePic || "/user.jpg";
 
-  const handleNav = (cb: () => void) => {
+  const mobileNavRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (mobileNavRef.current) {
+      const activeBtn = mobileNavRef.current.querySelector(
+        "button.bg-\\[var\\(--accent\\)\\]"
+      );
+      if (activeBtn) {
+        activeBtn.scrollIntoView({
+          behavior: "smooth",
+          inline: "center",
+          block: "nearest",
+        });
+      }
+    }
+  }, [isHomeActive, isFindFriendsActive, isRequestsActive, isFriendsActive, isGroupsActive]);
+
+  const handleNav = (cb: () => void, e?: React.MouseEvent<HTMLElement>) => {
+    if (e?.currentTarget) {
+      e.currentTarget.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
     cb();
     setMessages([]);
     setLoadingMessages(true);
@@ -104,12 +128,34 @@ const Header: React.FC = () => {
     setShowLeft(true);
     setActiveWorkspace("chat");
     router.push("/");
+
+    // Auto-scroll window and main content containers to top smoothly
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => {
+        const scrollableContainers = document.querySelectorAll(
+          ".overflow-y-auto, .custom-scrollbar"
+        );
+        scrollableContainers.forEach((el) => {
+          el.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }, 50);
+    }
   };
 
   const handleWorkspaceSwitch = (workspace: "chat" | "together") => {
     setActiveWorkspace(workspace);
     if (typeof window !== "undefined") {
       localStorage.setItem("activeWorkspace", workspace);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => {
+        const scrollableContainers = document.querySelectorAll(
+          ".overflow-y-auto, .custom-scrollbar"
+        );
+        scrollableContainers.forEach((el) => {
+          el.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      }, 50);
     }
     setMenuOpen(false);
     if (workspace === "chat") {
@@ -408,9 +454,9 @@ const Header: React.FC = () => {
 
         {/* WhatsApp Mobile Tab Navigation Strip */}
         {activeWorkspace === "chat" && (
-          <div className="flex items-center overflow-x-auto no-scrollbar px-2 py-1.5 bg-[var(--muted)]/40 border-t border-[var(--border)]/30 gap-1">
+          <div ref={mobileNavRef} className="flex items-center overflow-x-auto no-scrollbar px-2 py-1.5 bg-[var(--muted)]/40 border-t border-[var(--border)]/30 gap-1">
             <button
-              onClick={() =>
+              onClick={(e) =>
                 handleNav(() => {
                   setFindFriendWithChat(true);
                   setFindFriend(false);
@@ -418,7 +464,7 @@ const Header: React.FC = () => {
                   setAllFriends(false);
                   setGroupChatOpen(false);
                   setShowLeft(true);
-                })
+                }, e)
               }
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isHomeActive
@@ -430,7 +476,7 @@ const Header: React.FC = () => {
             </button>
 
             <button
-              onClick={() =>
+              onClick={(e) =>
                 handleNav(() => {
                   setFindFriend(true);
                   setFindFriendWithChat(false);
@@ -438,7 +484,7 @@ const Header: React.FC = () => {
                   setAllFriends(false);
                   setGroupChatOpen(false);
                   setShowLeft(true);
-                })
+                }, e)
               }
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isFindFriendsActive
@@ -450,7 +496,7 @@ const Header: React.FC = () => {
             </button>
 
             <button
-              onClick={() =>
+              onClick={(e) =>
                 handleNav(() => {
                   setFriendsRequests(true);
                   setFindFriendWithChat(false);
@@ -458,7 +504,7 @@ const Header: React.FC = () => {
                   setAllFriends(false);
                   setGroupChatOpen(false);
                   setShowLeft(true);
-                })
+                }, e)
               }
               className={`relative px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isRequestsActive
@@ -471,7 +517,7 @@ const Header: React.FC = () => {
             </button>
 
             <button
-              onClick={() =>
+              onClick={(e) =>
                 handleNav(() => {
                   setAllFriends(true);
                   setFindFriendWithChat(false);
@@ -479,7 +525,7 @@ const Header: React.FC = () => {
                   setFriendsRequests(false);
                   setGroupChatOpen(false);
                   setShowLeft(true);
-                })
+                }, e)
               }
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isFriendsActive
@@ -491,7 +537,7 @@ const Header: React.FC = () => {
             </button>
 
             <button
-              onClick={() =>
+              onClick={(e) =>
                 handleNav(() => {
                   setGroupChatOpen(true);
                   setFindFriendWithChat(false);
@@ -499,7 +545,7 @@ const Header: React.FC = () => {
                   setFriendsRequests(false);
                   setAllFriends(false);
                   setShowLeft(true);
-                })
+                }, e)
               }
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isGroupsActive

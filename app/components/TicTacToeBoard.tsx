@@ -6,7 +6,7 @@ import { useAtom } from "jotai";
 import { userIdAtom, friendsAtom } from "../states/States";
 import { TogetherRoom, TicTacToeState, TicTacToeComment } from "../states/togetherTypes";
 import { getSocket } from "../hooks/useSocket";
-import { RotateCcw, Trophy, Sparkles, Users, Circle, Send, MessageSquare, XCircle, Handshake, LogOut } from "lucide-react";
+import { RotateCcw, Trophy, Sparkles, Users, Circle, XCircle, Handshake, LogOut } from "lucide-react";
 
 interface TicTacToeBoardProps {
   room: TogetherRoom;
@@ -24,10 +24,7 @@ const QUICK_REACTIONS = [
 export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
   const [userId] = useAtom(userIdAtom);
   const [friends] = useAtom(friendsAtom);
-  const [commentText, setCommentText] = useState("");
-  const [showComments, setShowComments] = useState(true);
   const [hoveredCell, setHoveredCell] = useState<number | null>(null);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
 
   const gameState: TicTacToeState = room.state?.ticTacToe || {
     board: Array(9).fill(null),
@@ -40,7 +37,7 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
     comments: [],
   };
 
-  const { board, players, currentTurn, winner, winningLine, isDraw, status, comments = [] } = gameState;
+  const { board, players, currentTurn, winner, winningLine, isDraw, status } = gameState;
 
   const movesMade = board.some((cell) => cell !== null);
 
@@ -54,20 +51,6 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
     ties: 0,
     total: 0,
   };
-
-  const commentsContainerRef = useRef<HTMLDivElement | null>(null);
-  const prevCommentsLength = useRef(comments.length);
-
-  // Auto-scroll comments inside container only
-  useEffect(() => {
-    if (comments.length > prevCommentsLength.current) {
-      const container = commentsContainerRef.current;
-      if (container) {
-        container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-      }
-    }
-    prevCommentsLength.current = comments.length;
-  }, [comments.length]);
 
   // Helper to resolve player info
   const getPlayerInfo = (pid: string | null | undefined) => {
@@ -113,17 +96,6 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
     const socket = getSocket();
     if (socket) {
       socket.emit("together:tictactoe:startGame", { roomId: room.roomId });
-    }
-  };
-
-  const handleSendComment = (textToSend?: string) => {
-    const message = textToSend || commentText;
-    if (!message.trim()) return;
-
-    const socket = getSocket();
-    if (socket) {
-      socket.emit("together:tictactoe:comment", { roomId: room.roomId, text: message.trim() });
-      if (!textToSend) setCommentText("");
     }
   };
 
@@ -504,94 +476,7 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
       </div>
       )}
 
-      {/* ─── In-Game Comments & Live Chat ─── */}
-      <div className="w-full bg-[var(--muted)]/50 rounded-xl border border-[var(--border)] p-2 flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[11px] font-bold text-[var(--foreground)] flex items-center gap-1.5 opacity-80">
-            <MessageSquare size={12} /> Live Comments
-          </span>
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="text-[10px] text-[var(--accent)] font-semibold hover:underline cursor-pointer"
-          >
-            {showComments ? "Hide" : "Show"} ({comments.length})
-          </button>
-        </div>
 
-        {showComments && (
-          <>
-            {/* Comments List */}
-            {comments.length > 0 ? (
-              <div ref={commentsContainerRef} className="max-h-24 overflow-y-auto flex flex-col gap-1.5 px-1 py-0.5 scrollbar-thin">
-                {comments.map((c: TicTacToeComment) => {
-                  const isMe = c.senderId === userId;
-                  const senderName = isMe ? "You" : friends.find((f) => f.friendId === c.senderId)?.username || "Partner";
-
-                  return (
-                    <motion.div
-                      key={c.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`flex flex-col text-xs rounded-lg px-2.5 py-1 max-w-[85%] ${
-                        isMe
-                          ? "ml-auto bg-[var(--accent)] text-white font-medium shadow-sm"
-                          : "mr-auto bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)]"
-                      }`}
-                    >
-                      <span className="text-[9px] opacity-75 font-semibold">
-                        {senderName}
-                      </span>
-                      <span>{c.text}</span>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-[11px] text-[var(--foreground)] opacity-50 text-center py-1 italic">
-                No comments yet. Send a quick reaction!
-              </p>
-            )}
-
-            {/* Quick Reactions Pills */}
-            <div className="flex items-center gap-1 overflow-x-auto py-1 no-scrollbar">
-              {QUICK_REACTIONS.map((rx, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSendComment(rx)}
-                  className="flex-shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--card)] border border-[var(--border)] hover:border-[var(--accent)] hover:bg-[var(--accent)]/10 text-[var(--foreground)] transition-colors cursor-pointer"
-                >
-                  {rx}
-                </button>
-              ))}
-            </div>
-
-            {/* Comment Input */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSendComment();
-              }}
-              className="flex items-center gap-1.5 pt-0.5"
-            >
-              <input
-                type="text"
-                placeholder="Type a comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                maxLength={100}
-                className="flex-1 bg-[var(--card)] border border-[var(--border)] rounded-lg px-2.5 py-1 text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)] transition-colors"
-              />
-              <button
-                type="submit"
-                disabled={!commentText.trim()}
-                className="bg-[var(--accent)] disabled:opacity-40 text-white p-1.5 rounded-lg hover:opacity-90 transition-opacity cursor-pointer flex-shrink-0"
-              >
-                <Send size={12} />
-              </button>
-            </form>
-          </>
-        )}
-      </div>
 
       {/* ─── Bottom Actions (Rematch / Leave) ─── */}
       <div className="w-full flex items-center justify-center gap-2">

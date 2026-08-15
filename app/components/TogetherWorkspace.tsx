@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gamepad2,
@@ -19,6 +19,7 @@ import {
   X,
   Zap,
   RotateCcw,
+  Lock,
 } from "lucide-react";
 import { useAtom, useSetAtom } from "jotai";
 import {
@@ -124,9 +125,14 @@ const TogetherWorkspace: React.FC = () => {
 
   const [friends] = useAtom(friendsAtom);
   const [userId] = useAtom(userIdAtom);
+
+  // Exclude current user from selectable friends list for room invites
+  const selectableFriends = friends.filter(
+    (f) => String(f.friendId) !== String(userId) && String((f as any)._id || "") !== String(userId)
+  );
   const [isAppLocked] = useAtom(isAppLockedAtom);
   const setPendingInvite = useSetAtom(pendingTogetherInviteAtom);
-  const { room, invites, dismissInvite, createRoom, joinRoom } = useTogetherRoom();
+  const { room, invites, dismissInvite, declineInvite, createRoom, joinRoom } = useTogetherRoom();
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1025);
@@ -156,6 +162,8 @@ const TogetherWorkspace: React.FC = () => {
   }, [activeSection]);
 
   // 3. Auto-sync activeSection when room changes (e.g. watch room -> watch section)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (room?.type) {
       const typeToSection: Record<TogetherRoomType, TogetherSection> = {
@@ -172,10 +180,20 @@ const TogetherWorkspace: React.FC = () => {
     }
   }, [room?.type]);
 
+  // Auto-scroll scrollable main view to top when active section or room game/activity starts
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [activeSection, room?.roomId, room?.type, room?.gameId, room?.activityId]);
+
   const currentSection = sections.find((s) => s.id === activeSection) || sections[0];
 
   const handleInitiateCreate = (type: TogetherRoomType) => {
     setPendingRoomType(type);
+    if (type === "game") {
+      setSelectedGameId(null);
+    }
     const typeToSection: Record<TogetherRoomType, TogetherSection> = {
       watch: "watch",
       music: "listen",
@@ -186,10 +204,10 @@ const TogetherWorkspace: React.FC = () => {
     if (typeToSection[type]) {
       setActiveSection(typeToSection[type]);
     }
-    if (type === "activity" && !selectedGameId) {
+    if (type === "activity") {
       setSelectedGameId("would_you_rather" as unknown as TogetherGameId);
     }
-    setSelectedFriendId(friends.length > 0 ? friends[0].friendId : null);
+    setSelectedFriendId(selectableFriends.length > 0 ? selectableFriends[0].friendId : null);
     setShowCreateModal(true);
   };
 
@@ -223,7 +241,7 @@ const TogetherWorkspace: React.FC = () => {
   };
 
   const handleDeclineInvite = (roomId: string) => {
-    dismissInvite(roomId);
+    declineInvite(roomId);
   };
 
   return (
@@ -249,15 +267,23 @@ const TogetherWorkspace: React.FC = () => {
                   const isActive = activeSection === section.id;
                   const inviteCount = invites.filter((i) => i.roomType === section.roomType).length;
                   const hasTypeInvites = section.id !== "home" && inviteCount > 0;
+                  const isLocked = !!room && !isActive;
 
                   return (
                     <li
                       key={section.id}
-                      onClick={() => setActiveSection(section.id)}
-                      className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${isActive
-                        ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
-                        : "hover:bg-[var(--muted)]"
-                        }`}
+                      onClick={() => {
+                        if (room) return;
+                        setActiveSection(section.id);
+                      }}
+                      className={`flex items-center px-3 py-3 rounded-xl transition-all duration-150 relative ${
+                        isLocked
+                          ? "opacity-40 cursor-not-allowed"
+                          : isActive
+                          ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)] cursor-pointer"
+                          : "hover:bg-[var(--muted)] cursor-pointer"
+                      }`}
+                      title={room ? "Interface navigation is locked during an active room session" : undefined}
                     >
                       {/* Circular Avatar with Green Online Indicator */}
                       <div className="relative mr-3.5 flex-shrink-0">
@@ -276,12 +302,21 @@ const TogetherWorkspace: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
                           <p
-                            className={`text-sm truncate ${isActive ? "font-bold text-[var(--foreground)]" : "font-semibold text-[var(--foreground)]"
-                              }`}
+                            className={`text-sm truncate ${
+                              isActive ? "font-bold text-[var(--foreground)]" : "font-semibold text-[var(--foreground)]"
+                            }`}
                           >
                             {section.label}
                           </p>
-                          {hasTypeInvites && (
+                          {room && isActive && (
+                            <span className="ml-2 text-[10px] bg-emerald-500 text-white font-bold px-2 py-0.5 rounded-full flex items-center gap-1 flex-shrink-0 animate-pulse">
+                              Active 🟢
+                            </span>
+                          )}
+                          {isLocked && (
+                            <Lock size={12} className="text-[var(--foreground)] opacity-50 ml-1 flex-shrink-0" />
+                          )}
+                          {!room && hasTypeInvites && (
                             <span className="ml-2 text-[10px] bg-[var(--accent)] text-white font-bold px-2 py-0.5 rounded-full animate-pulse flex-shrink-0">
                               {inviteCount}
                             </span>
@@ -296,21 +331,30 @@ const TogetherWorkspace: React.FC = () => {
 
             {/* Footer Action Buttons */}
             <div className="p-3 border-t border-[var(--border)] bg-[var(--card)] flex flex-col gap-2">
-              <button
-                onClick={() => handleInitiateCreate(sections.find((s) => s.id === activeSection)?.roomType || "game")}
-                className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
-              >
-                <Plus size={16} />
-                <span>Create Room</span>
-              </button>
+              {room ? (
+                <div className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)]/15 border border-[var(--accent)]/40 text-[var(--accent)] font-bold text-xs flex items-center justify-center gap-2 shadow-xs">
+                  <Lock size={15} />
+                  <span>Room Session Active</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleInitiateCreate(sections.find((s) => s.id === activeSection)?.roomType || "game")}
+                    className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
+                  >
+                    <Plus size={16} />
+                    <span>Create Room</span>
+                  </button>
 
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="w-full py-2 px-3 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)]/40 text-[var(--foreground)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border)] transition cursor-pointer"
-              >
-                <LogIn size={15} />
-                <span>Join Room</span>
-              </button>
+                  <button
+                    onClick={() => setShowJoinModal(true)}
+                    className="w-full py-2 px-3 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)]/40 text-[var(--foreground)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border)] transition cursor-pointer"
+                  >
+                    <LogIn size={15} />
+                    <span>Join Room</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </nav>
@@ -328,25 +372,39 @@ const TogetherWorkspace: React.FC = () => {
               const isActive = activeSection === section.id;
               const inviteCount = invites.filter((i) => i.roomType === section.roomType).length;
               const hasTypeInvites = section.id !== "home" && inviteCount > 0;
+              const isLocked = !!room && !isActive;
 
               return (
                 <button
                   key={section.id}
-                  onClick={() => setActiveSection(section.id)}
+                  onClick={() => {
+                    if (room) return;
+                    setActiveSection(section.id);
+                  }}
                   aria-label={section.label}
                   aria-current={isActive ? "page" : undefined}
+                  disabled={isLocked}
                   className={`
                     relative flex flex-col items-center justify-center py-1.5 px-2.5 rounded-2xl text-xs font-semibold
-                    transition-all duration-150 cursor-pointer flex-1 min-w-[60px]
-                    ${isActive
-                      ? "bg-[var(--accent)]/15 text-[var(--accent)] font-bold shadow-xs border border-[var(--accent)]/30"
-                      : "text-[var(--foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--muted)]"
+                    transition-all duration-150 flex-1 min-w-[60px]
+                    ${
+                      isLocked
+                        ? "opacity-35 cursor-not-allowed"
+                        : isActive
+                        ? "bg-[var(--accent)]/15 text-[var(--accent)] font-bold shadow-xs border border-[var(--accent)]/30 cursor-pointer"
+                        : "text-[var(--foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--muted)] cursor-pointer"
                     }
                   `}
                 >
                   <div className="relative flex items-center justify-center">
                     <span className="text-base">{section.icon}</span>
-                    {hasTypeInvites && (
+                    {room && isActive && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[var(--card)] animate-ping" />
+                    )}
+                    {isLocked && (
+                      <Lock size={10} className="absolute -top-1 -right-1 text-[var(--foreground)] opacity-70" />
+                    )}
+                    {!room && hasTypeInvites && (
                       <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--accent)] border-2 border-[var(--card)] animate-ping" />
                     )}
                   </div>
@@ -358,9 +416,9 @@ const TogetherWorkspace: React.FC = () => {
         )}
 
         {/* Section Content */}
-        <div className="flex-1 flex items-start justify-center p-3 sm:p-6 overflow-y-auto scrollbar-none">
+        <div ref={containerRef} className="flex-1 flex items-start justify-center p-3 sm:p-6 overflow-y-auto scrollbar-none">
           <AnimatePresence mode="wait">
-            {room && (activeSection === (roomSectionMap[room.type] || "games")) ? (
+            {room ? (
               <motion.div
                 key="room-shell"
                 initial={{ opacity: 0, y: 20 }}
@@ -380,25 +438,6 @@ const TogetherWorkspace: React.FC = () => {
                 transition={{ duration: 0.3, ease: "easeOut" }}
                 className="w-full max-w-3xl mb-4 lg:max-w-5xl flex flex-col gap-6"
               >
-                {/* Active Session Banner if in room but viewing another tab */}
-                {room && roomSectionMap[room.type] && (
-                  <div className="w-full bg-gradient-to-r from-[var(--accent)]/20 via-purple-500/20 to-pink-500/20 border border-[var(--accent)]/40 rounded-2xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shadow-md">
-                    <div className="flex items-center gap-2">
-                      <Zap size={18} className="text-[var(--accent)] animate-pulse" />
-                      <span className="text-xs font-bold text-[var(--foreground)] capitalize">
-                        Active {room.type} session in progress
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setActiveSection(roomSectionMap[room.type])}
-                      className="px-3.5 py-1.5 rounded-xl bg-[var(--accent)] text-white text-xs font-bold shadow hover:opacity-90 transition-opacity cursor-pointer flex items-center gap-1.5 self-end sm:self-auto"
-                    >
-                      <RotateCcw size={13} />
-                      <span>Return to {sections.find((s) => s.id === roomSectionMap[room.type])?.label || "Session"}</span>
-                    </button>
-                  </div>
-                )}
-
                 {/* Active & Rejoinable Room Sessions Card List */}
                 {invites.length > 0 && (
                   <div className="w-full flex flex-col gap-3">
@@ -555,7 +594,14 @@ const TogetherWorkspace: React.FC = () => {
                       <button
                         key={sec.id}
                         type="button"
-                        onClick={() => setPendingRoomType(sec.roomType)}
+                        onClick={() => {
+                          setPendingRoomType(sec.roomType);
+                          if (sec.roomType === "game") {
+                            setSelectedGameId(null);
+                          } else if (sec.roomType === "activity") {
+                            setSelectedGameId("would_you_rather" as unknown as TogetherGameId);
+                          }
+                        }}
                         className={`flex flex-col items-center justify-center p-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${isSelected
                           ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--foreground)] shadow-sm scale-[1.02]"
                           : "bg-[var(--muted)] border-[var(--border)] text-[var(--foreground)] opacity-60 hover:opacity-100"
@@ -574,9 +620,9 @@ const TogetherWorkspace: React.FC = () => {
                 <label className="text-[11px] font-bold text-[var(--foreground)] uppercase tracking-wider block mb-1.5 opacity-70">
                   2. Select Friend to Invite:
                 </label>
-                {friends.length > 0 ? (
+                {selectableFriends.length > 0 ? (
                   <div className="flex flex-col gap-2 max-h-36 overflow-y-auto p-1 border border-[var(--border)] rounded-xl bg-[var(--muted)]/40">
-                    {friends.map((friend) => {
+                    {selectableFriends.map((friend) => {
                       const isSelected = selectedFriendId === friend.friendId;
                       return (
                         <button
@@ -621,7 +667,7 @@ const TogetherWorkspace: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-2">
-                {friends.length > 0 && (
+                {selectableFriends.length > 0 && (
                   <button
                     onClick={() => handleConfirmCreate(true)}
                     disabled={!selectedFriendId}
