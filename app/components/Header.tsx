@@ -90,11 +90,6 @@ const Header: React.FC = () => {
     }
   };
 
-  if (!isAuthenticated) return null;
-
-  const friendCount = friendsCounts;
-  const profilePic = user.profilePic || "/user.jpg";
-
   const mobileNavRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -111,6 +106,11 @@ const Header: React.FC = () => {
       }
     }
   }, [isHomeActive, isFindFriendsActive, isRequestsActive, isFriendsActive, isGroupsActive]);
+
+  if (!isAuthenticated) return null;
+
+  const friendCount = friendsCounts;
+  const profilePic = user.profilePic || "/user.jpg";
 
   const handleNav = (cb: () => void, e?: React.MouseEvent<HTMLElement>) => {
     if (e?.currentTarget) {
