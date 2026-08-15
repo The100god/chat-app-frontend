@@ -1091,8 +1091,31 @@ export default function ChatArea() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // console.log("selectedFriend", selectedFriend)
-  // console.log("messages", messages);
+  // Lock mobile window scroll when keyboard opens
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const lockScroll = () => {
+      if (window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+
+    window.addEventListener("scroll", lockScroll);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", lockScroll);
+      window.visualViewport.addEventListener("scroll", lockScroll);
+    }
+
+    return () => {
+      window.removeEventListener("scroll", lockScroll);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", lockScroll);
+        window.visualViewport.removeEventListener("scroll", lockScroll);
+      }
+    };
+  }, []);
+
   return (
     <div className="flex flex-col bg-[var(--background)] h-full rounded-md overflow-hidden relative">
       {!loadingMessages && (selectedFriend || selectedGroup) && (
@@ -1597,7 +1620,21 @@ export default function ChatArea() {
               <textarea
                 value={messageInput}
                 onChange={handleInputChange}
-                onFocus={() => setShowEmoji(false)}
+                onFocus={() => {
+                  setShowEmoji(false);
+                  if (typeof window !== "undefined") {
+                    window.scrollTo(0, 0);
+                    setTimeout(() => {
+                      window.scrollTo(0, 0);
+                      if (chatContainerRef.current) {
+                        chatContainerRef.current.scrollTo({
+                          top: chatContainerRef.current.scrollHeight,
+                          behavior: "smooth",
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
