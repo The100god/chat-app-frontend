@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, RotateCcw, LogOut, MessageSquare, Send, XCircle, Handshake, Users, Gamepad2 } from "lucide-react";
+import { Sparkles, Trophy, RotateCcw, LogOut, XCircle, Handshake, Users, Gamepad2 } from "lucide-react";
 import { MemoryMatchState, GameStats, TogetherRoom } from "../../states/togetherTypes";
 
 interface MemoryMatchBoardProps {
@@ -71,13 +71,6 @@ export const MemoryMatchBoard: React.FC<MemoryMatchBoardProps> = ({
 
   const handleRestart = () => {
     onEmit("together:memory:restart", { roomId: room.roomId });
-  };
-
-  const handleSendComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!commentInput.trim()) return;
-    onEmit("together:tictactoe:comment", { roomId: room.roomId, text: commentInput });
-    setCommentInput("");
   };
 
   return (
@@ -285,61 +278,6 @@ export const MemoryMatchBoard: React.FC<MemoryMatchBoardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ─── Live Comments ─── */}
-      <div className="w-full bg-[var(--muted)]/50 rounded-2xl border border-[var(--border)] p-2.5 flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5 opacity-80">
-            <MessageSquare size={13} /> Live Comments
-          </span>
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="text-[10px] text-[var(--accent)] font-semibold hover:underline cursor-pointer"
-          >
-            {showComments ? "Hide" : "Show"} ({comments.length})
-          </button>
-        </div>
-
-        {showComments && (
-          <>
-            <div className="max-h-24 overflow-y-auto flex flex-col gap-1.5 p-1 no-scrollbar">
-              {comments.length === 0 ? (
-                <p className="text-[11px] text-[var(--foreground)] opacity-50 italic text-center py-2">
-                  No comments yet. Send a quick chant!
-                </p>
-              ) : (
-                comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${
-                      c.senderId === currentUserId
-                        ? "bg-[var(--accent)] text-white self-end"
-                        : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
-                    }`}
-                  >
-                    {c.text}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <form onSubmit={handleSendComment} className="flex items-center gap-1.5 mt-1">
-              <input
-                type="text"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                placeholder="Say something nice..."
-                className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
-              />
-              <button
-                type="submit"
-                className="p-2 rounded-xl bg-[var(--accent)] text-white hover:opacity-90 transition cursor-pointer"
-              >
-                <Send size={12} />
-              </button>
-            </form>
-          </>
-        )}
-      </div>
     </div>
   );
 };

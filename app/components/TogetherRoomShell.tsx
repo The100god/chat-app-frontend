@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTogetherRoom } from "../hooks/useTogetherRoom";
 import { useAtom } from "jotai";
@@ -46,13 +46,25 @@ const typeConfig: Record<
   activity: { label: "Activity", icon: <Heart size={20} />, color: "#ec4899", emoji: "❤️" },
 };
 
-const TogetherRoomShell: React.FC = () => {
+export const TogetherRoomShell: React.FC = () => {
   const { room, isHost, leaveRoom, closeRoom, switchGame, emit } = useTogetherRoom();
   const [userId] = useAtom(userIdAtom);
   const [friends] = useAtom(friendsAtom);
   const [copied, setCopied] = useState(false);
   const [showConfirm, setShowConfirm] = useState<"leave" | "close" | null>(null);
   const [isChangingGame, setIsChangingGame] = useState(false);
+  const topShellRef = useRef<HTMLDivElement | null>(null);
+
+  // When room, game, activity, movie, or song starts/changes, automatically scroll to the top board
+  useEffect(() => {
+    if (topShellRef.current) {
+      topShellRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    const parentContainer = topShellRef.current?.closest(".overflow-y-auto");
+    if (parentContainer) {
+      parentContainer.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [room?.roomId, room?.type, room?.gameId, room?.activityId]);
 
   if (!room) return null;
 
@@ -89,15 +101,15 @@ const TogetherRoomShell: React.FC = () => {
     const c =
       room.type === "game"
         ? (room.state.ticTacToe?.comments ||
-           room.state.rps?.comments ||
-           room.state.connect4?.comments ||
-           room.state.memoryMatch?.comments ||
-           room.state.drawing?.comments ||
-           room.state.quiz?.comments ||
-           room.state.comments)
+          room.state.rps?.comments ||
+          room.state.connect4?.comments ||
+          room.state.memoryMatch?.comments ||
+          room.state.drawing?.comments ||
+          room.state.quiz?.comments ||
+          room.state.comments)
         : room.type === "activity"
-        ? (room.state.activity?.comments || room.state.comments)
-        : room.state.comments;
+          ? (room.state.activity?.comments || room.state.comments)
+          : room.state.comments;
 
     return Array.isArray(c) ? (c as TogetherComment[]) : [];
   };
@@ -133,6 +145,7 @@ const TogetherRoomShell: React.FC = () => {
 
   return (
     <motion.div
+      ref={topShellRef}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
@@ -183,131 +196,165 @@ const TogetherRoomShell: React.FC = () => {
         </div>
       </div>
 
-      {/* Game Content Block */}
-      {room.type === "game" && (
-        <div className="w-full bg-[var(--card)] rounded-2xl border border-[var(--accent)]/30 p-3 sm:p-4 shadow-xl backdrop-blur-md">
-          {!room.gameId || isChangingGame ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
-                <div className="flex items-center gap-2">
-                  <Gamepad2 className="text-[var(--accent)]" size={18} />
-                  <h3 className="text-sm font-bold text-[var(--foreground)]">
-                    {room.gameId ? "Select a New Game for Room" : "Choose a Game to Start Playing!"}
-                  </h3>
-                </div>
-                {room.gameId && (
-                  <button
-                    onClick={() => setIsChangingGame(false)}
-                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--muted)] hover:bg-[var(--accent)] hover:text-white transition cursor-pointer flex items-center gap-1"
-                    title="Cancel & Resume Current Game"
-                  >
-                    <X size={14} />
-                    <span className="hidden sm:inline">Cancel & Resume</span>
-                  </button>
-                )}
-              </div>
-              <GameSelector
-                selectedGameId={room.gameId as TogetherGameId | null}
-                userStats={room.sessionStats}
-                currentUserId={userId || undefined}
-                onSelectGame={(newGameId) => {
-                  switchGame(newGameId);
-                  setIsChangingGame(false);
-                }}
-              />
+      {/* Waiting for Partner Invitation Overlay */}
+      {room.participants.length < 2 ? (
+        <div className="w-full bg-[var(--card)] rounded-2xl border border-[var(--accent)]/40 p-8 sm:p-12 shadow-2xl backdrop-blur-md flex flex-col items-center justify-center text-center gap-4 my-4">
+          <div className="relative flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-[var(--accent)]/15 flex items-center justify-center text-[var(--accent)] animate-pulse">
+              <Users size={32} />
             </div>
-          ) : (
-            <>
-              {room.gameId === "tictactoe" && (
-                <TicTacToeBoard room={room} onLeave={() => setIsChangingGame(true)} />
-              )}
-              {room.gameId === "rps" && (
-                <RockPaperScissorsBoard
-                  room={room}
-                  currentUserId={userId || ""}
-                  onEmit={emit}
-                  onLeaveRoom={() => setIsChangingGame(true)}
-                />
-              )}
-              {room.gameId === "connect4" && (
-                <Connect4Board
-                  room={room}
-                  currentUserId={userId || ""}
-                  onEmit={emit}
-                  onLeaveRoom={() => setIsChangingGame(true)}
-                />
-              )}
-              {room.gameId === "memory" && (
-                <MemoryMatchBoard
-                  room={room}
-                  currentUserId={userId || ""}
-                  onEmit={emit}
-                  onLeaveRoom={() => setIsChangingGame(true)}
-                />
-              )}
-              {room.gameId === "drawing" && (
-                <DrawingBoard
-                  room={room}
-                  currentUserId={userId || ""}
-                  onEmit={emit}
-                  onLeaveRoom={() => setIsChangingGame(true)}
-                />
-              )}
-              {room.gameId === "quiz" && (
-                <QuizBoard
-                  room={room}
-                  currentUserId={userId || ""}
-                  onEmit={emit}
-                  onLeaveRoom={() => setIsChangingGame(true)}
-                />
-              )}
-            </>
-          )}
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--accent)] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-[var(--accent)]"></span>
+            </span>
+          </div>
+
+          <div className="max-w-md space-y-1.5">
+            <h3 className="text-base sm:text-lg font-bold text-[var(--foreground)] tracking-tight">
+              Waiting for Partner
+            </h3>
+            <p className="text-xs sm:text-sm text-[var(--foreground)] opacity-80 leading-relaxed font-medium bg-[var(--muted)]/60 px-4 py-2.5 rounded-xl border border-[var(--border)]">
+              Waiting for the partner to accept or decline the invitation.
+            </p>
+          </div>
+
+          <button
+            onClick={handleClose}
+            className="mt-2 flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white border border-rose-500/20 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+          >
+            <X size={14} />
+            Cancel Room & Invitation
+          </button>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Game Content Block */}
+          {room.type === "game" && (
+            <div className="w-full bg-[var(--card)] rounded-2xl border border-[var(--accent)]/30 p-3 sm:p-4 shadow-xl backdrop-blur-md">
+              {!room.gameId || isChangingGame ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between border-b border-[var(--border)] pb-2">
+                    <div className="flex items-center gap-2">
+                      <Gamepad2 className="text-[var(--accent)]" size={18} />
+                      <h3 className="text-sm font-bold text-[var(--foreground)]">
+                        {room.gameId ? "Select a New Game for Room" : "Choose a Game to Start Playing!"}
+                      </h3>
+                    </div>
+                    {room.gameId && (
+                      <button
+                        onClick={() => setIsChangingGame(false)}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-[var(--muted)] hover:bg-[var(--accent)] hover:text-white transition cursor-pointer flex items-center gap-1"
+                        title="Cancel & Resume Current Game"
+                      >
+                        <X size={14} />
+                        <span className="hidden sm:inline">Cancel & Resume</span>
+                      </button>
+                    )}
+                  </div>
+                  <GameSelector
+                    selectedGameId={room.gameId as TogetherGameId | null}
+                    userStats={room.sessionStats}
+                    currentUserId={userId || undefined}
+                    onSelectGame={(newGameId) => {
+                      switchGame(newGameId);
+                      setIsChangingGame(false);
+                    }}
+                  />
+                </div>
+              ) : (
+                <>
+                  {room.gameId === "tictactoe" && (
+                    <TicTacToeBoard room={room} onLeave={() => setIsChangingGame(true)} />
+                  )}
+                  {room.gameId === "rps" && (
+                    <RockPaperScissorsBoard
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                  {room.gameId === "connect4" && (
+                    <Connect4Board
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                  {room.gameId === "memory" && (
+                    <MemoryMatchBoard
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                  {room.gameId === "drawing" && (
+                    <DrawingBoard
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                  {room.gameId === "quiz" && (
+                    <QuizBoard
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
-      {/* Activity Content Block */}
-      {room.type === "activity" && (
-        <ActivityBoard
-          room={room}
-          currentUserId={userId || ""}
-          onEmit={emit}
-          onLeaveRoom={leaveRoom}
-        />
-      )}
+          {/* Activity Content Block */}
+          {room.type === "activity" && (
+            <ActivityBoard
+              room={room}
+              currentUserId={userId || ""}
+              onEmit={emit}
+              onLeaveRoom={leaveRoom}
+            />
+          )}
 
-      {/* Watch Together Content Block */}
-      {room.type === "watch" && (
-        <WatchBoard
-          room={room}
-          currentUserId={userId || ""}
-          onEmit={emit}
-          onLeaveRoom={leaveRoom}
-        />
-      )}
+          {/* Watch Together Content Block */}
+          {room.type === "watch" && (
+            <WatchBoard
+              room={room}
+              currentUserId={userId || ""}
+              onEmit={emit}
+              onLeaveRoom={leaveRoom}
+            />
+          )}
 
-      {/* Listen Together (Music) Content Block */}
-      {room.type === "music" && (
-        <ListenBoard
-          room={room}
-          currentUserId={userId || ""}
-          onEmit={emit}
-          onLeaveRoom={leaveRoom}
-        />
-      )}
+          {/* Listen Together (Music) Content Block */}
+          {room.type === "music" && (
+            <ListenBoard
+              room={room}
+              currentUserId={userId || ""}
+              onEmit={emit}
+              onLeaveRoom={leaveRoom}
+            />
+          )}
 
-      {/* Room Live WhatsApp Chat for Games & Activities */}
-      {(room.type === "game" || room.type === "activity") && (
-        <TogetherChatBox
-          comments={getRoomComments()}
-          currentUserId={userId || ""}
-          hostId={room.hostId}
-          onSendMessage={handleRoomSendComment}
-          title={`${room.type === "game" ? "Game" : "Activity"} Room Live Chat`}
-          accentColor={room.type === "game" ? "#8b5cf6" : "#ec4899"}
-          collapsible={true}
-          defaultExpanded={true}
-        />
+          {/* Room Live WhatsApp Chat for Games & Activities */}
+          {(room.type === "game" || room.type === "activity") && (
+            <TogetherChatBox
+              comments={getRoomComments()}
+              currentUserId={userId || ""}
+              hostId={room.hostId}
+              onSendMessage={handleRoomSendComment}
+              title={`${room.type === "game" ? "Game" : "Activity"} Room Live Chat`}
+              accentColor={room.type === "game" ? "#8b5cf6" : "#ec4899"}
+              collapsible={true}
+              defaultExpanded={true}
+            />
+          )}
+        </>
       )}
 
       {/* Participants List */}

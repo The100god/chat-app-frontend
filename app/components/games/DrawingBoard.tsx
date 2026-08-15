@@ -63,9 +63,9 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
   const displayElements: DrawingElement[] = isMindMatchMode
     ? secretRevealed
       ? [
-          ...(secretElements[currentUserId] || []),
-          ...(secretElements[partnerId] || []),
-        ]
+        ...(secretElements[currentUserId] || []),
+        ...(secretElements[partnerId] || []),
+      ]
       : secretElements[currentUserId] || []
     : elements;
 
@@ -74,9 +74,11 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
     const rect = canvasRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
+    const xPct = Math.max(0, Math.min(100, (x / rect.width) * 100));
+    const yPct = Math.max(0, Math.min(100, (y / rect.height) * 100));
 
     const now = Date.now();
-    if (now - lastEmitTime.current < 40) return;
+    if (now - lastEmitTime.current < 35) return;
     lastEmitTime.current = now;
 
     if (selectedStamp) {
@@ -87,6 +89,8 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
           icon: selectedStamp,
           x,
           y,
+          xPct,
+          yPct,
           color: activeColor,
         },
       });
@@ -97,6 +101,8 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
           type: "stroke",
           x,
           y,
+          xPct,
+          yPct,
           color: activeColor,
           size: 14,
         },
@@ -145,37 +151,37 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
     categoryTab === "romantic"
       ? ROMANTIC_OBJECTS
       : categoryTab === "facial"
-      ? FACIAL_OBJECTS
-      : NATURE_OBJECTS;
+        ? FACIAL_OBJECTS
+        : NATURE_OBJECTS;
 
   return (
-    <div className="w-full flex flex-col items-center gap-3 max-w-xl sm:max-w-2xl mx-auto p-2 select-none">
-      {/* ─── Top Control Bar ─── */}
-      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎨💖</span>
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
-                Couples Canvas & Secret Mind Match
+    <div className="w-full flex flex-col items-center gap-2.5 max-w-md sm:max-w-xl mx-auto px-2 select-none">
+      {/* ─── Top Control Header ─── */}
+      <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-2.5 sm:p-3 shadow-md flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xl shrink-0">🎨</span>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wide truncate">
+                Couples Canvas & Mind Match
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-semibold truncate">
                 {isMindMatchMode
-                  ? "Secret Mind Match Active: Draw in secret & submit to reveal!"
-                  : "Live Drawing Active: Draw & place object stamps together live!"}
+                  ? "Draw in secret & submit to reveal!"
+                  : "Draw & place stamps together live!"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Clear Canvas Button */}
             <button
               onClick={handleClear}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/15 border border-rose-500/40 text-rose-400 font-bold text-xs hover:bg-rose-500 hover:text-white transition cursor-pointer shadow-sm"
-              title="Clear Drawing Canvas"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold text-[11px] hover:bg-rose-500 hover:text-white transition cursor-pointer"
+              title="Clear Canvas"
             >
               <Trash2 size={13} />
-              <span>Clear Canvas</span>
+              <span className="hidden xs:inline">Clear</span>
             </button>
             <button
               onClick={onLeaveRoom}
@@ -187,44 +193,43 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
           </div>
         </div>
 
-        {/* Object Stamp Category Selector */}
-        <div className="flex items-center gap-1.5 border-t border-[var(--border)] pt-2">
-          <button
-            onClick={() => setCategoryTab("romantic")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-              categoryTab === "romantic"
-                ? "bg-rose-500/20 text-rose-400 border border-rose-500/40"
-                : "text-[var(--foreground)] opacity-60 hover:opacity-100"
-            }`}
-          >
-            <Heart size={12} /> Romantic
-          </button>
+        {/* ─── Category Tabs (Face, Romantic, Nature) ─── */}
+        <div className="flex items-center justify-between gap-1 border-t border-[var(--border)] pt-2">
           <button
             onClick={() => setCategoryTab("facial")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-              categoryTab === "facial"
-                ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                : "text-[var(--foreground)] opacity-60 hover:opacity-100"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer ${categoryTab === "facial"
+              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-sm"
+              : "bg-[var(--muted)]/50 text-[var(--foreground)] opacity-70 hover:opacity-100"
+              }`}
           >
-            <Eye size={12} /> Face
+            <Eye size={13} /> Face
+          </button>
+          <button
+            onClick={() => setCategoryTab("romantic")}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer ${categoryTab === "romantic"
+              ? "bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-sm"
+              : "bg-[var(--muted)]/50 text-[var(--foreground)] opacity-70 hover:opacity-100"
+              }`}
+          >
+            <Heart size={13} /> Romantic
           </button>
           <button
             onClick={() => setCategoryTab("nature")}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
-              categoryTab === "nature"
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/40"
-                : "text-[var(--foreground)] opacity-60 hover:opacity-100"
-            }`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-bold transition cursor-pointer ${categoryTab === "nature"
+              ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm"
+              : "bg-[var(--muted)]/50 text-[var(--foreground)] opacity-70 hover:opacity-100"
+              }`}
           >
-            <Sun size={12} /> Nature
+            <Sun size={13} /> Nature
           </button>
         </div>
 
-        {/* Color Palette & Stamp Selector */}
-        <div className="flex items-center justify-between gap-2 overflow-x-auto pt-0.5 no-scrollbar">
-          {/* Colors */}
-          <div className="flex items-center gap-1.5 bg-[var(--muted)] p-1 rounded-xl border border-[var(--border)] flex-shrink-0">
+        {/* ─── Color Palette Row ─── */}
+        <div className="flex items-center justify-between gap-1.5 bg-[var(--muted)]/60 p-1.5 rounded-xl border border-[var(--border)]">
+          <span className="text-[10px] font-extrabold text-[var(--foreground)] opacity-60 uppercase pl-1 shrink-0">
+            Colors
+          </span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar px-1 py-0.5">
             {COLORS.map((c) => (
               <button
                 key={c}
@@ -233,23 +238,31 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
                   setSelectedStamp(null);
                 }}
                 style={{ backgroundColor: c }}
-                className={`w-6 h-6 rounded-full border border-black/20 transition cursor-pointer ${
-                  activeColor === c && !selectedStamp ? "ring-2 ring-[var(--accent)] scale-110" : ""
-                }`}
-                title="Color Dot Tool"
+                className={`w-5 h-5 sm:w-5 sm:h-5 rounded-full border border-black/30 transition cursor-pointer shrink-0 ${activeColor === c && !selectedStamp
+                  ? "ring-2 ring-[var(--accent)] scale-90 shadow-md"
+                  : "opacity-80 hover:opacity-100"
+                  }`}
+                title="Brush Color"
               />
             ))}
           </div>
+        </div>
 
-          {/* Stamps */}
-          <div className="flex items-center gap-1 bg-[var(--muted)] p-1 rounded-xl border border-[var(--border)] overflow-x-auto no-scrollbar">
+        {/* ─── Object Stamps Shelf Row ─── */}
+        <div className="flex items-center gap-1.5 bg-[var(--muted)]/60 p-1.5 rounded-xl border border-[var(--border)]">
+          <span className="text-[10px] font-extrabold text-[var(--foreground)] opacity-60 uppercase pl-1 shrink-0">
+            Stamps
+          </span>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5 flex-1">
             {currentCategoryObjects.map((stamp) => (
               <button
                 key={stamp}
                 onClick={() => setSelectedStamp(selectedStamp === stamp ? null : stamp)}
-                className={`w-7 h-7 rounded-lg text-base flex items-center justify-center transition cursor-pointer flex-shrink-0 ${
-                  selectedStamp === stamp ? "bg-[var(--accent)] text-white scale-110 shadow" : "hover:bg-[var(--card)]"
-                }`}
+                className={`min-w-[32px] h-8 sm:min-w-[36px] sm:h-9 rounded-lg text-lg flex items-center justify-center transition cursor-pointer shrink-0 border ${selectedStamp === stamp
+                  ? "bg-[var(--accent)] text-white border-[var(--accent)] scale-110 shadow-md ring-2 ring-[var(--accent)]/50"
+                  : "bg-[var(--card)] border-[var(--border)] hover:bg-[var(--muted)] text-[var(--foreground)]"
+                  }`}
+                title={`Stamp ${stamp}`}
               >
                 {stamp}
               </button>
@@ -258,15 +271,14 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
         </div>
       </div>
 
-      {/* ─── 2 MODE SELECTION BUTTONS ABOVE THE CANVAS ─── */}
-      <div className="w-full grid grid-cols-2 gap-2 max-w-[420px] sm:max-w-[480px]">
+      {/* ─── 2 Mode Selection Buttons (Live vs Mind Match) ─── */}
+      <div className="w-full grid grid-cols-2 gap-2">
         <button
           onClick={() => handleSwitchMode("live")}
-          className={`py-2 px-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
-            !isMindMatchMode
-              ? "bg-[var(--accent)] text-white border-[var(--accent)] shadow-md"
-              : "bg-[var(--card)] text-[var(--foreground)] border-[var(--border)] opacity-70 hover:opacity-100"
-          }`}
+          className={`py-2 px-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${!isMindMatchMode
+            ? "bg-[var(--accent)] text-white border-[var(--accent)] shadow-md"
+            : "bg-[var(--card)] text-[var(--foreground)] border-[var(--border)] opacity-70 hover:opacity-100"
+            }`}
         >
           <Sparkles size={14} />
           1. Live Drawing
@@ -274,11 +286,10 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
 
         <button
           onClick={() => handleSwitchMode("mind_match")}
-          className={`py-2 px-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${
-            isMindMatchMode
-              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-500 shadow-md"
-              : "bg-[var(--card)] text-[var(--foreground)] border-[var(--border)] opacity-70 hover:opacity-100"
-          }`}
+          className={`py-2 px-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm ${isMindMatchMode
+            ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-purple-500 shadow-md"
+            : "bg-[var(--card)] text-[var(--foreground)] border-[var(--border)] opacity-70 hover:opacity-100"
+            }`}
         >
           <Brain size={14} />
           2. Secret Mind Match
@@ -310,13 +321,16 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
         )}
 
         {displayElements.map((el) => {
+          const posX = el.xPct !== undefined ? `${el.xPct}%` : el.x;
+          const posY = el.yPct !== undefined ? `${el.yPct}%` : el.y;
+
           if (el.type === "block" && el.icon) {
             return (
               <motion.div
                 key={el.id}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                style={{ left: el.x, top: el.y }}
+                style={{ left: posX, top: posY }}
                 className="absolute text-2xl -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none"
               >
                 {el.icon}
@@ -329,8 +343,8 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               style={{
-                left: el.x,
-                top: el.y,
+                left: posX,
+                top: posY,
                 backgroundColor: el.color || "#06b6d4",
                 width: el.size || 14,
                 height: el.size || 14,
@@ -405,9 +419,8 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
                           width: el.size ? `${(el.size / 420) * 100}%` : "3%",
                           height: el.size ? `${(el.size / 420) * 100}%` : "3%",
                         }}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${
-                          el.type === "block" ? "text-lg" : "rounded-full"
-                        }`}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${el.type === "block" ? "text-lg" : "rounded-full"
+                          }`}
                       >
                         {el.type === "block" ? el.icon : ""}
                       </div>
@@ -431,9 +444,8 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
                           width: el.size ? `${(el.size / 420) * 100}%` : "3%",
                           height: el.size ? `${(el.size / 420) * 100}%` : "3%",
                         }}
-                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${
-                          el.type === "block" ? "text-lg" : "rounded-full"
-                        }`}
+                        className={`absolute -translate-x-1/2 -translate-y-1/2 ${el.type === "block" ? "text-lg" : "rounded-full"
+                          }`}
                       >
                         {el.type === "block" ? el.icon : ""}
                       </div>
@@ -467,61 +479,6 @@ export const DrawingBoard: React.FC<DrawingBoardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* ─── Live Comments ─── */}
-      <div className="w-full bg-[var(--muted)]/50 rounded-2xl border border-[var(--border)] p-2.5 flex flex-col gap-2">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-xs font-bold text-[var(--foreground)] flex items-center gap-1.5 opacity-80">
-            <MessageSquare size={13} /> Live Comments
-          </span>
-          <button
-            onClick={() => setShowComments(!showComments)}
-            className="text-[10px] text-[var(--accent)] font-semibold hover:underline cursor-pointer"
-          >
-            {showComments ? "Hide" : "Show"} ({comments.length})
-          </button>
-        </div>
-
-        {showComments && (
-          <>
-            <div className="max-h-24 overflow-y-auto flex flex-col gap-1.5 p-1 no-scrollbar">
-              {comments.length === 0 ? (
-                <p className="text-[11px] text-[var(--foreground)] opacity-50 italic text-center py-2">
-                  No comments yet. Send a quick chant!
-                </p>
-              ) : (
-                comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className={`text-[11px] p-1.5 rounded-xl max-w-[85%] font-medium ${
-                      c.senderId === currentUserId
-                        ? "bg-[var(--accent)] text-white self-end"
-                        : "bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] self-start"
-                    }`}
-                  >
-                    {c.text}
-                  </div>
-                ))
-              )}
-            </div>
-
-            <form onSubmit={handleSendComment} className="flex items-center gap-1.5 mt-1">
-              <input
-                type="text"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                placeholder="Say something nice or vote who won..."
-                className="flex-1 px-3 py-1.5 rounded-xl bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)] focus:outline-none focus:border-[var(--accent)]"
-              />
-              <button
-                type="submit"
-                className="p-2 rounded-xl bg-[var(--accent)] text-white hover:opacity-90 transition cursor-pointer"
-              >
-                <Send size={12} />
-              </button>
-            </form>
-          </>
-        )}
-      </div>
     </div>
   );
 };

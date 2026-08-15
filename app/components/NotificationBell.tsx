@@ -21,7 +21,9 @@ const [userId] = useAtom(userIdAtom);
 
     // When server sends the full friend requests list
     const handleFriendRequestsList = (data: unknown[]) => {
-      setRequestCount(data.length);
+      if (Array.isArray(data)) {
+        setRequestCount(data.length);
+      }
     };
 
     // When a new friend request is received
@@ -47,15 +49,12 @@ const [userId] = useAtom(userIdAtom);
     };
   }, [userId]);
 
+  if (requestCount <= 0) return null;
+
   return (
-    <div className="relative">
-      {/* <Bell size={24} className="cursor-pointer" /> */}
-      {requestCount > 0 && (
-        <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-          {requestCount}
-        </span>
-      )}
-    </div>
+    <span className="ml-1 inline-flex items-center justify-center bg-rose-500 text-white text-[10px] font-extrabold rounded-full px-1.5 py-0.5 min-w-[18px] h-4.5 leading-none shadow-xs animate-pulse">
+      {requestCount}
+    </span>
   );
 };
 

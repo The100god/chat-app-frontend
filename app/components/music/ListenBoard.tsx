@@ -132,16 +132,20 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
       : 0;
     const targetTime = Math.max(0, musicState.position + elapsed);
 
-    // Drift Check (> 1.5s triggers seek sync)
-    if (Math.abs(a.currentTime - targetTime) > 1.5) {
+    // Tight Drift Check (> 0.3s triggers tight seek sync)
+    if (Math.abs(a.currentTime - targetTime) > 0.3) {
       a.currentTime = targetTime;
     }
 
     // Play/Pause State Enforcement
     if (musicState.playing && a.paused) {
+      a.currentTime = targetTime;
       a.play().catch(() => { });
     } else if (!musicState.playing && !a.paused) {
       a.pause();
+      if (a.duration && musicState.position < a.duration) {
+        a.currentTime = musicState.position;
+      }
     }
   }, [
     musicState?.playing,
@@ -150,6 +154,25 @@ export const ListenBoard: React.FC<ListenBoardProps> = ({
     musicState?.currentTrackIndex,
     currentTrack?.url,
   ]);
+
+  // Continuous periodic audio sync ticker while playing to eliminate drift
+  useEffect(() => {
+    if (!musicState || !musicState.playing || !audioRef.current) return;
+
+    const interval = setInterval(() => {
+      const a = audioRef.current;
+      if (!a || a.paused) return;
+
+      const elapsed = (Date.now() - musicState.updatedAt) / 1000;
+      const targetTime = Math.max(0, musicState.position + elapsed);
+
+      if (Math.abs(a.currentTime - targetTime) > 0.35) {
+        a.currentTime = targetTime;
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [musicState?.playing, musicState?.updatedAt, musicState?.position]);
 
   const handleTimeUpdate = () => {
     if (audioRef.current) {

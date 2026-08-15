@@ -7,6 +7,7 @@ import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 
 export interface TogetherComment {
   id: string;
+  senderId?: string;
   username?: string;
   text: string;
   timestamp: number;
@@ -201,9 +202,11 @@ export const TogetherChatBox: React.FC<TogetherChatBoxProps> = ({
                 ) : (
                   comments.map((c) => {
                     const isCurrentUser =
-                      c.username === "Host" ||
+                      (c.senderId && c.senderId === currentUserId) ||
                       c.username === "You" ||
-                      c.username === currentUserId;
+                      c.username === currentUserId ||
+                      (c.username === "Host" && currentUserId === hostId) ||
+                      (c.username === "Partner" && currentUserId !== hostId);
 
                     return (
                       <div

@@ -50,6 +50,17 @@ export function useTogetherRoom() {
     [setInvites]
   );
 
+  const declineInvite = useCallback(
+    (roomId: string) => {
+      const socket = getActiveSocket();
+      if (socket) {
+        socket.emit("together:declineInvite", { roomId });
+      }
+      dismissInvite(roomId);
+    },
+    [getActiveSocket, dismissInvite]
+  );
+
   // ─── Join Room Action ───
   const joinRoom = useCallback(
     (roomId: string) => {
@@ -89,10 +100,13 @@ export function useTogetherRoom() {
       }
     };
 
-    const handleClosed = (data?: { roomId?: string }) => {
+    const handleClosed = (data?: { roomId?: string; reason?: string }) => {
       setRoom(null);
       if (data?.roomId) {
         setInvites((prev) => prev.filter((i) => i.roomId !== data.roomId));
+      }
+      if (data?.reason === "invite_declined") {
+        showToast("Invitation was declined. Room closed.", "info");
       }
     };
 
@@ -142,6 +156,12 @@ export function useTogetherRoom() {
       });
     };
 
+    const handleConnect = () => {
+      socket.emit("together:getState", { roomId: null });
+      socket.emit("together:getRejoinableRooms");
+    };
+
+    socket.on("connect", handleConnect);
     socket.on("together:state", handleState);
     socket.on("together:created", handleCreated);
     socket.on("together:closed", handleClosed);
@@ -151,10 +171,10 @@ export function useTogetherRoom() {
     socket.on("together:rejoinableRooms", handleRejoinableRooms);
 
     // On mount, check room state & fetch available active rooms
-    socket.emit("together:getState", { roomId: null });
-    socket.emit("together:getRejoinableRooms");
+    handleConnect();
 
     return () => {
+      socket.off("connect", handleConnect);
       socket.off("together:state", handleState);
       socket.off("together:created", handleCreated);
       socket.off("together:closed", handleClosed);
@@ -260,6 +280,7 @@ export function useTogetherRoom() {
     isHost,
     invites,
     dismissInvite,
+    declineInvite,
     fetchRejoinableRooms,
     createRoom,
     joinRoom,

@@ -170,8 +170,8 @@ const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   // 📱 Mobile Layout (toggle view)
   if (isMobile) {
     return (
-      <div className="flex flex-col h-full w-full bg-transparent relative">
-        <div className="flex-grow overflow-hidden bg-[var(--background)]">
+      <div className="flex flex-col h-full w-full bg-transparent relative overflow-hidden">
+        <div className="flex-grow overflow-hidden bg-[var(--background)] h-full flex flex-col min-h-0">
           {showLeft ? leftComponent : rightComponent}
         </div>
       </div>

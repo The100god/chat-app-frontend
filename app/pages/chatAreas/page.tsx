@@ -45,6 +45,7 @@ interface Message {
     username: string;
     profilePic: string;
   }[];
+  deletedFor?: (string | { _id: string })[];
 }
 
 // Disappearing message timer options (hours)
@@ -316,30 +317,40 @@ export default function ChatArea() {
     if (!socket || !chatId) return;
 
     const handleNewMessage = (message: Message) => {
-      if (message.chatId !== chatId) return; // Only if it's the open chat
-      setMessages((prev) => {
-        const alreadyExists = prev.some((m) => m._id === message._id);
-        if (alreadyExists) return prev;
+      if (message.chatId === chatId) {
+        const isDeletedForUser =
+          message.deletedFor &&
+          Array.isArray(message.deletedFor) &&
+          message.deletedFor.some(
+            (id: any) =>
+              (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
+          );
+        if (isDeletedForUser) return;
 
-        const localIndex = prev.findIndex(
-          (m) =>
-            m._id?.startsWith("local-") &&
-            ((typeof m.sender === "string" && m.sender === userId) ||
-              (typeof m.sender === "object" && m.sender?._id === userId)) &&
-            (m.content === message.content ||
-              (!m.content && !message.content) ||
-              (m.content === "" && message.content === "let's Talk!")) &&
-            m.media?.length === message.media?.length
-        );
+        setMessages((prev) => {
+          const alreadyExists = prev.some((m) => m._id === message._id);
+          if (alreadyExists) return prev;
 
-        if (localIndex !== -1) {
-          const updated = [...prev];
-          updated[localIndex] = message;
-          return updated;
-        }
+          const localIndex = prev.findIndex(
+            (m) =>
+              m._id?.startsWith("local-") &&
+              ((typeof m.sender === "string" && m.sender === userId) ||
+                (typeof m.sender === "object" && m.sender?._id === userId)) &&
+              (m.content === message.content ||
+                (!m.content && !message.content) ||
+                (m.content === "" && message.content === "let's Talk!")) &&
+              m.media?.length === message.media?.length
+          );
 
-        return [...prev, message];
-      });
+          if (localIndex !== -1) {
+            const updated = [...prev];
+            updated[localIndex] = message;
+            return updated;
+          }
+
+          return [...prev, message];
+        });
+      }
     };
 
     socket.on("newMessage", handleNewMessage);
@@ -355,6 +366,15 @@ export default function ChatArea() {
     const handleGroupMessage = (message: Message) => {
       // console.log("handleGroupMessage", message);
       if (message.groupId === selectedGroup._id) {
+        const isDeletedForUser =
+          message.deletedFor &&
+          Array.isArray(message.deletedFor) &&
+          message.deletedFor.some(
+            (id: any) =>
+              (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
+          );
+        if (isDeletedForUser) return;
+
         setMessages((prev) => {
           const alreadyExists = prev.some((m) => m._id === message._id);
           if (alreadyExists) return prev;
@@ -389,7 +409,24 @@ export default function ChatArea() {
       messages: Message[];
     }) => {
       if (selectedGroup && seenGroupId === selectedGroup._id) {
-        setMessages(updatedMessges);
+        setMessages((prevMessages) => {
+          if (!prevMessages) return [];
+          return prevMessages
+            .filter((msg) => {
+              if (!msg.deletedFor || !Array.isArray(msg.deletedFor)) return true;
+              return !msg.deletedFor.some(
+                (id: any) =>
+                  (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
+              );
+            })
+            .map((prevMsg) => {
+              const updated = updatedMessges?.find((m) => m._id === prevMsg._id);
+              if (updated) {
+                return { ...prevMsg, seenBy: updated.seenBy };
+              }
+              return prevMsg;
+            });
+        });
       }
     };
 
@@ -749,22 +786,33 @@ export default function ChatArea() {
     }) => {
       if (readerId === userId) return;
 
-      // If the server sent back updated messages (with expiresAt set), use them
-      if (updatedMessages && updatedMessages.length > 0) {
-        setMessages(updatedMessages);
-      } else {
-        // Fallback: just mark as read locally
-        setMessages((prevMessages) =>
-          prevMessages?.map((msg) => {
-            const isSenderCurrentUser =
-              (typeof msg?.sender === "string" && msg?.sender === userId) ||
-              (typeof msg?.sender === "object" && msg?.sender?._id === userId);
-            return isSenderCurrentUser && msg?.chatId === ackChatId
-              ? { ...msg, isRead: true }
-              : msg;
+      setMessages((prevMessages) => {
+        if (!prevMessages) return [];
+        return prevMessages
+          .filter((msg) => {
+            if (!msg.deletedFor || !Array.isArray(msg.deletedFor)) return true;
+            return !msg.deletedFor.some(
+              (id: any) =>
+                (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
+            );
           })
-        );
-      }
+          .map((prevMsg) => {
+            const updated = updatedMessages?.find((m) => m._id === prevMsg._id);
+            if (updated) {
+              return {
+                ...prevMsg,
+                isRead: updated.isRead,
+                expiresAt: updated.expiresAt,
+              };
+            }
+            const isSenderCurrentUser =
+              (typeof prevMsg?.sender === "string" && prevMsg?.sender === userId) ||
+              (typeof prevMsg?.sender === "object" && prevMsg?.sender?._id === userId);
+            return isSenderCurrentUser && prevMsg?.chatId === ackChatId
+              ? { ...prevMsg, isRead: true }
+              : prevMsg;
+          });
+      });
     };
 
     socket.on("messagesReadAck", handleMessagesReadAck);
@@ -785,7 +833,24 @@ export default function ChatArea() {
       messages: Message[];
     }) => {
       if (selectedGroup && groupId === selectedGroup?._id) {
-        setMessages(updatedMessages);
+        setMessages((prevMessages) => {
+          if (!prevMessages) return [];
+          return prevMessages
+            .filter((msg) => {
+              if (!msg.deletedFor || !Array.isArray(msg.deletedFor)) return true;
+              return !msg.deletedFor.some(
+                (id: any) =>
+                  (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
+              );
+            })
+            .map((prevMsg) => {
+              const updated = updatedMessages?.find((m) => m._id === prevMsg._id);
+              if (updated) {
+                return { ...prevMsg, seenBy: updated.seenBy };
+              }
+              return prevMsg;
+            });
+        });
       }
     };
 
@@ -794,7 +859,7 @@ export default function ChatArea() {
     return () => {
       socket.off("groupSeenUpdate", handleSeenUpdate);
     };
-  }, [socket, selectedGroup, setMessages]);
+  }, [socket, selectedGroup, userId, setMessages]);
 
   useEffect(() => {
     if (!socket) return;
@@ -1031,7 +1096,7 @@ export default function ChatArea() {
   return (
     <div className="flex flex-col bg-[var(--background)] h-full rounded-md overflow-hidden relative">
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="w-full flex items-center justify-between rounded-md px-4 py-2.5 bg-[var(--card)] border-b border-[var(--border)] relative z-20 shadow-2xs min-h-[60px]">
+        <div className="w-full flex items-center justify-between rounded-md px-4 py-2.5 bg-[var(--card)] border-b border-[var(--border)] sticky top-0 z-30 flex-shrink-0 shadow-2xs min-h-[60px]">
           {/* Left: Back Button + Avatar + Contact Info */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -1212,7 +1277,7 @@ export default function ChatArea() {
 
       {/* Disappearing messages banner */}
       {!loadingMessages && selectedFriend && disappearDuration > 0 && (
-        <div className="flex items-center justify-center gap-2 py-1.5 px-3 mx-2 my-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+        <div className="flex items-center justify-center gap-2 py-1.5 px-3 mx-2 my-1 rounded-lg bg-[var(--accent)]/10 border border-[var(--accent)]/20 flex-shrink-0">
           <span className="text-xs text-[var(--accent)] font-medium">
             Messages will disappear {disappearDuration}h after being seen
           </span>
@@ -1484,7 +1549,7 @@ export default function ChatArea() {
 
       {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 shadow-xs lg:mb-[1rem] xl:mb-0">
+        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
           <input
             type="file"
             name="media"

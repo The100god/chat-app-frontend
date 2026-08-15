@@ -26,6 +26,7 @@ export interface Message {
     username: string;
     profilePic: string;
   }[];
+  deletedFor?: (string | { _id: string })[];
 }
 
 export interface FloatingEmoji {

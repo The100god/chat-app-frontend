@@ -189,19 +189,14 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
         : 0;
       const targetTime = Math.max(0, watchState.position + elapsed);
 
-      // Drift Correction Check (> 1.5s drift triggers seek)
-      if (Math.abs(v.currentTime - targetTime) > 1.5 && (v.duration ? targetTime < v.duration : true)) {
+      // Tight Drift Correction Check (> 0.3s drift triggers tight sync seek)
+      if (Math.abs(v.currentTime - targetTime) > 0.3 && (v.duration ? targetTime < v.duration : true)) {
         v.currentTime = targetTime;
-        setIsSyncing(true);
-        setSyncNotice("Adjusting Sync...");
-        setTimeout(() => {
-          setIsSyncing(false);
-          setSyncNotice(null);
-        }, 1000);
       }
 
       // Play/Pause State Enforcement
       if (watchState.playing && v.paused) {
+        v.currentTime = targetTime;
         v.play().catch(() => {
           // If browser blocks unmuted play, fallback to muted play
           v.muted = true;
@@ -210,9 +205,31 @@ export const WatchBoard: React.FC<WatchBoardProps> = ({
         });
       } else if (!watchState.playing && !v.paused) {
         v.pause();
+        if (v.duration && watchState.position < v.duration) {
+          v.currentTime = watchState.position;
+        }
       }
     }
   }, [watchState?.playing, watchState?.position, watchState?.updatedAt, watchState?.mediaUrl, youtubeId]);
+
+  // Continuous periodic video sync ticker while playing to eliminate drift
+  useEffect(() => {
+    if (!watchState || !watchState.playing || !videoRef.current) return;
+
+    const interval = setInterval(() => {
+      const v = videoRef.current;
+      if (!v || v.readyState < 1 || v.paused) return;
+
+      const elapsed = (Date.now() - watchState.updatedAt) / 1000;
+      const targetTime = Math.max(0, watchState.position + elapsed);
+
+      if (Math.abs(v.currentTime - targetTime) > 0.35 && (v.duration ? targetTime < v.duration : true)) {
+        v.currentTime = targetTime;
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [watchState?.playing, watchState?.updatedAt, watchState?.position]);
 
   // Video Event Handlers
   const handleTimeUpdate = () => {
