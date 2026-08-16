@@ -93,6 +93,19 @@ export const GAMES_REGISTRY: TogetherGameDefinition[] = [
     status: "active",
     category: "trivia",
   },
+  {
+    id: "catchpartner",
+    title: "Pakdam Pakdai",
+    subtitle: "Real-Time 2D Top-Down Chase",
+    description: "One is Catcher, one is Runner! Tag your partner before time runs out.",
+    icon: "🏃",
+    iconPath: "/game-icons/catchpartner.png",
+    badgeColor: "from-red-500 to-amber-500",
+    minPlayers: 2,
+    maxPlayers: 2,
+    status: "active",
+    category: "arcade",
+  },
 ];
 
 export function getGameDefinition(id: string): TogetherGameDefinition | undefined {
