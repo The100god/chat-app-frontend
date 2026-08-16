@@ -13,6 +13,8 @@ export const connectSocket = (
 
   if (!socket && userId) {
     socket = io(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000", {
+      auth: { userId },
+      query: { userId },
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

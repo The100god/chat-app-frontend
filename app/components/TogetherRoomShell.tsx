@@ -27,6 +27,7 @@ import { Connect4Board } from "./games/Connect4Board";
 import { MemoryMatchBoard } from "./games/MemoryMatchBoard";
 import { DrawingBoard } from "./games/DrawingBoard";
 import { QuizBoard } from "./games/QuizBoard";
+import { CatchMyPartnerBoard } from "./games/CatchMyPartnerBoard";
 import { ActivityBoard } from "./activities/ActivityBoard";
 import { WatchBoard } from "./watch/WatchBoard";
 import { ListenBoard } from "./music/ListenBoard";
@@ -106,6 +107,7 @@ export const TogetherRoomShell: React.FC = () => {
           room.state.memoryMatch?.comments ||
           room.state.drawing?.comments ||
           room.state.quiz?.comments ||
+          room.state.catchPartner?.comments ||
           room.state.comments)
         : room.type === "activity"
           ? (room.state.activity?.comments || room.state.comments)
@@ -300,6 +302,14 @@ export const TogetherRoomShell: React.FC = () => {
                   )}
                   {room.gameId === "quiz" && (
                     <QuizBoard
+                      room={room}
+                      currentUserId={userId || ""}
+                      onEmit={emit}
+                      onLeaveRoom={() => setIsChangingGame(true)}
+                    />
+                  )}
+                  {room.gameId === "catchpartner" && (
+                    <CatchMyPartnerBoard
                       room={room}
                       currentUserId={userId || ""}
                       onEmit={emit}

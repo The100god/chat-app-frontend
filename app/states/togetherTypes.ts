@@ -8,7 +8,54 @@ export type TogetherGameId =
   | "connect4"
   | "memory"
   | "drawing"
-  | "quiz";
+  | "quiz"
+  | "catchpartner";
+
+export interface CatchPartnerPlayer {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  role: "catcher" | "runner";
+  speedBoostTime?: number;
+  isBoosting?: boolean;
+}
+
+export interface CatchPartnerObstacle {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  type?: "pillar" | "wall" | "box";
+}
+
+export interface CatchPartnerPowerUp {
+  id: string;
+  x: number;
+  y: number;
+  type: "speed" | "shield";
+}
+
+export interface CatchPartnerState {
+  status: "waiting" | "setup" | "playing" | "round_ended" | "finished";
+  players: Record<string, CatchPartnerPlayer>;
+  roles: {
+    catcher: string | null;
+    runner: string | null;
+  };
+  round: number;
+  maxRounds: number;
+  timer: number;
+  scores: Record<string, number>;
+  winner: string | null;
+  roundResult?: {
+    winnerId: string | null;
+    reason: string;
+  } | null;
+  obstacles: CatchPartnerObstacle[];
+  powerUps?: CatchPartnerPowerUp[];
+  comments?: TicTacToeComment[];
+}
 
 export interface GameStats {
   wins: number;
@@ -222,6 +269,7 @@ export interface TogetherRoom {
     memoryMatch?: MemoryMatchState;
     drawing?: DrawingState;
     quiz?: QuizState;
+    catchPartner?: CatchPartnerState;
     activity?: ActivityState;
     watch?: WatchRoomState;
     music?: MusicRoomState;
