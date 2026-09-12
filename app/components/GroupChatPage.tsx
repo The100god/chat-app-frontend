@@ -12,6 +12,7 @@ import {
   selectedFriendAtom,
   selectedGroupAtom,
   userIdAtom,
+  groupsAtom,
 } from "../states/States";
 import { connectSocket } from "../hooks/useSocket";
 import Image from "next/image";
@@ -32,6 +33,7 @@ export interface Group {
   groupMember: GroupMember[];
   admins: GroupMember[];
   superAdmin: GroupMember | string | null;
+  unreadCount?: number;
 }
 
 const GroupChatPage = () => {
@@ -45,7 +47,7 @@ const GroupChatPage = () => {
 
   const [selectedGroup, setSelectedGroup] = useAtom(selectedGroupAtom);
   const [, setSelectedFriend] = useAtom(selectedFriendAtom); // clear friend
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useAtom(groupsAtom);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
 
 
@@ -165,11 +167,44 @@ const GroupChatPage = () => {
       }
     };
 
+    const handleGroupUnreadCountUpdated = ({
+      groupId,
+      count,
+    }: {
+      groupId: string;
+      count: number;
+    }) => {
+      setGroups((prev) =>
+        prev.map((g) => (g._id === groupId ? { ...g, unreadCount: count } : g))
+      );
+    };
+
+    const handleNewGroupMessage = (newMsg: any) => {
+      const msgGroupId =
+        typeof newMsg.groupId === "object"
+          ? newMsg.groupId?._id?.toString() || newMsg.groupId?.toString()
+          : newMsg.groupId?.toString();
+      if (!msgGroupId) return;
+
+      // If user is currently looking at this group, unread count stays 0
+      if (selectedGroup?._id === msgGroupId) return;
+
+      setGroups((prev) =>
+        prev.map((g) =>
+          g._id === msgGroupId
+            ? { ...g, unreadCount: (g.unreadCount || 0) + 1 }
+            : g
+        )
+      );
+    };
+
     socket.on("newGroupCreated", handleNewGroup);
     socket.on("groupUpdated", handleGroupUpdated);
     socket.on("groupDeleted", handleGroupDeleted);
     socket.on("removedFromGroup", handleRemovedFromGroup);
     socket.on("leftGroup", handleLeftGroup);
+    socket.on("groupUnreadCountUpdated", handleGroupUnreadCountUpdated);
+    socket.on("newGroupMessage", handleNewGroupMessage);
 
     return () => {
       socket.off("newGroupCreated", handleNewGroup);
@@ -177,6 +212,8 @@ const GroupChatPage = () => {
       socket.off("groupDeleted", handleGroupDeleted);
       socket.off("removedFromGroup", handleRemovedFromGroup);
       socket.off("leftGroup", handleLeftGroup);
+      socket.off("groupUnreadCountUpdated", handleGroupUnreadCountUpdated);
+      socket.off("newGroupMessage", handleNewGroupMessage);
     };
   }, [socket, selectedGroup, setSelectedGroup]);
   if (!userId && !socket) return null;
@@ -213,6 +250,7 @@ const GroupChatPage = () => {
             {groups.map((g, i) => {
               const isSelected = selectedGroup?._id === g?._id;
               const memberCount = g?.groupMember?.length || 0;
+              const unread = g?.unreadCount || 0;
 
               return (
                 <div
@@ -225,6 +263,17 @@ const GroupChatPage = () => {
                   onClick={() => {
                     setSelectedFriend(null);
                     setSelectedGroup(g);
+                    setGroups((prev) =>
+                      prev.map((item) =>
+                        item._id === g._id ? { ...item, unreadCount: 0 } : item
+                      )
+                    );
+                    if (socket && userId) {
+                      socket.emit("groupMessagesRead", {
+                        groupId: g._id,
+                        readerId: userId,
+                      });
+                    }
                     setShowLeft(false);
                   }}
                 >
@@ -246,6 +295,11 @@ const GroupChatPage = () => {
                       <span className={`text-sm truncate ${isSelected ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--foreground)]"}`}>
                         {g?.groupName}
                       </span>
+                      {unread > 0 && (
+                        <span className="ml-2 px-2 py-0.5 text-[11px] font-bold bg-[var(--accent)] text-white rounded-full flex-shrink-0 shadow-xs">
+                          {unread > 99 ? "99+" : unread}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-[var(--foreground)]/60 truncate">
                       {memberCount} {memberCount === 1 ? "member" : "members"}

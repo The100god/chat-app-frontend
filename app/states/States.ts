@@ -82,13 +82,29 @@ export const friendsCountsAtom = atom<number>(0);
 export const selectedFriendAtom = atom<Friend | null>(null);
 export const friendsAtom = atom<Friend[]>([]);
 
+export const groupsAtom = atom<Group[]>([]);
+export const groupUnreadTotalAtom = atom<number>((get) => {
+  const groups = get(groupsAtom);
+  if (!Array.isArray(groups)) return 0;
+  return groups.reduce((total, group) => total + (group?.unreadCount || 0), 0);
+});
+
 export const unreadCountAtom = atom<number>((get) => {
   const friends = get(friendsAtom);
-  if (!Array.isArray(friends)) return 0;
-  return friends.reduce(
-    (total, friend) => total + (friend?.unreadMessagesCount || 0),
-    0
-  );
+  const friendsUnread = Array.isArray(friends)
+    ? friends.reduce(
+        (total, friend) => total + (friend?.unreadMessagesCount || 0),
+        0
+      )
+    : 0;
+  const groups = get(groupsAtom);
+  const groupsUnread = Array.isArray(groups)
+    ? groups.reduce(
+        (total, group) => total + (group?.unreadCount || 0),
+        0
+      )
+    : 0;
+  return friendsUnread + groupsUnread;
 });
 
 export const selectedGroupAtom = atom<Group | null>(null);

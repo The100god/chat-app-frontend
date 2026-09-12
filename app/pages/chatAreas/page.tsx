@@ -365,7 +365,13 @@ export default function ChatArea() {
 
     const handleGroupMessage = (message: Message) => {
       // console.log("handleGroupMessage", message);
-      if (message.groupId === selectedGroup._id) {
+      const msgGroupId =
+        typeof message.groupId === "object"
+          ? (message.groupId as any)?._id?.toString() || (message.groupId as any)?.toString()
+          : message.groupId?.toString();
+      const currentGroupId = selectedGroup?._id?.toString();
+
+      if (msgGroupId && currentGroupId && msgGroupId === currentGroupId) {
         const isDeletedForUser =
           message.deletedFor &&
           Array.isArray(message.deletedFor) &&
@@ -398,44 +404,21 @@ export default function ChatArea() {
 
           return [...prev, message];
         });
-      }
-    };
 
-    const handleGroupSeenUpdate = ({
-      groupId: seenGroupId,
-      messages: updatedMessges,
-    }: {
-      groupId: string;
-      messages: Message[];
-    }) => {
-      if (selectedGroup && seenGroupId === selectedGroup._id) {
-        setMessages((prevMessages) => {
-          if (!prevMessages) return [];
-          return prevMessages
-            .filter((msg) => {
-              if (!msg.deletedFor || !Array.isArray(msg.deletedFor)) return true;
-              return !msg.deletedFor.some(
-                (id: any) =>
-                  (typeof id === "string" ? id : id?._id?.toString() || id?.toString()) === userId
-              );
-            })
-            .map((prevMsg) => {
-              const updated = updatedMessges?.find((m) => m._id === prevMsg._id);
-              if (updated) {
-                return { ...prevMsg, seenBy: updated.seenBy };
-              }
-              return prevMsg;
-            });
-        });
+        // Automatically mark as read since user is actively in this group
+        if (socket && userId) {
+          socket.emit("groupMessagesRead", {
+            groupId: currentGroupId,
+            readerId: userId,
+          });
+        }
       }
     };
 
     socket.on("newGroupMessage", handleGroupMessage);
-    socket.on("groupSeenUpdate", handleGroupSeenUpdate);
 
     return () => {
       socket.off("newGroupMessage", handleGroupMessage);
-      socket.off("groupSeenUpdate", handleGroupSeenUpdate);
     };
   }, [socket, selectedGroup, userId, setMessages]);
 
@@ -832,7 +815,9 @@ export default function ChatArea() {
       groupId: string;
       messages: Message[];
     }) => {
-      if (selectedGroup && groupId === selectedGroup?._id) {
+      const currentGroupId = selectedGroup?._id?.toString();
+      const incomingGroupId = groupId?.toString();
+      if (currentGroupId && incomingGroupId && incomingGroupId === currentGroupId) {
         setMessages((prevMessages) => {
           if (!prevMessages) return [];
           return prevMessages
@@ -846,7 +831,11 @@ export default function ChatArea() {
             .map((prevMsg) => {
               const updated = updatedMessages?.find((m) => m._id === prevMsg._id);
               if (updated) {
-                return { ...prevMsg, seenBy: updated.seenBy };
+                return {
+                  ...prevMsg,
+                  seenBy: updated.seenBy,
+                  expiresAt: updated.expiresAt,
+                };
               }
               return prevMsg;
             });
@@ -1164,7 +1153,7 @@ export default function ChatArea() {
                 </h2>
                 <p className="text-[11px] text-[var(--foreground)]/60 truncate font-medium">
                   {isTyping ? (
-                    <span className="text-[var(--accent)] font-semibold animate-pulse">typing...</span>
+                    <span className="text-[var(--accent)] font-semibold animate-pulse">Chugli...</span>
                   ) : selectedGroup ? (
                     "Tap for group info"
                   ) : (
@@ -1372,11 +1361,11 @@ export default function ChatArea() {
                     msg?.sender?._id === selectedFriend?.friendId);
                 const isGroupChat = !!selectedGroup;
                 const hasAudio = !!(msg.media && msg.media.some(url => {
-                  const cleanUrl = url.split("#")[0];
-                  const isBlob = url.startsWith("blob:");
+                  const cleanUrl = url.split("#")[0].toLowerCase();
+                  const isBlob = cleanUrl.startsWith("blob:") || cleanUrl.startsWith("data:audio");
                   return isBlob
-                    ? url.includes("audio")
-                    : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a"));
+                    ? cleanUrl.includes("audio")
+                    : (cleanUrl.endsWith(".webm") || cleanUrl.endsWith(".mp3") || cleanUrl.endsWith(".wav") || cleanUrl.endsWith(".ogg") || cleanUrl.endsWith(".m4a") || cleanUrl.includes("/video/upload/") || cleanUrl.endsWith(".mp4"));
                 }));
 
                 if (!isSentByUser && !isFromFriend && !isGroupChat) return null;
@@ -1434,13 +1423,13 @@ export default function ChatArea() {
                               setShowMediaModal(true);
                             };
 
-                            const isBlob = url.startsWith("blob:");
-                            const isVideo = isBlob
-                              ? url.includes("video")
-                              : (url.endsWith(".mp4") || url.endsWith(".mov") || url.endsWith(".avi") || url.endsWith(".mkv"));
+                            const isBlob = url.startsWith("blob:") || url.startsWith("data:audio");
                             const isAudio = isBlob
                               ? url.includes("audio")
-                              : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a"));
+                              : (url.endsWith(".webm") || url.endsWith(".mp3") || url.endsWith(".wav") || url.endsWith(".ogg") || url.endsWith(".m4a") || url.includes("/video/upload/") || url.endsWith(".mp4"));
+                            const isVideo = !isAudio && (isBlob
+                              ? url.includes("video")
+                              : (url.endsWith(".mov") || url.endsWith(".avi") || url.endsWith(".mkv")));
 
                             return isVideo ? (
                               <video
@@ -1490,6 +1479,17 @@ export default function ChatArea() {
                       </div>
                     )}
 
+                    {/* Border between Media and Text content */}
+                    {msg.media && msg.media.length > 0 && msg.content && msg.content.trim() && (
+                      <div
+                        className={`w-full my-2.5 border-t-[1.5px] ${
+                          isSentByUser
+                            ? "border-white/45 dark:border-white/45 border-black/25"
+                            : "border-black/20 dark:border-white/35"
+                        }`}
+                      />
+                    )}
+
                     {/* Text content */}
                     {msg.content && <p className="text-sm leading-relaxed">{msg.content}</p>}
 
@@ -1506,21 +1506,41 @@ export default function ChatArea() {
                       )}
 
                       {isSentByUser && (
-                        <span className={msg.isRead ? "text-sky-500 font-bold" : "opacity-60"}>
-                          ✓✓
-                        </span>
+                        (() => {
+                          if (selectedGroup) {
+                            const otherMembersCount = Math.max(1, (selectedGroup.groupMember?.length || 2) - 1);
+                            const seenOthers = (msg.seenBy || []).filter((u: any) => {
+                              const id = typeof u === 'object' ? u._id : u;
+                              return id && id !== userId;
+                            });
+                            const allSeen = seenOthers.length >= otherMembersCount;
+                            const someSeen = seenOthers.length > 0;
+
+                            return (
+                              <span className={allSeen ? "text-sky-500 font-bold" : someSeen ? "text-sky-400/80 font-medium" : "opacity-60"}>
+                                ✓✓
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <span className={msg.isRead ? "text-sky-500 font-bold" : "opacity-60"}>
+                              ✓✓
+                            </span>
+                          );
+                        })()
                       )}
 
                       {selectedGroup && msg.seenBy && msg.seenBy.length > 0 && (
                         <div className="flex items-center space-x-0.5 ml-1">
                           {msg.seenBy
-                            .filter((u) => u._id !== userId)
+                            .filter((u: any) => (typeof u === 'object' ? u._id !== userId : u !== userId))
                             .slice(0, 3)
-                            .map((user, i) => (
+                            .map((user: any, i: number) => (
                               <Image
                                 key={i}
-                                src={user.profilePic || "/user.jpg"}
-                                title={user.username}
+                                src={(typeof user === 'object' && user.profilePic) ? user.profilePic : "/user.jpg"}
+                                title={typeof user === 'object' ? user.username : 'Member'}
                                 alt="Seen by avatar"
                                 className="w-3.5 h-3.5 rounded-full border border-[var(--card)]"
                                 width={14}
@@ -1535,7 +1555,7 @@ export default function ChatArea() {
               })}
             {typingFriend && (
               <div className="text-xs italic text-[var(--accent)] font-semibold bg-[var(--card)] px-3 py-1.5 rounded-full w-fit shadow-xs">
-                {typingFriend} is typing...
+                {typingFriend} is Chugli...
               </div>
             )}
             <div ref={bottomRef} />

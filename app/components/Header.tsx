@@ -29,8 +29,10 @@ import {
   messageAtom,
   responsiveDeviceAtom,
   selectedFriendAtom,
+  unreadCountAtom,
   updateAvailableAtom,
   userAtom,
+  groupUnreadTotalAtom,
 } from "../states/States";
 import NotificationBell from "./NotificationBell";
 import { Gamepad2, MessageCircle } from "lucide-react";
@@ -48,6 +50,7 @@ const Header: React.FC = () => {
   const [, setSelectedFriend] = useAtom(selectedFriendAtom);
   const [user] = useAtom(userAtom);
   const [updateAvailable] = useAtom(updateAvailableAtom);
+  const [groupUnreadTotal] = useAtom(groupUnreadTotalAtom);
   const router = useRouter();
   const [showLeft, setShowLeft] = useAtom(responsiveDeviceAtom);
   const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
@@ -350,6 +353,17 @@ const Header: React.FC = () => {
             >
               <FaUsers size={14} />
               <span>Groups</span>
+              {groupUnreadTotal > 0 && (
+                <span
+                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isGroupsActive
+                      ? "bg-white text-[var(--accent)]"
+                      : "bg-[var(--accent)] text-white"
+                  }`}
+                >
+                  {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
+                </span>
+              )}
             </button>
           </div>
         )}
@@ -554,6 +568,17 @@ const Header: React.FC = () => {
               }`}
             >
               Groups
+              {groupUnreadTotal > 0 && (
+                <span
+                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isGroupsActive
+                      ? "bg-white text-[var(--accent)]"
+                      : "bg-[var(--accent)] text-white"
+                  }`}
+                >
+                  {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
+                </span>
+              )}
             </button>
           </div>
         )}
