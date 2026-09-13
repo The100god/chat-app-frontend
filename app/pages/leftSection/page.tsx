@@ -99,25 +99,33 @@ export default function LeftSection() {
       count: number;
     }) => {
       // console.log("count", count);
-      setFriends((prevFriends) =>
-        prevFriends.map((friend) =>
-          friend.friendId === friendId
-            ? { ...friend, unreadMessagesCount: count }
+      const fIdStr = String(friendId);
+      setFriends((prevFriends) => {
+        const exists = prevFriends.some(
+          (friend) => String(friend.friendId || (friend as any)._id) === fIdStr
+        );
+        if (!exists) {
+          socket.emit("getFriendListWithUnseen", { userId });
+          return prevFriends;
+        }
+        return prevFriends.map((friend) =>
+          String(friend.friendId || (friend as any)._id) === fIdStr
+            ? { ...friend, unreadMessagesCount: Math.max(0, count) }
             : friend
-        )
-      );
+        );
+      });
       setLoading(false);
     };
 
     socket.on("friendsUpdated", handleFriendsUpdate);
-    // socket.on("update_unseen_count", handleUnseenCountUpdate);
+    socket.on("update_unseen_count", handleUnseenCountUpdate);
     socket.on("unreadMessageCountUpdated", handleUnseenCountUpdate);
     // 🔌 Ask for unseen count on reconnect/mount
     socket.emit("getFriendListWithUnseen", { userId });
     return () => {
       socket.off("friendsUpdated", handleFriendsUpdate);
       socket.off("unreadMessageCountUpdated", handleUnseenCountUpdate);
-      // socket.off("update_unseen_count", handleUnseenCountUpdate);
+      socket.off("update_unseen_count", handleUnseenCountUpdate);
     };
   }, [socket, userId, setFriends]);
 

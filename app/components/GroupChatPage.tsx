@@ -174,8 +174,11 @@ const GroupChatPage = () => {
       groupId: string;
       count: number;
     }) => {
+      const gIdStr = String(groupId);
       setGroups((prev) =>
-        prev.map((g) => (g._id === groupId ? { ...g, unreadCount: count } : g))
+        prev.map((g) =>
+          String(g._id) === gIdStr ? { ...g, unreadCount: Math.max(0, count) } : g
+        )
       );
     };
 
@@ -183,15 +186,16 @@ const GroupChatPage = () => {
       const msgGroupId =
         typeof newMsg.groupId === "object"
           ? newMsg.groupId?._id?.toString() || newMsg.groupId?.toString()
-          : newMsg.groupId?.toString();
+          : (newMsg.groupId || newMsg.group)?.toString();
       if (!msgGroupId) return;
 
+      const gIdStr = String(msgGroupId);
       // If user is currently looking at this group, unread count stays 0
-      if (selectedGroup?._id === msgGroupId) return;
+      if (String(selectedGroup?._id) === gIdStr) return;
 
       setGroups((prev) =>
         prev.map((g) =>
-          g._id === msgGroupId
+          String(g._id) === gIdStr
             ? { ...g, unreadCount: (g.unreadCount || 0) + 1 }
             : g
         )

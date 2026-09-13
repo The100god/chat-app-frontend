@@ -33,6 +33,7 @@ import {
   updateAvailableAtom,
   userAtom,
   groupUnreadTotalAtom,
+  friendUnreadTotalAtom,
 } from "../states/States";
 import NotificationBell from "./NotificationBell";
 import { Gamepad2, MessageCircle } from "lucide-react";
@@ -51,6 +52,8 @@ const Header: React.FC = () => {
   const [user] = useAtom(userAtom);
   const [updateAvailable] = useAtom(updateAvailableAtom);
   const [groupUnreadTotal] = useAtom(groupUnreadTotalAtom);
+  const [friendUnreadTotal] = useAtom(friendUnreadTotalAtom);
+  const [totalUnread] = useAtom(unreadCountAtom);
   const router = useRouter();
   const [showLeft, setShowLeft] = useAtom(responsiveDeviceAtom);
   const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
@@ -225,7 +228,14 @@ const Header: React.FC = () => {
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              <MessageCircle size={14} className="relative z-10" />
+              <div className="relative flex items-center">
+                <MessageCircle size={14} className="relative z-10" />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] font-extrabold px-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center leading-none z-20 shadow-xs border border-white/20 animate-pulse">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
+              </div>
               <span className="relative z-10">Chat</span>
             </button>
             <button
@@ -272,6 +282,17 @@ const Header: React.FC = () => {
             >
               <FaHome size={14} />
               <span>Chats</span>
+              {friendUnreadTotal > 0 && (
+                <span
+                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isHomeActive
+                      ? "bg-white text-[var(--accent)]"
+                      : "bg-rose-500 text-white"
+                  }`}
+                >
+                  {friendUnreadTotal > 99 ? "99+" : friendUnreadTotal}
+                </span>
+              )}
             </button>
 
             <button
@@ -443,11 +464,16 @@ const Header: React.FC = () => {
               <button
                 onClick={() => handleWorkspaceSwitch("chat")}
                 title="Chat Workspace"
-                className={`p-1 rounded-full transition-all cursor-pointer ${
+                className={`relative p-1 rounded-full transition-all cursor-pointer ${
                   activeWorkspace === "chat" ? "bg-[var(--accent)] text-white shadow-xs" : "text-[var(--foreground)] opacity-60"
                 }`}
               >
                 <MessageCircle size={14} />
+                {totalUnread > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[8px] font-extrabold px-1 min-w-[13px] h-[13px] rounded-full flex items-center justify-center leading-none z-20 shadow-xs">
+                    {totalUnread > 99 ? "99+" : totalUnread}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => handleWorkspaceSwitch("together")}
@@ -480,13 +506,24 @@ const Header: React.FC = () => {
                   setShowLeft(true);
                 }, e)
               }
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isHomeActive
                   ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
                   : "text-[var(--foreground)] opacity-70 hover:opacity-100"
               }`}
             >
-              Chats
+              <span>Chats</span>
+              {friendUnreadTotal > 0 && (
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                    isHomeActive
+                      ? "bg-white text-[var(--accent)]"
+                      : "bg-rose-500 text-white"
+                  }`}
+                >
+                  {friendUnreadTotal > 99 ? "99+" : friendUnreadTotal}
+                </span>
+              )}
             </button>
 
             <button
