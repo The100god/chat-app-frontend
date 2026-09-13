@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTogetherRoom } from "../hooks/useTogetherRoom";
-import { useAtom } from "jotai";
-import { userIdAtom, friendsAtom } from "../states/States";
+import { useAtom, useAtomValue } from "jotai";
+import { userIdAtom, friendsAtom, unreadCountAtom, activeWorkspaceAtom } from "../states/States";
+import { useRouter } from "next/navigation";
 import { TogetherGameId } from "../states/togetherTypes";
 import {
   LogOut,
@@ -19,6 +20,7 @@ import {
   Brain,
   Heart,
   ArrowRightLeft,
+  MessageSquare,
 } from "lucide-react";
 
 import TicTacToeBoard from "./TicTacToeBoard";
@@ -51,6 +53,9 @@ export const TogetherRoomShell: React.FC = () => {
   const { room, isHost, leaveRoom, closeRoom, switchGame, emit } = useTogetherRoom();
   const [userId] = useAtom(userIdAtom);
   const [friends] = useAtom(friendsAtom);
+  const totalUnread = useAtomValue(unreadCountAtom);
+  const [, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [showConfirm, setShowConfirm] = useState<"leave" | "close" | null>(null);
   const [isChangingGame, setIsChangingGame] = useState(false);
@@ -170,6 +175,20 @@ export const TogetherRoomShell: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {totalUnread > 0 && (
+            <button
+              onClick={() => {
+                setActiveWorkspace("chat");
+                router.push("/?workspace=chat");
+              }}
+              className="flex items-center gap-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-lg px-2.5 py-1 text-xs font-bold transition-all shadow-sm animate-pulse cursor-pointer"
+              title={`${totalUnread} unread message${totalUnread > 1 ? "s" : ""} in Chat`}
+            >
+              <MessageSquare size={13} />
+              <span>{totalUnread > 99 ? "99+" : totalUnread}</span>
+            </button>
+          )}
+
           {/* Switch Game Button */}
           {room.type === "game" && (
             <button
