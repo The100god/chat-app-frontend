@@ -87,18 +87,19 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
             <p className="text-xs opacity-60 mt-1">Redirecting to Find Friends...</p>
           </div>
         ) : (
-          <ul className="divide-y divide-[var(--border)]/40">
+          <ul className="divide-y divide-[var(--border)]">
             {safeFriends && safeFriends.map((friend) => {
               const isSelected = selectedFriend?.friendId === friend?.friendId;
               const hasUnread = (friend?.unreadMessagesCount || 0) > 0;
+              const isSelf = friend.friendId === userId;
 
               return (
                 <li
                   key={friend?.friendId}
                   onClick={() => handleSelectFriend(friend)}
                   className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${isSelected
-                      ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
-                      : "hover:bg-[var(--muted)]"
+                    ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
+                    : "hover:bg-[var(--muted)]"
                     }`}
                 >
                   {/* WhatsApp Profile Avatar */}
@@ -118,11 +119,11 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
                     <div className="flex items-center justify-between mb-0.5">
                       <p
                         className={`text-sm truncate ${hasUnread || isSelected
-                            ? "font-bold text-[var(--foreground)]"
-                            : "font-medium text-[var(--foreground)]"
+                          ? "font-bold text-[var(--foreground)]"
+                          : "font-medium text-[var(--foreground)]"
                           }`}
                       >
-                        {friend.username}
+                        {isSelf ? "You" + ' : ' + friend.username : friend.username}
                       </p>
                     </div>
 

@@ -5,17 +5,18 @@
 
 
 :root {
-  --background: #efeae2;
+  --background: #ffffff;
   --foreground: #111b21;
   --primary: #00a884;
   --secondary: #25d366;
   --accent: #00a884;
+  --accent-hover: #008f6f;
   --muted: #f0f2f5;
   --card: #ffffff;
   --card-foreground: #111b21;
   --popover: #ffffff;
   --popover-foreground: #111b21;
-  --border: #e9edef;
+  --border: #e2e8f0;
   --input: #f0f2f5;
   --ring: #00a884;
   --bubble-sent: #d9fdd3;
@@ -38,24 +39,25 @@ body {
 
 /* ---------- Dark Theme ---------- */
 [data-theme="dark"] {
-  --background: #0b141a;
-  --foreground: #e9edef;
-  --primary: #00a884;
-  --secondary: #00a884;
-  --accent: #00a884;
-  --muted: #111b21;
-  --card: #202c33;
-  --card-foreground: #e9edef;
-  --popover: #202c33;
-  --popover-foreground: #e9edef;
-  --border: #222d34;
-  --input: #2a3942;
-  --ring: #00a884;
-  --bubble-sent: #005c4b;
-  --bubble-sent-text: #e9edef;
-  --bubble-received: #202c33;
-  --bubble-received-text: #e9edef;
-  --chat-pattern-opacity: 0.03;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --primary: #8b5cf6;
+  --secondary: #ec4899;
+  --accent: #8b5cf6;
+  --accent-hover: #7c3aed;
+  --muted: #1e293b;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --popover: #1e293b;
+  --popover-foreground: #f8fafc;
+  --border: #334155;
+  --input: #0f172a;
+  --ring: #8b5cf6;
+  --bubble-sent: #8b5cf6;
+  --bubble-sent-text: #ffffff;
+  --bubble-received: #1e293b;
+  --bubble-received-text: #f8fafc;
+  --chat-pattern-opacity: 0.05;
 }
 
 /* ---------- Custom Theme Example (e.g. “Aurora”) ---------- */
@@ -65,6 +67,7 @@ body {
   --primary: #00bcd4;
   --secondary: #ff4081;
   --accent: #4caf50;
+  --accent-hover: #43a047;
   --muted: #1e293b;
   --card: #17212b;
   --card-foreground: #e0f2f1;
@@ -128,12 +131,15 @@ textarea,
 
 
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE 10+ */
 }
 
 *::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
+  /* Chrome/Safari */
 }
 
 /* ---------- Glow Effects ---------- */
@@ -147,12 +153,10 @@ textarea,
 
 /* ---------- Shimmer Loading ---------- */
 .shimmer-mask {
-  background: linear-gradient(
-    120deg,
-    rgba(13, 34, 70, 0.05) 0%,
-    rgba(5, 10, 55, 0.2) 50%,
-    rgba(8, 1, 64, 0.05) 100%
-  );
+  background: linear-gradient(120deg,
+      rgba(13, 34, 70, 0.05) 0%,
+      rgba(5, 10, 55, 0.2) 50%,
+      rgba(8, 1, 64, 0.05) 100%);
   background-size: 200% 100%;
   animation: shimmer 3s infinite ease-in-out;
   mix-blend-mode: overlay;
@@ -162,6 +166,7 @@ textarea,
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -169,10 +174,13 @@ textarea,
 
 /* ---------- Animations ---------- */
 @keyframes fadeInOut {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0;
     transform: scale(0.5);
   }
+
   50% {
     opacity: 1;
     transform: scale(1);
@@ -183,6 +191,7 @@ textarea,
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

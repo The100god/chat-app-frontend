@@ -59,11 +59,7 @@ export const userAtom = atom<User>({
 });
 
 export const responsiveDeviceAtom = atom<boolean>(true);
-export const activeWorkspaceAtom = atom<"chat" | "together">(
-  typeof window !== "undefined" && localStorage.getItem("activeWorkspace") === "together"
-    ? "together"
-    : "chat"
-);
+export const activeWorkspaceAtom = atom<"chat" | "together">("chat");
 export const togetherRoomAtom = atom<TogetherRoom | null>(null);
 export const isAppLockedAtom = atom<boolean>(false);
 export const pendingTogetherInviteAtom = atom<{ roomId: string; roomType?: string } | null>(null);
@@ -125,3 +121,8 @@ export const floatingEmojisAtom = atom<FloatingEmoji[]>(() => {
     size: Math.random() * 2 + 1.1, // random scale
   }));
 });
+
+// Animated background settings (persisted in localStorage via effects)
+export const animatedBgEnabledAtom = atom<boolean>(true);
+export const animatedBgTextAtom = atom<string>("");
+export const animatedBgTextColorAtom = atom<string>("");

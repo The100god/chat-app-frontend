@@ -11,6 +11,10 @@ import {
   Fingerprint,
   Smartphone,
   RefreshCw,
+  Sparkles,
+  Check,
+  RotateCcw,
+  Palette,
 } from "lucide-react";
 import Image from "next/image";
 import { useAtom } from "jotai";
@@ -18,9 +22,10 @@ import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
 import { isMobilePWA, hashPin } from "../../components/AppLockWrapper";
 import { showToast } from "../../components/Toast";
-import { updateAvailableAtom } from "../../states/States";
+import { updateAvailableAtom, animatedBgEnabledAtom, animatedBgTextAtom, animatedBgTextColorAtom } from "../../states/States";
 
 export default function SettingsPage() {
+  const [mounted, setMounted] = useState(false);
   const { user, logout } = useAuth();
   const [mode, setMode] = useState<string | null>();
   const [notifications, setNotifications] = useState(true);
@@ -32,6 +37,58 @@ export default function SettingsPage() {
   const [updatingApp, setUpdatingApp] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
   const [updateAvailable, setUpdateAvailable] = useAtom(updateAvailableAtom);
+  const [animatedBgEnabled, setAnimatedBgEnabled] = useAtom(animatedBgEnabledAtom);
+  const [animatedBgText, setAnimatedBgText] = useAtom(animatedBgTextAtom);
+  const [animatedBgTextColor, setAnimatedBgTextColor] = useAtom(animatedBgTextColorAtom);
+  const [bgDraftText, setBgDraftText] = useState("");
+  const [bgDraftTextColor, setBgDraftTextColor] = useState("");
+
+  const handleToggleAnimatedBg = () => {
+    const next = !animatedBgEnabled;
+    setAnimatedBgEnabled(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("animatedBgEnabled", String(next));
+    }
+    showToast(next ? "Animated background enabled" : "Animated background disabled", "info");
+  };
+
+  const handleSaveBgText = () => {
+    setAnimatedBgText(bgDraftText);
+    setAnimatedBgTextColor(bgDraftTextColor);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("animatedBgText", bgDraftText);
+      localStorage.setItem("animatedBgTextColor", bgDraftTextColor);
+    }
+    showToast("Background changes saved successfully!", "success");
+  };
+
+  const handleResetBgText = () => {
+    setBgDraftText("");
+    setAnimatedBgText("");
+    setBgDraftTextColor("");
+    setAnimatedBgTextColor("");
+    if (typeof window !== "undefined") {
+      localStorage.setItem("animatedBgText", "");
+      localStorage.setItem("animatedBgTextColor", "");
+    }
+    showToast("Reset to default emojis & theme colors", "info");
+  };
+
+  const handleSelectPreset = (emojis: string, defaultColor?: string) => {
+    setBgDraftText(emojis);
+    setAnimatedBgText(emojis);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("animatedBgText", emojis);
+    }
+    if (defaultColor !== undefined) {
+      setBgDraftTextColor(defaultColor);
+      setAnimatedBgTextColor(defaultColor);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("animatedBgTextColor", defaultColor);
+      }
+    }
+    showToast("Preset theme applied!", "success");
+  };
 
   const handleUpdateApp = async () => {
     setUpdatingApp(true);
@@ -127,13 +184,29 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     const savedTheme = localStorage.getItem("chatTheme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
     setMode(savedTheme);
 
     const savedTimeout = Number(localStorage.getItem("chugliAppLockTimeout")) || 0;
     setAppLockTimeout(savedTimeout);
-  }, []);
+
+    const savedBgEnabled = localStorage.getItem("animatedBgEnabled");
+    if (savedBgEnabled !== null) {
+      setAnimatedBgEnabled(savedBgEnabled !== "false");
+    }
+    const savedBgText = localStorage.getItem("animatedBgText");
+    if (savedBgText !== null) {
+      setAnimatedBgText(savedBgText);
+      setBgDraftText(savedBgText);
+    }
+    const savedBgTextColor = localStorage.getItem("animatedBgTextColor");
+    if (savedBgTextColor !== null) {
+      setAnimatedBgTextColor(savedBgTextColor);
+      setBgDraftTextColor(savedBgTextColor);
+    }
+  }, [setAnimatedBgEnabled, setAnimatedBgText, setAnimatedBgTextColor]);
 
   const getAppLockStatusText = () => {
     if (appLockTimeout === 0) return "No Lock";
@@ -368,7 +441,7 @@ export default function SettingsPage() {
                 className="bg-[var(--card)] hover:bg-[var(--accent)]/15"
                 onClick={handleAppLockClick}
               />
-              {!isMobilePWA() && (
+              {mounted && !isMobilePWA() && (
                 <div className="absolute right-12 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1.5 px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs font-medium select-none pointer-events-none">
                   <Smartphone className="w-3 h-3" />
                   <span>PWA Mobile Only</span>
@@ -392,36 +465,234 @@ export default function SettingsPage() {
         </section>
 
         {/* Chat Preferences */}
-        <section>
+        <section className="space-y-4">
           <h3 className="text-lg font-bold mb-3">Chat Preferences</h3>
-          <div className="flex flex-row justify-between items-center space-x-3">
-            <button
-              className={`flex w-full justify-center items-center cursor-pointer ${mode === "light" ? "bg-[var(--accent)]/15" : "bg-[var(--card)]"
-                } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
-              onClick={() => handleThemeToggle("light")}
-            >
-              Light
-            </button>
-            <button
-              className={`flex w-full justify-center items-center cursor-pointer ${mode === "dark" ? "bg-[var(--accent)]/15" : "bg-[var(--card)]"
-                } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
-              onClick={() => handleThemeToggle("dark")}
-            >
-              Dark
-            </button>
-            <button
-              className={`flex w-full justify-center items-center cursor-pointer ${mode === "aurora" ? "bg-[var(--accent)]/15" : "bg-[var(--card)]"
-                } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--foreground)] hover:border-[var(--accent)]`}
-              onClick={() => handleThemeToggle("aurora")}
-            >
-              Aurora
-            </button>
-            {/* <ToggleItem
-              icon={darkMode ? <Moon /> : <Sun />}
-              label="Dark Mode"
-              enabled={darkMode}
-              onToggle={handleThemeToggle}
-            /> */}
+
+          {/* Theme selector */}
+          <div>
+            <label className="text-xs font-semibold text-[var(--foreground)]/70 uppercase tracking-wider block mb-2">
+              Theme
+            </label>
+            <div className="flex flex-row justify-between items-center space-x-3">
+              <button
+                className={`flex w-full justify-center items-center cursor-pointer ${mode === "light" ? "bg-[var(--accent)]/15 font-bold" : "bg-[var(--card)]"
+                  } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--border)] hover:border-[var(--accent)] transition`}
+                onClick={() => handleThemeToggle("light")}
+              >
+                Light
+              </button>
+              <button
+                className={`flex w-full justify-center items-center cursor-pointer ${mode === "dark" ? "bg-[var(--accent)]/15 font-bold" : "bg-[var(--card)]"
+                  } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--border)] hover:border-[var(--accent)] transition`}
+                onClick={() => handleThemeToggle("dark")}
+              >
+                Dark
+              </button>
+              <button
+                className={`flex w-full justify-center items-center cursor-pointer ${mode === "aurora" ? "bg-[var(--accent)]/15 font-bold" : "bg-[var(--card)]"
+                  } hover:bg-[var(--accent)]/15 px-2 py-3 rounded-md border border-[var(--border)] hover:border-[var(--accent)] transition`}
+                onClick={() => handleThemeToggle("aurora")}
+              >
+                Aurora
+              </button>
+            </div>
+          </div>
+
+          {/* Animated Background Toggle & Custom Emojis */}
+          <div className="bg-[var(--card)] rounded-xl border border-[var(--border)] p-4 space-y-4 shadow-xs">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="text-pink-500">
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    Emoji Background
+                  </p>
+                  <p className="text-xs text-[var(--foreground)]/60">
+                    Floating faint emojis drifting in the background
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleAnimatedBg}
+                className={`w-12 h-6 flex items-center rounded-full transition cursor-pointer ${animatedBgEnabled ? "bg-[var(--accent)]" : "bg-gray-400 dark:bg-gray-600"
+                  }`}
+                title="Toggle Animated Background"
+              >
+                <div
+                  className={`w-5 h-5 bg-white rounded-full shadow transform transition ${animatedBgEnabled ? "translate-x-6" : "translate-x-1"
+                    }`}
+                />
+              </button>
+            </div>
+
+            {animatedBgEnabled && (
+              <div className="pt-3 border-t border-[var(--border)] space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-[var(--foreground)]/80 block mb-1.5">
+                    Custom Emojis or Text
+                  </label>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      type="text"
+                      value={bgDraftText}
+                      onChange={(e) => setBgDraftText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSaveBgText();
+                        }
+                      }}
+                      placeholder="e.g. 🌸 💖 ✨ 🔥 or type any words"
+                      className="flex-1 px-3.5 py-2 rounded-xl bg-[var(--input)] border border-[var(--border)] text-sm text-[var(--foreground)] placeholder:text-[var(--foreground)]/40 outline-none focus:border-[var(--accent)] transition select-text"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveBgText}
+                        className="flex-1 sm:flex-none px-4 py-2 rounded-xl bg-[var(--accent)] hover:opacity-90 text-white text-xs font-semibold shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                        title="Save Changes"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Save Changes</span>
+                      </button>
+                      {(bgDraftText || animatedBgText) && (
+                        <button
+                          type="button"
+                          onClick={handleResetBgText}
+                          className="px-3.5 py-2 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)] text-xs font-semibold text-[var(--foreground)] transition flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                          title="Reset to default emojis"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Text Color Selection */}
+                <div className="space-y-2 pt-1 border-t border-[var(--border)]/60">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-semibold text-[var(--foreground)]/80 flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5 text-[var(--accent)]" />
+                      <span>Text Color (Dark & Light Theme):</span>
+                    </label>
+                    <span className="text-[11px] text-[var(--foreground)]/60 font-mono">
+                      {bgDraftTextColor ? bgDraftTextColor.toUpperCase() : "Auto (Adaptive)"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Auto / Default theme chip */}
+                    <button
+                      type="button"
+                      onClick={() => setBgDraftTextColor("")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition cursor-pointer flex items-center gap-1.5 ${
+                        !bgDraftTextColor
+                          ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)] font-bold shadow-xs"
+                          : "bg-[var(--muted)] border-[var(--border)] text-[var(--foreground)]/80 hover:border-[var(--accent)]"
+                      }`}
+                    >
+                      <span className="w-3 h-3 rounded-full bg-gradient-to-tr from-gray-300 to-gray-700 border border-white/20 inline-block" />
+                      <span>Auto</span>
+                    </button>
+
+                    {/* Predefined Color Swatches */}
+                    {[
+                      { name: "White (Bright on Dark)", hex: "#ffffff" },
+                      { name: "Pink", hex: "#f472b6" },
+                      { name: "Cyan", hex: "#38bdf8" },
+                      { name: "Purple", hex: "#c084fc" },
+                      { name: "Gold", hex: "#fbbf24" },
+                      { name: "Mint", hex: "#34d399" },
+                      { name: "Coral", hex: "#f87171" },
+                    ].map((col) => {
+                      const isSelected = bgDraftTextColor.toLowerCase() === col.hex.toLowerCase();
+                      return (
+                        <button
+                          key={col.hex}
+                          type="button"
+                          onClick={() => setBgDraftTextColor(col.hex)}
+                          className={`w-7 h-7 rounded-full border-2 transition flex items-center justify-center cursor-pointer shadow-xs ${
+                            isSelected
+                              ? "border-[var(--foreground)] scale-110 shadow-md ring-2 ring-[var(--accent)]/50"
+                              : "border-black/20 dark:border-white/20 hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: col.hex }}
+                          title={col.name}
+                        >
+                          {isSelected && (
+                            <Check
+                              className={`w-3.5 h-3.5 ${
+                                col.hex === "#ffffff" || col.hex === "#fbbf24" ? "text-gray-900" : "text-white"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
+
+                    {/* Custom Color Picker Input */}
+                    <label
+                      className={`relative w-7 h-7 rounded-full border-2 cursor-pointer flex items-center justify-center overflow-hidden transition shadow-xs ${
+                        bgDraftTextColor && ![
+                          "#ffffff", "#f472b6", "#38bdf8", "#c084fc", "#fbbf24", "#34d399", "#f87171"
+                        ].includes(bgDraftTextColor.toLowerCase())
+                          ? "border-[var(--foreground)] scale-110 shadow-md ring-2 ring-[var(--accent)]/50"
+                          : "border-black/20 dark:border-white/20 hover:scale-105"
+                      }`}
+                      style={{
+                        background: bgDraftTextColor && ![
+                          "#ffffff", "#f472b6", "#38bdf8", "#c084fc", "#fbbf24", "#34d399", "#f87171"
+                        ].includes(bgDraftTextColor.toLowerCase())
+                          ? bgDraftTextColor
+                          : "conic-gradient(from 180deg at 50% 50%, #f43f5e 0deg, #eab308 90deg, #22c55e 180deg, #06b6d4 270deg, #f43f5e 360deg)",
+                      }}
+                      title="Custom Color"
+                    >
+                      <input
+                        type="color"
+                        value={bgDraftTextColor || "#ffffff"}
+                        onChange={(e) => setBgDraftTextColor(e.target.value)}
+                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Preset Chips */}
+                <div>
+                  <p className="text-[11px] text-[var(--foreground)]/60 mb-1.5 font-medium">
+                    Quick Preset Themes:
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: "💕 Romance", emojis: "🌸 💖 💕 ❤️ 🥰 💌", color: "#f472b6" },
+                      { label: "✨ Magic", emojis: "✨ 💫 🌟 🔮 🦋 🌙", color: "#c084fc" },
+                      { label: "🔥 Energy", emojis: "🔥 ⚡ 🚀 💥 🎈 🎉", color: "#fbbf24" },
+                      { label: "🌸 Spring", emojis: "🌸 🌷 🌺 🌹 🌿 🍃", color: "#34d399" },
+                      { label: "🧸 Cute", emojis: "🧸 🐱 🐶 🐼 🍓 🍭", color: "#ffffff" },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => handleSelectPreset(preset.emojis, preset.color)}
+                        className={`text-xs px-2.5 py-1 rounded-lg border transition cursor-pointer ${
+                          (bgDraftText || animatedBgText) === preset.emojis
+                            ? "bg-[var(--accent)]/15 border-[var(--accent)] text-[var(--accent)] font-bold"
+                            : "bg-[var(--muted)] border-[var(--border)] text-[var(--foreground)]/80 hover:border-[var(--accent)]"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 

@@ -25,6 +25,7 @@ import FindAllFriend from "../findAllFriend/FindAllFriend";
 import FriendRequestPage from "../friendRequestPage/FriendRequestPage";
 import FriendListPage from "../friendListPage/FriendListPage";
 import GroupChat from "../groupChatPage/GroupChat";
+import AnimatedEmojiBackground from "../../components/AnimatedEmojiBackground";
 
 interface Friend {
   friendId: string;
@@ -188,6 +189,7 @@ export default function LeftSection() {
 
   return (
     <div ref={containerRef} className="flex px-4 pt-4 flex-col bg-[var(--background)] text-[var(--foreground)] h-[calc(100%-40px)] lg:h-[calc(100%-40px)] xl:h-full w-full rounded-md overflow-hidden relative">
+      <AnimatedEmojiBackground isAbsolute />
       {findFriend && <FindFriend />}
       {/* {findFriend && <FindUser />} */}
       {/* {allFriends && <AllFriends friends={friends} loading={loading} />} */}
