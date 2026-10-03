@@ -18,7 +18,23 @@ import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
 import { showToast } from "../../components/Toast";
-import { X, Timer, ChevronDown, Plus, SendHorizontal, Loader2, ArrowLeft, Settings, Trash2 } from "lucide-react";
+import {
+  X,
+  Timer,
+  ChevronDown,
+  Plus,
+  Send,
+  SendHorizontal,
+  Loader2,
+  ArrowLeft,
+  Settings,
+  Trash2,
+  Image as ImageIcon,
+  Mic,
+  Smile,
+  MessageSquare,
+} from "lucide-react";
+import AnimatedEmojiBackground from "../../components/AnimatedEmojiBackground";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -57,6 +73,21 @@ const DISAPPEAR_OPTIONS = [
   { label: "12 hours", value: 12 },
   { label: "24 hours", value: 24 },
 ];
+
+function isAudioFile(file?: File): boolean {
+  if (!file) return false;
+  const name = file.name.toLowerCase();
+  const type = (file.type || "").toLowerCase();
+  return (
+    type.startsWith("audio/") ||
+    name.endsWith(".m4a") ||
+    name.endsWith(".mp3") ||
+    name.endsWith(".wav") ||
+    name.endsWith(".webm") ||
+    name.endsWith(".aac") ||
+    name.endsWith(".ogg")
+  );
+}
 
 // Helper: format remaining time for countdown
 function formatCountdown(expiresAt: string): string {
@@ -143,10 +174,14 @@ export default function ChatArea() {
   const [showDisappearSubmenu, setShowDisappearSubmenu] = useState(false);
   const settingsDropdownRef = useRef<HTMLDivElement | null>(null);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const recordIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -424,6 +459,8 @@ export default function ChatArea() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessageInput(e.target.value);
+    e.target.style.height = "auto";
+    e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
 
     if (socket && selectedFriend && !isTyping) {
       setIsTyping(true);
@@ -463,6 +500,9 @@ export default function ChatArea() {
     setMediaFiles([]);
     setPreviewVisible(false);
     setShowEmoji(false);
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+    }
 
     const localId = `local-${Date.now()}`;
     if (mediaFilesToSend.length > 0) {
@@ -687,34 +727,32 @@ export default function ChatArea() {
 
   const startVoiceRecording = async () => {
     try {
+      if (recordIntervalRef.current) {
+        clearInterval(recordIntervalRef.current);
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
+        if (e.data && e.data.size > 0) {
           chunksRef.current.push(e.data);
         }
       };
 
-      mediaRecorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const file = new File([blob], `voice_${Date.now()}.webm`, {
-          type: "audio/webm",
-        });
-
-        setMediaFiles((prev) => [...prev, file]);
-        setPreviewVisible(true);
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.start();
+      mediaRecorder.start(100);
       setIsRecordingVoice(true);
+      setRecordDuration(0);
+
+      recordIntervalRef.current = setInterval(() => {
+        setRecordDuration((prev) => prev + 1);
+      }, 1000);
+
       if (navigator.vibrate) {
         navigator.vibrate(100);
       }
-      showToast("🎙️ Recording started... Release to preview!", "success");
     } catch (err) {
       console.error("Error starting voice recording:", err);
       showToast("Could not access microphone.", "error");
@@ -722,38 +760,57 @@ export default function ChatArea() {
     }
   };
 
-  const stopVoiceRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+  const stopVoiceRecording = (shouldAttach = true) => {
+    if (recordIntervalRef.current) {
+      clearInterval(recordIntervalRef.current);
+      recordIntervalRef.current = null;
     }
     setIsRecordingVoice(false);
-  };
 
-  const handlePressStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (isRecordingVoice) return;
-
-    // Start timer for 3 seconds (3000ms)
-    longPressTimerRef.current = setTimeout(() => {
-      startVoiceRecording();
-    }, 3000);
-  };
-
-  const handlePressEnd = (e: React.MouseEvent | React.TouchEvent) => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-
-      if (!isRecordingVoice) {
-        // Short click -> send regular message
-        sendMessage();
-      } else {
-        // Release hold -> stop and send
-        stopVoiceRecording();
+    const recorder = mediaRecorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.onstop = () => {
+        if (shouldAttach && chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const file = new File([blob], `voice_${Date.now()}.webm`, {
+            type: "audio/webm",
+          });
+          setMediaFiles((prev) => [...prev, file]);
+          setPreviewVisible(true);
+          showToast("🎙️ Voice note added!", "success");
+        }
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+        }
+      };
+      recorder.stop();
+    } else {
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
       }
-    } else if (isRecordingVoice) {
-      stopVoiceRecording();
     }
   };
+
+  const cancelVoiceRecording = () => {
+    stopVoiceRecording(false);
+    showToast("Recording cancelled", "info");
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recordIntervalRef.current) {
+        clearInterval(recordIntervalRef.current);
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!socket) return;
@@ -1003,8 +1060,9 @@ export default function ChatArea() {
       }
       return true;
     });
-    setMediaFiles(validFiles);
+    setMediaFiles((prev) => [...prev, ...validFiles]);
     setPreviewVisible(true);
+    e.target.value = "";
   };
 
   const renderMediaPreviews = () => {
@@ -1319,34 +1377,7 @@ export default function ChatArea() {
             className="relative h-full bg-[var(--background)] p-4 overflow-y-auto space-y-3 select-text custom-scrollbar"
           >
             {/* Floating faint emojis animation */}
-            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-              {floatingEmojis.map((e) => (
-                <motion.span
-                  key={e.id}
-                  initial={{ opacity: 0.05, y: 0 }}
-                  animate={{
-                    opacity: [0.08, 0.35, 0.06],
-                    y: [10, -25, 10],
-                    rotate: [0, 10, -10, 0],
-                  }}
-                  transition={{
-                    duration: 6 + Math.random() * 4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="absolute select-none pointer-events-none"
-                  style={{
-                    top: `${e.y}%`,
-                    left: `${e.x}%`,
-                    fontSize: `${e.size}rem`,
-                    opacity: 0.9,
-                    filter: "blur(0.5px)",
-                  }}
-                >
-                  {e.emoji}
-                </motion.span>
-              ))}
-            </div>
+            <AnimatedEmojiBackground isAbsolute />
 
             {messages?.length > 0 &&
               messages?.map((msg, idx) => {
@@ -1567,33 +1598,69 @@ export default function ChatArea() {
         </div>
       )}
 
-      {/* Media Previews Bar */}
+      {/* Attached Media Preview Bar */}
       {!loadingMessages &&
         (selectedFriend || selectedGroup) &&
-        previewVisible &&
         mediaFiles.length > 0 && (
-          <div className="relative flex flex-wrap gap-2 p-2 bg-[var(--card)] border-t border-[var(--border)]">
-            {renderMediaPreviews()}
-            <span className="text-[var(--foreground)] text-xs font-medium ml-2 self-center">
-              {mediaFiles.length} file(s) attached
-            </span>
+          <div className="px-3 pt-3 pb-2 border-t border-[var(--border)] bg-[var(--card)]">
+            <div className="flex items-center gap-2.5 overflow-x-auto custom-scrollbar pb-1">
+              {mediaFiles.map((file, index) => {
+                const isAudio = isAudioFile(file);
+                const url = previewUrls[index] || "";
 
-            <div
-              className="absolute top-2 right-2 cursor-pointer p-1 rounded-full hover:bg-[var(--muted)]"
-              onClick={() => {
-                setPreviewVisible(false);
-                setMediaFiles([]);
-              }}
-            >
-              <X size={16} className="text-[var(--foreground)]" />
+                return (
+                  <div key={index} className="relative flex-shrink-0">
+                    {isAudio ? (
+                      <div className="flex items-center gap-2 pl-2.5 pr-2.5 py-2 rounded-[14px] border border-[var(--border)] bg-[var(--muted)] min-w-[170px]">
+                        <div className="w-8 h-8 rounded-full bg-[var(--accent)] flex items-center justify-center text-white flex-shrink-0 shadow-2xs">
+                          <Mic size={16} />
+                        </div>
+                        <div className="flex flex-col justify-center mr-1">
+                          <span className="text-[13px] font-bold text-[var(--foreground)] leading-tight">
+                            Voice Note
+                          </span>
+                          <span className="text-[11px] font-medium text-[var(--foreground)]/60 leading-tight mt-0.5">
+                            Ready to send
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setMediaFiles((prev) => prev.filter((_, i) => i !== index))}
+                          className="w-[26px] h-[26px] rounded-full flex items-center justify-center ml-1 bg-red-500/15 hover:bg-red-500/25 text-[#ef4444] transition cursor-pointer"
+                          title="Remove voice note"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="relative pt-1 pr-1">
+                        <img
+                          src={url}
+                          alt="Thumbnail"
+                          className="w-[62px] h-[62px] rounded-xl object-cover border border-[var(--border)] shadow-2xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setMediaFiles((prev) => prev.filter((_, i) => i !== index))}
+                          className="absolute top-0 right-0 bg-[#ef4444] hover:bg-red-600 text-white rounded-full w-[22px] h-[22px] flex items-center justify-center shadow-md cursor-pointer transition z-10"
+                          title="Remove attachment"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
       {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="bg-[var(--card)] rounded-md border-t border-[var(--border)] p-2.5 px-4 flex items-center gap-2 relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
+        <div className="bg-[var(--card)] border-t border-[var(--border)] px-2.5 py-2 flex items-center relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
           <input
+            ref={fileInputRef}
             type="file"
             name="media"
             aria-label="Upload media"
@@ -1604,114 +1671,162 @@ export default function ChatArea() {
             id="upload"
           />
 
-          {/* Emoji Picker toggle button */}
-          <div className="relative">
-            <button
-              onClick={() => setShowEmoji(!showEmoji)}
-              className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/80 hover:text-[var(--foreground)] transition cursor-pointer text-xl flex items-center justify-center"
-              title="Choose Emoji"
-            >
-              😀
-            </button>
-            {showEmoji && (
-              <EmojiPicker
-                onEmojiClick={(emoji) => setMessageInput((prev) => prev + emoji)}
-              />
-            )}
-          </div>
+          {isRecordingVoice ? (
+            <div className="flex-1 flex items-center justify-between py-0.5">
+              <button
+                type="button"
+                onClick={cancelVoiceRecording}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-red-500/12 hover:bg-red-500/20 text-[#ef4444] transition cursor-pointer"
+                title="Cancel recording"
+              >
+                <Trash2 size={18} className="text-[#ef4444]" />
+                <span className="text-[13px] font-semibold text-[#ef4444]">Cancel</span>
+              </button>
 
-          {/* Attachment Clip button */}
-          <label
-            htmlFor="upload"
-            className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/80 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center"
-            title="Attach Media"
-          >
-            <Plus size={22} />
-          </label>
-
-          {/* WhatsApp Textarea Input */}
-          <div className="flex-1 min-w-0 bg-[var(--input)] border border-[var(--border)] focus-within:border-[var(--accent)] rounded-2xl px-4 py-1.5 transition flex items-center">
-            {isRecordingVoice ? (
-              <div className="flex-1 text-rose-500 flex items-center gap-2 animate-pulse font-medium text-xs py-1 select-none">
-                <span>🔴</span>
-                <span>Recording voice message...</span>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse" />
+                <span className="text-[15px] font-bold tabular-nums text-[var(--foreground)]">
+                  {Math.floor(recordDuration / 60)}:{recordDuration % 60 < 10 ? "0" : ""}{recordDuration % 60}
+                </span>
+                <span className="text-xs font-medium text-[var(--foreground)]/60">
+                  Recording Chugli...
+                </span>
               </div>
-            ) : (
-              <textarea
-                value={messageInput}
-                onChange={handleInputChange}
-                onFocus={() => {
-                  setShowEmoji(false);
-                  if (typeof window !== "undefined") {
-                    window.scrollTo(0, 0);
-                    setTimeout(() => {
-                      window.scrollTo(0, 0);
-                      if (chatContainerRef.current) {
-                        chatContainerRef.current.scrollTo({
-                          top: chatContainerRef.current.scrollHeight,
-                          behavior: "smooth",
-                        });
-                      }
-                    }, 100);
-                  }
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                className="w-full bg-transparent text-[var(--foreground)] outline-none resize-none text-sm placeholder:text-[var(--foreground)]/40 max-h-24 custom-scrollbar"
-                placeholder="Type a message..."
-                rows={1}
-              />
-            )}
-          </div>
 
-          {/* Dynamic Send / Mic Action Button */}
-          <button
-            onMouseDown={handlePressStart}
-            onMouseUp={handlePressEnd}
-            onMouseLeave={() => {
-              if (longPressTimerRef.current) {
-                clearTimeout(longPressTimerRef.current);
-                longPressTimerRef.current = null;
-              }
-              if (isRecordingVoice) {
-                stopVoiceRecording();
-              }
-            }}
-            onTouchStart={(e) => {
-              e.preventDefault();
-              handlePressStart(e);
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              handlePressEnd(e);
-            }}
-            onClick={() => {
-              if (messageInput.trim() || mediaFiles.length > 0) {
-                sendMessage();
-              }
-            }}
-            className={`p-3 rounded-full cursor-pointer transition-all flex items-center justify-center shadow-2xs ${isRecordingVoice
-              ? "bg-rose-600 animate-pulse text-white shadow-rose-500/30"
-              : "bg-[var(--accent)] hover:opacity-90 text-white"
-              }`}
-            title={
-              isRecordingVoice
-                ? "Release to Preview"
-                : messageInput.trim() || mediaFiles.length > 0
-                  ? "Send Message"
-                  : "Hold to record voice"
-            }
-          >
-            {isRecordingVoice ? (
-              <Loader2 className="animate-spin" size={18} />
-            ) : (
-              <SendHorizontal size={18} />
-            )}
-          </button>
+              <button
+                type="button"
+                onClick={() => stopVoiceRecording(true)}
+                className="w-10 h-10 rounded-full bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white flex items-center justify-center cursor-pointer shadow-xs transition"
+                title="Send voice note"
+              >
+                <Send size={18} className="text-white" />
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Image Picker Button */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                title="Attach Media"
+              >
+                <ImageIcon size={22} />
+              </button>
+
+              {/* Mic / Audio Record Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmoji(false);
+                  startVoiceRecording();
+                }}
+                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                title="Record Voice Note"
+              >
+                <Mic size={22} />
+              </button>
+
+              {/* Emoji Picker toggle button */}
+              <div className="relative flex items-center">
+                <button
+                  type="button"
+                  onClick={() => setShowEmoji((prev) => !prev)}
+                  className={`p-2 rounded-full hover:bg-[var(--muted)] transition cursor-pointer flex items-center justify-center flex-shrink-0 ${
+                    showEmoji
+                      ? "text-[var(--accent)]"
+                      : "text-[var(--foreground)]/60 hover:text-[var(--foreground)]"
+                  }`}
+                  title="Choose Emoji"
+                >
+                  <Smile size={22} />
+                </button>
+                {showEmoji && (
+                  <EmojiPicker
+                    onEmojiClick={(emoji) => {
+                      setMessageInput((prev) => prev + emoji);
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Textarea Input */}
+              <div className="flex-1 min-w-0 bg-[var(--input)] border border-[var(--border)] focus-within:border-[var(--accent)] rounded-[22px] px-3.5 py-1.5 mx-1 transition flex items-center">
+                <textarea
+                  ref={textareaRef}
+                  value={messageInput}
+                  onChange={handleInputChange}
+                  onFocus={() => {
+                    setShowEmoji(false);
+                    if (typeof window !== "undefined") {
+                      window.scrollTo(0, 0);
+                      setTimeout(() => {
+                        if (chatContainerRef.current) {
+                          chatContainerRef.current.scrollTo({
+                            top: chatContainerRef.current.scrollHeight,
+                            behavior: "smooth",
+                          });
+                        }
+                      }, 100);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  className="w-full bg-transparent text-[var(--foreground)] outline-none resize-none text-[15px] leading-5 placeholder:text-[var(--foreground)]/40 max-h-[100px] custom-scrollbar overflow-y-auto block py-0.5"
+                  placeholder={selectedGroup ? "Type a group message..." : "Type a message..."}
+                  rows={1}
+                />
+              </div>
+
+              {/* Send Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmoji(false);
+                  sendMessage();
+                }}
+                disabled={(!messageInput.trim() && mediaFiles.length === 0) || loadingMessages}
+                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${
+                  !messageInput.trim() && mediaFiles.length === 0 && !loadingMessages
+                    ? "bg-[var(--accent)] opacity-50 cursor-not-allowed text-white"
+                    : "bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white cursor-pointer"
+                }`}
+                title="Send Message"
+              >
+                {loadingMessages ? (
+                  <Loader2 size={18} className="animate-spin text-white" />
+                ) : (
+                  <Send size={18} className="text-white" />
+                )}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Empty State when no conversation is selected */}
+      {!loadingMessages && !selectedFriend && !selectedGroup && (
+        <div className="flex-1 flex flex-col items-center justify-center relative p-8 text-center select-none overflow-hidden h-full">
+          <AnimatedEmojiBackground isAbsolute />
+          <div className="relative z-10 max-w-md flex flex-col items-center">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white shadow-xl mb-6">
+              <MessageSquare size={38} className="text-white" />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-[var(--foreground)] mb-2">
+              Chugli for Web
+            </h2>
+            <p className="text-sm text-[var(--foreground)]/65 leading-relaxed mb-8">
+              Send and receive messages with your friends, share voice notes, and play interactive games together in real-time.
+            </p>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[var(--card)] border border-[var(--border)] text-xs text-[var(--foreground)]/60 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              End-to-end encrypted messaging
+            </div>
+          </div>
         </div>
       )}
       <MediaViewerModal

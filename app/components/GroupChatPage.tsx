@@ -250,7 +250,7 @@ const GroupChatPage = () => {
             <p className="text-xs opacity-60 mt-1">Create a group to start chatting together</p>
           </div>
         ) : (
-          <div className="divide-y divide-[var(--border)]/40">
+          <div className="divide-y divide-[var(--border)]">
             {groups.map((g, i) => {
               const isSelected = selectedGroup?._id === g?._id;
               const memberCount = g?.groupMember?.length || 0;

@@ -262,7 +262,7 @@ const TogetherWorkspace: React.FC = () => {
 
             {/* Activities / Sections List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-1.5 space-y-1">
-              <ul className="divide-y divide-[var(--border)]/40">
+              <ul className="divide-y divide-[var(--border)]">
                 {sections.map((section) => {
                   const isActive = activeSection === section.id;
                   const inviteCount = invites.filter((i) => i.roomType === section.roomType).length;
@@ -276,13 +276,12 @@ const TogetherWorkspace: React.FC = () => {
                         if (room) return;
                         setActiveSection(section.id);
                       }}
-                      className={`flex items-center px-3 py-3 rounded-xl transition-all duration-150 relative ${
-                        isLocked
+                      className={`flex items-center px-3 py-3 rounded-xl transition-all duration-150 relative ${isLocked
                           ? "opacity-40 cursor-not-allowed"
                           : isActive
-                          ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)] cursor-pointer"
-                          : "hover:bg-[var(--muted)] cursor-pointer"
-                      }`}
+                            ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)] cursor-pointer"
+                            : "hover:bg-[var(--muted)] cursor-pointer"
+                        }`}
                       title={room ? "Interface navigation is locked during an active room session" : undefined}
                     >
                       {/* Circular Avatar with Green Online Indicator */}
@@ -302,9 +301,8 @@ const TogetherWorkspace: React.FC = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-0.5">
                           <p
-                            className={`text-sm truncate ${
-                              isActive ? "font-bold text-[var(--foreground)]" : "font-semibold text-[var(--foreground)]"
-                            }`}
+                            className={`text-sm truncate ${isActive ? "font-bold text-[var(--foreground)]" : "font-semibold text-[var(--foreground)]"
+                              }`}
                           >
                             {section.label}
                           </p>
@@ -340,7 +338,7 @@ const TogetherWorkspace: React.FC = () => {
                 <>
                   <button
                     onClick={() => handleInitiateCreate(sections.find((s) => s.id === activeSection)?.roomType || "game")}
-                    className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
+                    className="w-full py-2.5 px-3 rounded-xl bg-[var(--accent)] hover:bg-[var(--accent-hover)] hover:brightness-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer active:scale-98"
                   >
                     <Plus size={16} />
                     <span>Create Room</span>
@@ -348,7 +346,7 @@ const TogetherWorkspace: React.FC = () => {
 
                   <button
                     onClick={() => setShowJoinModal(true)}
-                    className="w-full py-2 px-3 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)]/40 text-[var(--foreground)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border)] transition cursor-pointer"
+                    className="w-full py-2 px-3 rounded-xl bg-[var(--muted)] hover:bg-[var(--border)] text-[var(--foreground)] font-semibold text-xs flex items-center justify-center gap-2 border border-[var(--border)] transition cursor-pointer"
                   >
                     <LogIn size={15} />
                     <span>Join Room</span>
@@ -387,10 +385,9 @@ const TogetherWorkspace: React.FC = () => {
                   className={`
                     relative flex flex-col items-center justify-center py-1.5 px-2.5 rounded-2xl text-xs font-semibold
                     transition-all duration-150 flex-1 min-w-[60px]
-                    ${
-                      isLocked
-                        ? "opacity-35 cursor-not-allowed"
-                        : isActive
+                    ${isLocked
+                      ? "opacity-35 cursor-not-allowed"
+                      : isActive
                         ? "bg-[var(--accent)]/15 text-[var(--accent)] font-bold shadow-xs border border-[var(--accent)]/30 cursor-pointer"
                         : "text-[var(--foreground)] opacity-60 hover:opacity-100 hover:bg-[var(--muted)] cursor-pointer"
                     }

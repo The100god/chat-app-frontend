@@ -9,6 +9,7 @@ import UnreadBadgeManager from "./components/UnreadBadgeManager";
 import ToastContainer from "./components/Toast";
 import TogetherInviteToast from "./components/TogetherInviteToast";
 import Footer from "./components/Footer";
+import AnimatedEmojiBackground from "./components/AnimatedEmojiBackground";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <AppLockWrapper>
+            <AnimatedEmojiBackground />
             <UnreadBadgeManager />
             <Header />
             <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
