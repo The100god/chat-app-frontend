@@ -130,7 +130,7 @@ const FriendRequests = () => {
             className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition ${
               activeTab === "received"
                 ? "bg-[var(--accent)] text-white shadow-2xs"
-                : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/15"
             }`}
           >
             Received {requests.length > 0 && `(${requests.length})`}
@@ -140,7 +140,7 @@ const FriendRequests = () => {
             className={`px-3 py-1 rounded-full text-xs font-semibold cursor-pointer transition ${
               activeTab === "sent"
                 ? "bg-[var(--accent)] text-white shadow-2xs"
-                : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/15"
             }`}
           >
             Sent {sentRequests.length > 0 && `(${sentRequests.length})`}
@@ -162,7 +162,7 @@ const FriendRequests = () => {
               requests?.map((req) => (
                 <div
                   key={req?._id}
-                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--accent)]/10 border border-[var(--border)] hover:border-[var(--accent)]/40 rounded-xl p-3 transition"
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <Image
@@ -207,7 +207,7 @@ const FriendRequests = () => {
               sentRequests.map((req) => (
                 <div
                   key={req?._id}
-                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+                  className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--accent)]/10 border border-[var(--border)] hover:border-[var(--accent)]/40 rounded-xl p-3 transition"
                 >
                   <div className="flex items-center space-x-3 min-w-0">
                     <Image

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { TogetherActivityId } from "../../states/togetherTypes";
 import { ACTIVITIES_REGISTRY } from "./activityRegistry";
 import { Heart, Sparkles, Flame, Scale, Calendar, MessageCircle, Play } from "lucide-react";
+import { useSystemConfig } from "../../context/ConfigContext";
 
 interface ActivitySelectorProps {
   selectedActivityId?: TogetherActivityId | null;
@@ -15,9 +16,11 @@ export const ActivitySelector: React.FC<ActivitySelectorProps> = ({
   selectedActivityId,
   onSelectActivity,
 }) => {
+  const { isActivityEnabled } = useSystemConfig();
   const [filter, setFilter] = useState<string>("all");
 
   const filteredActivities = ACTIVITIES_REGISTRY.filter((act) => {
+    if (!isActivityEnabled(act.id)) return false;
     if (filter === "all") return true;
     return act.type === filter;
   });

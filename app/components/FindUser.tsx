@@ -145,7 +145,7 @@ const FindUser = () => {
             return (
               <div
                 key={user?._id}
-                className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+                className="flex items-center justify-between bg-[var(--card)] hover:bg-[var(--accent)]/10 border border-[var(--border)] hover:border-[var(--accent)]/40 rounded-xl p-3 transition"
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <Image

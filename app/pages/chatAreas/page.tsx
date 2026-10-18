@@ -18,6 +18,7 @@ import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
 import { showToast } from "../../components/Toast";
+import { useSystemConfig } from "../../context/ConfigContext";
 import {
   X,
   Timer,
@@ -121,6 +122,7 @@ export interface Friend {
 }
 
 export default function ChatArea() {
+  const { isFeatureEnabled } = useSystemConfig();
   // const userId = localStorage.getItem("userId")
   //   ? localStorage.getItem("userId")
   //   : null;
@@ -1658,6 +1660,12 @@ export default function ChatArea() {
 
       {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
+        ((selectedFriend && !isFeatureEnabled("feature_chat_1on1")) ||
+         (selectedGroup && !isFeatureEnabled("feature_group_chat"))) ? (
+          <div className="bg-[var(--card)] border-t border-[var(--border)] px-4 py-3 flex items-center justify-center text-xs font-semibold text-amber-500 bg-amber-500/10">
+            ⚠️ {selectedGroup ? "Group chatting is temporarily paused by the administrator." : "Direct 1-on-1 chatting is temporarily paused by the administrator."}
+          </div>
+        ) : (
         <div className="bg-[var(--card)] border-t border-[var(--border)] px-2.5 py-2 flex items-center relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
           <input
             ref={fileInputRef}
@@ -1705,37 +1713,41 @@ export default function ChatArea() {
           ) : (
             <>
               {/* Image Picker Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
-                title="Attach Media"
-              >
-                <ImageIcon size={22} />
-              </button>
+              {isFeatureEnabled("feature_media_sharing") && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-2 rounded-full hover:bg-[var(--accent)]/15 text-[var(--foreground)]/60 hover:text-[var(--accent)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                  title="Attach Media"
+                >
+                  <ImageIcon size={22} />
+                </button>
+              )}
 
               {/* Mic / Audio Record Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEmoji(false);
-                  startVoiceRecording();
-                }}
-                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
-                title="Record Voice Note"
-              >
-                <Mic size={22} />
-              </button>
+              {isFeatureEnabled("feature_voice_notes") && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmoji(false);
+                    startVoiceRecording();
+                  }}
+                  className="p-2 rounded-full hover:bg-[var(--accent)]/15 text-[var(--foreground)]/60 hover:text-[var(--accent)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                  title="Record Voice Note"
+                >
+                  <Mic size={22} />
+                </button>
+              )}
 
               {/* Emoji Picker toggle button */}
               <div className="relative flex items-center">
                 <button
                   type="button"
                   onClick={() => setShowEmoji((prev) => !prev)}
-                  className={`p-2 rounded-full hover:bg-[var(--muted)] transition cursor-pointer flex items-center justify-center flex-shrink-0 ${
+                  className={`p-2 rounded-full hover:bg-[var(--accent)]/15 transition cursor-pointer flex items-center justify-center flex-shrink-0 ${
                     showEmoji
                       ? "text-[var(--accent)]"
-                      : "text-[var(--foreground)]/60 hover:text-[var(--foreground)]"
+                      : "text-[var(--foreground)]/60 hover:text-[var(--accent)]"
                   }`}
                   title="Choose Emoji"
                 >
@@ -1806,6 +1818,7 @@ export default function ChatArea() {
             </>
           )}
         </div>
+        )
       )}
 
       {/* Empty State when no conversation is selected */}

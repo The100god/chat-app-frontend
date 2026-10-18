@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAtom } from "jotai";
 import { animatedBgEnabledAtom, animatedBgTextAtom, animatedBgTextColorAtom } from "../states/States";
+import { useSystemConfig } from "../context/ConfigContext";
 
 interface EmojiItem {
   id: number;
@@ -72,6 +73,7 @@ export default function AnimatedEmojiBackground({
   const [enabled, setEnabled] = useAtom(animatedBgEnabledAtom);
   const [customText, setCustomText] = useAtom(animatedBgTextAtom);
   const [customTextColor, setCustomTextColor] = useAtom(animatedBgTextColorAtom);
+  const { config, isFeatureEnabled } = useSystemConfig();
 
   useEffect(() => {
     setMounted(true);
@@ -91,11 +93,18 @@ export default function AnimatedEmojiBackground({
     }
   }, [setEnabled, setCustomText, setCustomTextColor]);
 
-  if (!mounted || !enabled) return null;
+  const isBgFeatureEnabled =
+    isFeatureEnabled("feature_animated_bg") && config?.animated_bg?.enabled !== false;
+
+  if (!mounted || !enabled || !isBgFeatureEnabled) return null;
 
   const customTokens = parseCustomEmojisOrText(customText);
   const isCustom = customTokens.length > 0;
+  const adminEmojis = config?.animated_bg?.defaultEmojis && config.animated_bg.defaultEmojis.length > 0
+    ? config.animated_bg.defaultEmojis
+    : null;
   const resolvedColor = customTextColor || "var(--foreground)";
+  const speedFactor = config?.animated_bg?.floatingSpeed ? (1 / config.animated_bg.floatingSpeed) : 1;
 
   return (
     <div
@@ -105,10 +114,12 @@ export default function AnimatedEmojiBackground({
       aria-hidden="true"
     >
       {PRESET_EMOJIS.map((e, index) => {
-        const displayText =
-          customTokens.length > 0
-            ? customTokens[index % customTokens.length]
-            : e.emoji;
+        let displayText = e.emoji;
+        if (customTokens.length > 0) {
+          displayText = customTokens[index % customTokens.length];
+        } else if (adminEmojis) {
+          displayText = adminEmojis[index % adminEmojis.length];
+        }
 
         return (
           <motion.span
@@ -120,7 +131,7 @@ export default function AnimatedEmojiBackground({
               rotate: [0, 8, -8, 0],
             }}
             transition={{
-              duration: e.duration,
+              duration: Math.max(3, e.duration * speedFactor),
               repeat: Infinity,
               ease: "easeInOut",
             }}

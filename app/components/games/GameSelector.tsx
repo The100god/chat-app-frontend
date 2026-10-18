@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Trophy, XCircle, Handshake, Gamepad2, Play, BarChart3, Target, Award } from "lucide-react";
 import { GAMES_REGISTRY, TogetherGameDefinition } from "./registry";
 import { GameStats, TogetherGameId } from "../../states/togetherTypes";
+import { useSystemConfig } from "../../context/ConfigContext";
 
 interface GameSelectorProps {
   selectedGameId?: TogetherGameId | null;
@@ -19,11 +20,12 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
   userStats = {},
   currentUserId,
 }) => {
+  const { isGameEnabled } = useSystemConfig();
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [showStatsDashboard, setShowStatsDashboard] = useState<boolean>(false);
 
   const filteredGames = GAMES_REGISTRY.filter(
-    (g) => filterCategory === "all" || g.category === filterCategory
+    (g) => (filterCategory === "all" || g.category === filterCategory) && isGameEnabled(g.id)
   );
 
   const getStatsForGame = (gameId: string): GameStats => {
@@ -167,7 +169,7 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
 
             {/* Individual Game Breakdown */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-1">
-              {GAMES_REGISTRY.map((game) => {
+              {GAMES_REGISTRY.filter((game) => isGameEnabled(game.id)).map((game) => {
                 const st = getStatsForGame(game.id);
                 return (
                   <div

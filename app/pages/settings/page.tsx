@@ -161,6 +161,11 @@ export default function SettingsPage() {
 
   const handleThemeToggle = (theme: "light" | "dark" | "aurora") => {
     document.documentElement.setAttribute("data-theme", theme);
+    if (theme === "dark" || theme === "aurora") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     setMode(theme);
     localStorage.setItem("chatTheme", theme);
   };

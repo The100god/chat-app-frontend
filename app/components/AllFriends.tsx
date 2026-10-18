@@ -35,7 +35,7 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
           {friends.map((friend) => (
             <div
               key={friend?.friendId}
-              className="flex items-center space-x-3 bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+              className="flex items-center space-x-3 bg-[var(--card)] hover:bg-[var(--accent)]/10 border border-[var(--border)] hover:border-[var(--accent)]/40 rounded-xl p-3 transition"
             >
               <Image
                 src={friend?.profilePic || "/default-profile-pic.jpg"}

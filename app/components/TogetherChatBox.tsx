@@ -278,7 +278,7 @@ export const TogetherChatBox: React.FC<TogetherChatBoxProps> = ({
               <button
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className={`p-2 rounded-full text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)] transition cursor-pointer flex-shrink-0 ${showEmojiPicker ? "text-[var(--accent)] opacity-100" : ""
+                className={`p-2 rounded-full text-[var(--foreground)] opacity-70 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/15 transition cursor-pointer flex-shrink-0 ${showEmojiPicker ? "text-[var(--accent)] opacity-100" : ""
                   }`}
                 title="Choose Emoji"
               >

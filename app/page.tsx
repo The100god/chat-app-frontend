@@ -8,15 +8,22 @@ import TogetherWorkspace from "./components/TogetherWorkspace";
 import { useEffect } from "react";
 import { useAtom } from "jotai";
 import { activeWorkspaceAtom, responsiveDeviceAtom } from "./states/States";
+import { useSystemConfig } from "./context/ConfigContext";
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
   const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
   const [showLeft] = useAtom(responsiveDeviceAtom);
+  const { isFeatureEnabled } = useSystemConfig();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("chatTheme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
+    if (savedTheme === "dark" || savedTheme === "aurora") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
 
     // Register PWA service worker
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -90,10 +97,11 @@ export default function Home() {
   }
 
   const isMobileChatOpen = activeWorkspace === "chat" && !showLeft;
+  const isTogetherActive = activeWorkspace === "together" && isFeatureEnabled("feature_together_hub");
 
   return (
     <div className="flex w-full h-full min-h-0 flex-1 overflow-hidden">
-      {activeWorkspace === "chat" ? (
+      {!isTogetherActive ? (
         <ResizableLayout
           leftComponent={<LeftSection />}
           rightComponent={<ChatArea />}
