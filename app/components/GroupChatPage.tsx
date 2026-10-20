@@ -20,6 +20,7 @@ import Image from "next/image";
 export interface GroupMember {
   _id: string;
   username: string;
+  name?: string;
   profilePic: string;
   about?: string;
   email?: string;

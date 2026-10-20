@@ -668,9 +668,11 @@ const Header: React.FC = () => {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold text-[var(--foreground)] truncate">
-                    {user.username || "Profile"}
+                    {user.name || user.username || "Profile"}
                   </p>
-                  <p className="text-[10px] text-[var(--accent)] font-medium">View Profile</p>
+                  <p className="text-[10px] text-[var(--accent)] font-mono truncate">
+                    {user.username ? `@${user.username}` : "View Profile"}
+                  </p>
                 </div>
               </Link>
 

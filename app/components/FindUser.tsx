@@ -10,7 +10,9 @@ import { getApiUrl } from "../utils/apiUrl";
 interface UserSearchResult {
   _id: string;
   username: string;
+  name?: string;
   profilePic: string;
+  about?: string;
 }
 
 let debounceTimeout: NodeJS.Timeout;
@@ -114,7 +116,7 @@ const FindUser = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by username..."
+          placeholder="Search by name or @username..."
           className="w-full bg-[var(--input)] border border-[var(--border)] focus:border-[var(--accent)] outline-none h-10 rounded-full px-4 text-sm text-[var(--foreground)] transition shadow-2xs placeholder:text-[var(--foreground)]/40"
         />
         {searchQuery && (
@@ -149,15 +151,20 @@ const FindUser = () => {
               >
                 <div className="flex items-center space-x-3 min-w-0">
                   <Image
-                    src={user?.profilePic || "/default-profile-pic.jpg"}
+                    src={user?.profilePic || "/user.jpg"}
                     alt="pic"
                     className="w-10 h-10 rounded-full border border-[var(--border)] object-cover shadow-2xs flex-shrink-0"
                     width={40}
                     height={40}
                   />
-                  <p className="text-sm font-semibold truncate text-[var(--foreground)]">
-                    {user?.username}
-                  </p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate text-[var(--foreground)]">
+                      {user?.name || user?.username}
+                    </p>
+                    <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
+                      @{user?.username}
+                    </p>
+                  </div>
                 </div>
                 <button
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer flex-shrink-0 ${

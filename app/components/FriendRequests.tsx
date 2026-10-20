@@ -9,6 +9,7 @@ import Image from "next/image";
 interface FriendRequest {
   _id: string;
   username: string;
+  name?: string;
   profilePic: string;
 }
 
@@ -42,16 +43,18 @@ const FriendRequests = () => {
     const handleNewFriendRequest = ({
       senderId,
       username,
+      name,
       profilePic,
     }: {
       senderId: string;
       username: string;
+      name?: string;
       profilePic: string;
     }) => {
       // Avoid duplicates if already in list
       setRequests((prev) => {
         if (prev.some((req) => req._id === senderId)) return prev;
-        return [...prev, { _id: senderId, username, profilePic }];
+        return [...prev, { _id: senderId, username, name, profilePic }];
       });
     };
 
@@ -167,14 +170,19 @@ const FriendRequests = () => {
                   <div className="flex items-center space-x-3 min-w-0">
                     <Image
                       className="rounded-full border border-[var(--border)] w-10 h-10 object-cover shadow-2xs flex-shrink-0"
-                      src={req?.profilePic || "/default-profile-pic.jpg"}
+                      src={req?.profilePic || "/user.jpg"}
                       alt="pic"
                       width={40}
                       height={40}
                     />
-                    <p className="text-sm font-semibold truncate text-[var(--foreground)]">
-                      {req?.username}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate text-[var(--foreground)]">
+                        {req?.name || req?.username}
+                      </p>
+                      <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
+                        @{req?.username}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     <button
@@ -212,16 +220,19 @@ const FriendRequests = () => {
                   <div className="flex items-center space-x-3 min-w-0">
                     <Image
                       className="rounded-full border border-[var(--border)] w-10 h-10 object-cover shadow-2xs flex-shrink-0"
-                      src={req?.profilePic || "/default-profile-pic.jpg"}
+                      src={req?.profilePic || "/user.jpg"}
                       alt="pic"
                       width={40}
                       height={40}
                     />
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate text-[var(--foreground)]">
-                        {req?.username}
+                        {req?.name || req?.username}
                       </p>
-                      <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
+                      <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
+                        @{req?.username}
+                      </p>
+                      <span className="text-[11px] text-amber-500 font-medium flex items-center gap-1 mt-0.5">
                         <span>⏳</span> Pending response
                       </span>
                     </div>

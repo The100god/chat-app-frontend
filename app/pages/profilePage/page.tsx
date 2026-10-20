@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAtom } from "jotai";
-import { Pencil, Mail, X, Camera } from "lucide-react";
+import { Pencil, Mail, X, Camera, Lock, AtSign } from "lucide-react";
 import { floatingEmojisAtom, userAtom, User } from "../../states/States";
 import { showToast } from "../../components/Toast";
 import { motion } from "framer-motion";
@@ -47,10 +47,18 @@ const ProfilePage: React.FC = () => {
         body: JSON.stringify(updatedData),
       });
 
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `HTTP error! status: ${res.status}`);
+      }
       const data = await res.json();
-      setUser(data.user);
-    } catch (error) {
+      if (data.user) {
+        setUser(data.user);
+        localStorage.setItem("chatAppUser", JSON.stringify(data.user));
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error updating profile";
+      showToast(msg, "error");
       console.error("Error updating user:", error);
     }
   };
@@ -77,21 +85,29 @@ const ProfilePage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveName = async (newName: string) => {
-    setUser((prev) => ({ ...prev, username: newName }));
-    await updateUser({ username: newName });
+  const handleSaveDisplayName = async (newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      showToast("Display name cannot be empty", "warning");
+      setIsEditingName(false);
+      return;
+    }
+    setUser((prev) => ({ ...prev, name: trimmed }));
+    await updateUser({ name: trimmed });
     setIsEditingName(false);
+    showToast("Display name updated successfully", "success");
   };
 
   const handleSaveAbout = async (newAbout: string) => {
-    setUser((prev) => ({ ...prev, about: newAbout }));
-    await updateUser({ about: newAbout });
+    const trimmed = newAbout.trim();
+    setUser((prev) => ({ ...prev, about: trimmed }));
+    await updateUser({ about: trimmed });
     setIsEditingAbout(false);
+    showToast("About updated successfully", "success");
   };
 
   return (
     <div className="relative flex flex-col items-center justify-start bg-[var(--background)] text-[var(--foreground)] w-full min-h-screen p-6">
-      {/* Profile Image */}
       {/* 🌸 Floating faint emojis */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         {floatingEmojis.map((e) => (
@@ -121,11 +137,13 @@ const ProfilePage: React.FC = () => {
           </motion.span>
         ))}
       </div>
-      <div className="flex flex-col justify-start items-center w-full max-w-md bg-[var(--card-foreground)] text-[var(--card)] p-4 rounded-2xl shadow-inner overflow-y-auto space-y-4">
+
+      <div className="flex flex-col justify-start items-center w-full max-w-md bg-[var(--card-foreground)] text-[var(--card)] p-6 rounded-2xl shadow-inner overflow-y-auto space-y-4">
+        {/* Profile Image */}
         <div className="relative flex flex-col items-center">
           {isImageNotFound(user?.profilePic) || imageError ? (
             <div className="w-32 h-32 rounded-full flex items-center justify-center bg-gradient-to-tr from-[var(--primary)] to-[var(--accent)] text-white font-bold text-4xl border-4 border-[var(--accent)] select-none shadow-inner">
-              {getInitials(user?.username)}
+              {getInitials(user?.name || user?.username)}
             </div>
           ) : (
             <Image
@@ -141,9 +159,9 @@ const ProfilePage: React.FC = () => {
           )}
           <label
             htmlFor="changeProfile"
-            className="absolute bottom-0 right-0 bg-[var(--accent)] hover:opacity-90 transition text-sm px-3 py-3 rounded-full cursor-pointer"
+            className="absolute bottom-0 right-0 bg-[var(--accent)] text-[var(--card-foreground)] hover:opacity-90 transition p-2.5 rounded-full cursor-pointer shadow"
           >
-            <Camera size={20} radius={100} />
+            <Camera size={18} />
           </label>
           <input
             id="changeProfile"
@@ -154,12 +172,12 @@ const ProfilePage: React.FC = () => {
           />
         </div>
 
-        <div className="mt-1 mb-12">
+        <div className="mt-1 mb-2">
           <label
             htmlFor="changeProfilePic"
-            className="flex items-center justify-center bg-[var(--card)] text-[var(--foreground)] border border-[var(--accent)] hover:bg-[var(--accent)] transition text-sm px-3 py-2 rounded-md cursor-pointer "
+            className="flex items-center justify-center bg-[var(--card)] text-[var(--foreground)] border border-[var(--accent)] hover:bg-[var(--accent)] hover:text-white transition text-xs font-medium px-3 py-1.5 rounded-lg cursor-pointer"
           >
-            <Camera className="mr-2 h-4 w-4" />
+            <Camera className="mr-1.5 h-3.5 w-3.5" />
             Change photo
           </label>
           <input
@@ -171,33 +189,57 @@ const ProfilePage: React.FC = () => {
           />
         </div>
 
-        {/* Username */}
-        <div className="flex items-center justify-center gap-3 w-full mb-1 ">
+        {/* Display Name (Editable) */}
+        <div className="flex flex-col items-center justify-center w-full">
           {isEditingName ? (
-            <input
-              type="text"
-              defaultValue={user?.username}
-              onBlur={(e) => handleSaveName(e.target.value)}
-              className="bg-[var(--input)] border border-[var(--border)] px-3 py-1 rounded-md text-[var(--foreground)] focus:ring-2 focus:ring-[var(--ring)]"
-              autoFocus
-            />
-          ) : (
-            <>
-              <h2 className="text-3xl text-[var(--background)] font-semibold">
-                {user?.username}
-              </h2>
-              <Pencil
-                className="h-10 w-10 text-[var(--accent)] hover:text-[var(--primary)] hover:bg-red-500/40 px-2 py-1 rounded-md cursor-pointer"
-                onClick={() => setIsEditingName(true)}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                defaultValue={user?.name || user?.username}
+                onBlur={(e) => handleSaveDisplayName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveDisplayName((e.target as HTMLInputElement).value);
+                  if (e.key === "Escape") setIsEditingName(false);
+                }}
+                maxLength={50}
+                className="bg-[var(--input)] border border-[var(--border)] px-3 py-1.5 rounded-xl text-[var(--foreground)] focus:ring-2 focus:ring-[var(--accent)] text-2xl font-semibold text-center"
+                autoFocus
               />
-            </>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2">
+              <h2 className="text-3xl text-[var(--background)] font-bold tracking-tight">
+                {user?.name || user?.username}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsEditingName(true)}
+                title="Edit display name"
+                className="p-1 rounded-lg text-[var(--accent)] hover:bg-[var(--accent)]/20 transition"
+              >
+                <Pencil className="h-5 w-5" />
+              </button>
+            </div>
           )}
         </div>
-        <div className="text-pretty text-[var(--card)] mb-6">
-          Personalize your profile to make it feel like home.
+
+        {/* Permanent Username Handle (Read-only with Lock) */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--background)]/15 text-[var(--background)] text-xs font-mono">
+          <AtSign size={13} className="text-[var(--accent)]" />
+          <span className="font-semibold">{user?.username}</span>
+          <span
+            className="flex items-center gap-0.5 ml-1 text-[10px] text-[var(--accent)] bg-[var(--background)] px-1.5 py-0.5 rounded-full font-sans font-medium"
+            title="Permanent unique handle assigned at registration. Cannot be modified."
+          >
+            <Lock size={10} /> Permanent
+          </span>
         </div>
 
-        {/* About Field */}
+        <div className="text-xs text-center text-[var(--card)]/70 mb-4">
+          Personalize your display name to make it feel like home.
+        </div>
+
+        {/* About Field (Editable) */}
         <div className="flex flex-col items-center w-full mb-4 text-center">
           <div className="flex items-center gap-2">
             <span className="text-[var(--card)]">
@@ -205,34 +247,45 @@ const ProfilePage: React.FC = () => {
                 <textarea
                   defaultValue={user?.about || ""}
                   onBlur={(e) => handleSaveAbout(e.target.value)}
-                  className="bg-[var(--input)] border border-[var(--border)] px-3 py-2 rounded-md text-[var(--foreground)] w-64 h-16 resize-none focus:ring-2 focus:ring-[var(--ring)]"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSaveAbout((e.target as HTMLTextAreaElement).value);
+                    }
+                  }}
+                  className="bg-[var(--input)] border border-[var(--border)] px-3 py-2 rounded-xl text-[var(--foreground)] w-64 h-16 resize-none focus:ring-2 focus:ring-[var(--accent)] text-sm"
                   autoFocus
                 />
               ) : (
-                <span className="text-lg text-[var(--background)]">
+                <span className="text-base text-[var(--background)]">
                   {user?.about || "Hey there! I’m using Chugli."}
                 </span>
               )}
             </span>
             {!isEditingAbout && (
-              <Pencil
-                className="h-8 w-8 text-[var(--accent)] hover:text-[var(--primary)] hover:bg-red-500/40 px-2 py-1 rounded-md cursor-pointer"
+              <button
+                type="button"
                 onClick={() => setIsEditingAbout(true)}
-              />
+                title="Edit about"
+                className="p-1 rounded-lg text-[var(--accent)] hover:bg-[var(--accent)]/20 transition"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
             )}
           </div>
         </div>
 
         {/* Email */}
-        <div className="flex items-center gap-3 text-[var(--muted)]">
+        <div className="flex items-center gap-2 text-[var(--muted)] pt-2 border-t border-[var(--card)]/10 w-full justify-center">
           <Mail className="h-4 w-4 text-[var(--accent)]" />
-          <span className="text-lg text-[var(--background)] ">{user?.email}</span>
+          <span className="text-sm text-[var(--background)]">{user?.email}</span>
         </div>
       </div>
 
       {/* Profile Image Modal */}
       {previewModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50 backdrop-blur-md"
           style={{ backgroundColor: "rgba(0,0,0,0.7)" }}
         >
           <div className="relative">

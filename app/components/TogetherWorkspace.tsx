@@ -642,9 +642,16 @@ const TogetherWorkspace: React.FC = () => {
                               {friend.username.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-xs font-semibold flex-1 truncate">
-                            {friend.username}
-                          </span>
+                          <div className="flex flex-col text-left flex-1 min-w-0">
+                            <span className="text-xs font-semibold truncate">
+                              {friend.name || friend.username}
+                            </span>
+                            {friend.name && friend.name !== friend.username && (
+                              <span className="text-[10px] text-[var(--foreground)]/50 font-mono truncate">
+                                @{friend.username}
+                              </span>
+                            )}
+                          </div>
                           {isSelected && (
                             <UserCheck size={15} className="text-[var(--accent)] flex-shrink-0" />
                           )}

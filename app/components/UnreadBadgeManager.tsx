@@ -133,8 +133,8 @@ export default function UnreadBadgeManager() {
             ? msg.content.substring(0, 50) + "..."
             : msg.content
           : msg.media && msg.media.length > 0
-          ? "Sent a photo/media 📷"
-          : "New message";
+            ? "Sent a photo/media 📷"
+            : "New Chugli";
 
         // Show toast notification if user is NOT currently in direct conversation with that friend in chat workspace
         const isViewingChat =
@@ -195,8 +195,8 @@ export default function UnreadBadgeManager() {
             ? msg.content.substring(0, 40) + "..."
             : msg.content
           : msg.media && msg.media.length > 0
-          ? "Sent a photo/media 📷"
-          : "Sent an attachment 📎";
+            ? "Sent a photo/media 📷"
+            : "Sent an attachment 📎";
 
         const targetGroupId =
           typeof msg.groupId === "object"
@@ -239,7 +239,7 @@ export default function UnreadBadgeManager() {
     // Request Notification permission on mount if default (required for iOS Safari PWA badging)
     if (typeof window !== "undefined" && "Notification" in window) {
       if (Notification.permission === "default") {
-        Notification.requestPermission().catch(() => {});
+        Notification.requestPermission().catch(() => { });
       }
     }
 
@@ -331,11 +331,11 @@ export default function UnreadBadgeManager() {
                 badge: "/icon-192.png",
                 tag: "chugli-unread-badge",
                 silent: true,
-              }).catch(() => {});
+              }).catch(() => { });
             } else if (reg && currentCount === 0) {
               reg.getNotifications({ tag: "chugli-unread-badge" }).then((nots) => {
                 nots.forEach((n) => n.close());
-              }).catch(() => {});
+              }).catch(() => { });
             }
           } catch (err) {
             console.warn("Service Worker setAppBadge error:", err);
@@ -391,7 +391,7 @@ export default function UnreadBadgeManager() {
         }
 
         const convertedVapidKey = urlBase64ToUint8Array(vapidKey);
-        
+
         let subscription = await reg.pushManager.getSubscription();
 
         if (!subscription) {

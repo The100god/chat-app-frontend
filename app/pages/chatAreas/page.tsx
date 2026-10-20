@@ -196,7 +196,7 @@ export default function ChatArea() {
     onConfirm: () => { },
   });
   const username =
-    selectedFriend?.username ||
+    (selectedFriend?.name || selectedFriend?.username) ||
     selectedGroup?.groupName ||
     "Select a friend to chat";
 
@@ -1208,9 +1208,16 @@ export default function ChatArea() {
               </div>
 
               <div className="min-w-0 flex flex-col justify-center">
-                <h2 className="text-sm font-bold text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[280px] leading-tight">
-                  {username}
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 className="text-sm font-bold text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[280px] leading-tight">
+                    {username}
+                  </h2>
+                  {selectedFriend?.name && selectedFriend.name !== selectedFriend.username && (
+                    <span className="text-[11px] text-[var(--foreground)]/50 font-mono truncate hidden sm:inline">
+                      @{selectedFriend.username}
+                    </span>
+                  )}
+                </div>
                 <p className="text-[11px] text-[var(--foreground)]/60 truncate font-medium">
                   {isTyping ? (
                     <span className="text-[var(--accent)] font-semibold animate-pulse">Chugli...</span>
@@ -1426,7 +1433,12 @@ export default function ChatArea() {
                     {/* Sender Name in Group Chat */}
                     {isGroupChat && !isSentByUser && typeof msg.sender === "object" && (
                       <p className={`text-xs font-bold mb-1 ${colors[idx % colors.length]}`}>
-                        {msg.sender.username}
+                        {msg.sender.name || msg.sender.username}
+                        {msg.sender.name && msg.sender.name !== msg.sender.username && (
+                          <span className="text-[10px] font-normal opacity-70 ml-1 font-mono">
+                            @{msg.sender.username}
+                          </span>
+                        )}
                       </p>
                     )}
 

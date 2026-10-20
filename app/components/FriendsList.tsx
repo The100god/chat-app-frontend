@@ -123,16 +123,21 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
                           : "font-medium text-[var(--foreground)]"
                           }`}
                       >
-                        {isSelf ? "You" + ' : ' + friend.username : friend.username}
+                        {isSelf ? `You (${friend.name || friend.username})` : (friend.name || friend.username)}
                       </p>
+                      {friend.name && friend.name !== friend.username && !isSelf && (
+                        <span className="text-[11px] text-[var(--foreground)]/50 font-mono truncate max-w-[100px] ml-1">
+                          @{friend.username}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-[var(--foreground)]/60">
                       <p className="truncate text-xs opacity-75 max-w-[180px]">
                         {hasUnread ? (
-                          <span className="text-[var(--accent)] font-semibold">New message</span>
+                          <span className="text-[var(--accent)] font-semibold">New Chugli</span>
                         ) : (
-                          "Tap to chat"
+                          "Tap to Chugli"
                         )}
                       </p>
 
