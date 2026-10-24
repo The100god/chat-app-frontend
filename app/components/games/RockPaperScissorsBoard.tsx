@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, RotateCcw, LogOut, XCircle, Handshake } from "lucide-react";
+import { Sparkles, Trophy, RotateCcw, LogOut, XCircle, Handshake, Clock } from "lucide-react";
 import { RPSState, GameStats, TogetherRoom } from "../../states/togetherTypes";
+import { useRoundTimer } from "../../hooks/useRoundTimer";
 
 interface RockPaperScissorsBoardProps {
   room: TogetherRoom;
@@ -45,6 +46,8 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
     total: 0,
   };
 
+  const { timeLeft, isLowTime } = useRoundTimer(room);
+
   const handleSelectChoice = (choice: "rock" | "paper" | "scissors") => {
     if (status === "round_ended") return;
     onEmit("together:rps:choice", { roomId: room.roomId, choice });
@@ -83,9 +86,22 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Rock Paper Scissors
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
-                Round {round}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                  Round {round}
+                </p>
+                <span
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black border transition-all ${
+                    isLowTime
+                      ? "bg-rose-500 text-white border-rose-400 animate-pulse shadow-xs"
+                      : "bg-amber-400/10 text-amber-400 border-amber-400/30"
+                  }`}
+                  title="Round Timer"
+                >
+                  <Clock size={10} />
+                  <span>{timeLeft}s</span>
+                </span>
+              </div>
             </div>
           </div>
 

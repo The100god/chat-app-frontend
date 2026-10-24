@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, RotateCcw, LogOut, Users, XCircle, Handshake, Gamepad2 } from "lucide-react";
+import { Sparkles, Trophy, RotateCcw, LogOut, Users, XCircle, Handshake, Gamepad2, Clock } from "lucide-react";
 import { Connect4State, GameStats, TogetherRoom } from "../../states/togetherTypes";
+import { useRoundTimer } from "../../hooks/useRoundTimer";
 
 interface Connect4BoardProps {
   room: TogetherRoom;
@@ -45,6 +46,8 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
     total: 0,
   };
 
+  const { timeLeft, isLowTime } = useRoundTimer(room);
+
   const handleDropToken = (colIndex: number) => {
     if (!isMyTurn) return;
     onEmit("together:connect4:dropToken", { roomId: room.roomId, colIndex });
@@ -85,9 +88,24 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Connect 4
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
-                {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "4-in-a-Row Duel"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                  {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "4-in-a-Row Duel"}
+                </p>
+                {status === "playing" && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black border transition-all ${
+                      isLowTime
+                        ? "bg-rose-500 text-white border-rose-400 animate-pulse shadow-xs"
+                        : "bg-amber-400/10 text-amber-400 border-amber-400/30"
+                    }`}
+                    title="Turn Timer"
+                  >
+                    <Clock size={10} />
+                    <span>{timeLeft}s</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

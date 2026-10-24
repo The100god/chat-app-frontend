@@ -103,6 +103,7 @@ const sections: SectionInfo[] = [
 ];
 
 import { GameSelector } from "./games/GameSelector";
+import { useGamification } from "../hooks/useGamification";
 
 const roomSectionMap: Record<TogetherRoomType, TogetherSection> = {
   watch: "watch",
@@ -130,6 +131,11 @@ const TogetherWorkspace: React.FC = () => {
   const selectableFriends = friends.filter(
     (f) => String(f.friendId) !== String(userId) && String((f as any)._id || "") !== String(userId)
   );
+  const primaryPartner = selectableFriends.find((f) => f.friendId === selectedFriendId) || selectableFriends[0] || friends[0];
+  const partnerId = primaryPartner?.friendId;
+  const partnerName = primaryPartner?.username;
+  const { gamificationState } = useGamification(partnerId);
+
   const [isAppLocked] = useAtom(isAppLockedAtom);
   const setPendingInvite = useSetAtom(pendingTogetherInviteAtom);
   const { room, invites, dismissInvite, declineInvite, createRoom, joinRoom } = useTogetherRoom();
@@ -516,6 +522,9 @@ const TogetherWorkspace: React.FC = () => {
                     selectedGameId={selectedGameId}
                     userStats={(room as TogetherRoom | null)?.sessionStats}
                     currentUserId={userId || undefined}
+                    partnerId={partnerId}
+                    partnerName={partnerName}
+                    gamificationState={gamificationState}
                     onSelectGame={(gameId) => {
                       setSelectedGameId(gameId);
                       setPendingRoomType("game");

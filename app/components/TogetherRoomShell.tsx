@@ -21,7 +21,9 @@ import {
   Heart,
   ArrowRightLeft,
   MessageSquare,
+  Clock,
 } from "lucide-react";
+import { useRoundTimer } from "../hooks/useRoundTimer";
 
 import TicTacToeBoard from "./TicTacToeBoard";
 import { RockPaperScissorsBoard } from "./games/RockPaperScissorsBoard";
@@ -35,6 +37,8 @@ import { WatchBoard } from "./watch/WatchBoard";
 import { ListenBoard } from "./music/ListenBoard";
 import { GameSelector } from "./games/GameSelector";
 import { TogetherChatBox, TogetherComment } from "./TogetherChatBox";
+import { useGamification } from "../hooks/useGamification";
+import { GameResultModal } from "./games/GameResultModal";
 
 import { getGameDefinition } from "./games/registry";
 
@@ -60,6 +64,10 @@ export const TogetherRoomShell: React.FC = () => {
   const [showConfirm, setShowConfirm] = useState<"leave" | "close" | null>(null);
   const [isChangingGame, setIsChangingGame] = useState(false);
   const topShellRef = useRef<HTMLDivElement | null>(null);
+
+  const partnerId = room?.participants?.find((id) => id !== userId);
+  const { gamificationState, lastResult, showResultModal, dismissResultModal } = useGamification(partnerId);
+  const { timeLeft, isLowTime } = useRoundTimer(room);
 
   // When room, game, activity, movie, or song starts/changes, automatically scroll to the top board
   useEffect(() => {
@@ -172,6 +180,25 @@ export const TogetherRoomShell: React.FC = () => {
           <h2 className="text-sm sm:text-base font-bold truncate">
             {gameDef ? gameDef.title : config.label}
           </h2>
+
+          {room.type === "game" && (
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-black bg-black/25 text-amber-300 border border-amber-300/30 whitespace-nowrap hidden sm:inline">
+                Lvl {Number((room.state as any)?.currentLevel || 1)}
+              </span>
+              <span
+                className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono font-black border transition-all whitespace-nowrap shadow-xs ${
+                  isLowTime
+                    ? "bg-rose-500 text-white border-rose-300 animate-pulse shadow-md shadow-rose-500/50"
+                    : "bg-black/35 text-amber-300 border-amber-400/40"
+                }`}
+                title="Round Timer"
+              >
+                <Clock size={12} className={isLowTime ? "text-white" : "text-amber-300"} />
+                <span>{timeLeft}s</span>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -276,6 +303,9 @@ export const TogetherRoomShell: React.FC = () => {
                     selectedGameId={room.gameId as TogetherGameId | null}
                     userStats={room.sessionStats}
                     currentUserId={userId || undefined}
+                    partnerId={partnerId}
+                    partnerName={partnerId ? getParticipantName(partnerId) : "Partner"}
+                    gamificationState={gamificationState}
                     onSelectGame={(newGameId) => {
                       switchGame(newGameId);
                       setIsChangingGame(false);
@@ -489,6 +519,13 @@ export const TogetherRoomShell: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Gamification Match Result & Level-Up Modal */}
+      <GameResultModal
+        isOpen={showResultModal}
+        result={lastResult}
+        currentUserId={userId || ""}
+        onClose={dismissResultModal}
+      />
     </motion.div>
   );
 };

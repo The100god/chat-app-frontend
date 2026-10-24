@@ -2,9 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, XCircle, Handshake, Gamepad2, Play, BarChart3, Target, Award } from "lucide-react";
+import { Sparkles, Trophy, XCircle, Handshake, Gamepad2, Play, BarChart3, Target, Award, Lock, Star, Zap, Check } from "lucide-react";
 import { GAMES_REGISTRY, TogetherGameDefinition } from "./registry";
-import { GameStats, TogetherGameId } from "../../states/togetherTypes";
+import { GameStats, TogetherGameId, PairGamificationState } from "../../states/togetherTypes";
 import { useSystemConfig } from "../../context/ConfigContext";
 
 interface GameSelectorProps {
@@ -12,6 +12,9 @@ interface GameSelectorProps {
   onSelectGame: (gameId: TogetherGameId) => void;
   userStats?: Record<string, GameStats>;
   currentUserId?: string;
+  partnerId?: string | null;
+  partnerName?: string;
+  gamificationState?: PairGamificationState | null;
 }
 
 export const GameSelector: React.FC<GameSelectorProps> = ({
@@ -19,6 +22,9 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
   onSelectGame,
   userStats = {},
   currentUserId,
+  partnerId,
+  partnerName,
+  gamificationState,
 }) => {
   const { isGameEnabled } = useSystemConfig();
   const [filterCategory, setFilterCategory] = useState<string>("all");
@@ -30,16 +36,27 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
 
   const getStatsForGame = (gameId: string): GameStats => {
     if (currentUserId && userStats[`${gameId}_${currentUserId}`]) {
-      return userStats[`${gameId}_${currentUserId}`];
+      const s = userStats[`${gameId}_${currentUserId}`];
+      if (s.total > 0 || s.wins > 0) return s;
     }
     if (userStats[gameId]) {
-      return userStats[gameId];
+      const s = userStats[gameId];
+      if (s.total > 0 || s.wins > 0) return s;
+    }
+    if (gamificationState?.games) {
+      const gProg = gamificationState.games.find((g) => g.gameId === gameId);
+      if (gProg && (gProg.combinedPlays > 0 || gProg.combinedWins > 0)) {
+        const wins = gProg.combinedWins || 0;
+        const total = gProg.combinedPlays || 0;
+        const losses = Math.max(0, total - wins);
+        return { wins, losses, ties: 0, total };
+      }
     }
     return { wins: 0, losses: 0, ties: 0, total: 0 };
   };
 
   // Compute aggregate stats across all games for current user or room
-  const totalStats = currentUserId && userStats[currentUserId]
+  const computedTotalStats = currentUserId && userStats[currentUserId] && userStats[currentUserId].total > 0
     ? userStats[currentUserId]
     : GAMES_REGISTRY.reduce(
         (acc, g) => {
@@ -54,10 +71,99 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
         { wins: 0, losses: 0, ties: 0, total: 0 }
       );
 
+  const totalStats: GameStats =
+    computedTotalStats.total > 0
+      ? computedTotalStats
+      : gamificationState?.summary
+      ? {
+          wins: gamificationState.summary.totalCombinedWins ?? gamificationState.summary.totalWins ?? 0,
+          total: gamificationState.summary.totalCombinedPlays ?? gamificationState.summary.totalPlays ?? 0,
+          losses: Math.max(
+            0,
+            (gamificationState.summary.totalCombinedPlays ?? gamificationState.summary.totalPlays ?? 0) -
+              (gamificationState.summary.totalCombinedWins ?? gamificationState.summary.totalWins ?? 0)
+          ),
+          ties: 0,
+        }
+      : computedTotalStats;
+
   const winRate = totalStats.total > 0 ? Math.round((totalStats.wins / totalStats.total) * 100) : 0;
 
   return (
     <div className="w-full flex flex-col gap-4">
+      {/* ─── Pair Progression Banner ─── */}
+      {gamificationState && (
+        <div className="w-full bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-500/30 rounded-2xl p-4 shadow-lg backdrop-blur-sm">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-amber-500/20 flex-shrink-0">
+                <Trophy size={20} />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-[var(--foreground)] flex items-center gap-2">
+                  <span>Together Progression</span>
+                  {partnerName && (
+                    <span className="text-[11px] font-medium text-amber-400">
+                      with {partnerName}
+                    </span>
+                  )}
+                </h3>
+                <div className="flex items-center gap-3 text-xs text-[var(--foreground)] opacity-80 mt-0.5">
+                  <span className="font-extrabold text-amber-400 flex items-center gap-1">
+                    <Zap size={12} /> {gamificationState.summary.totalCombinedPoints} Points
+                  </span>
+                  <span>•</span>
+                  <span className="font-bold text-emerald-400">
+                    {gamificationState.summary.totalCombinedWins} Wins
+                  </span>
+                  <span>•</span>
+                  <span className="font-bold text-indigo-400">
+                    {gamificationState.summary.unlockedGamesCount} / 7 Games Unlocked
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Next Unlock Goal */}
+            {(() => {
+              const nextLocked = gamificationState.games.find((g) => !g.isUnlocked);
+              if (!nextLocked) {
+                return (
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                      All Games Unlocked!
+                    </span>
+                    <span className="text-xs font-bold text-[var(--foreground)] opacity-70">
+                      Keep leveling up to Level 20!
+                    </span>
+                  </div>
+                );
+              }
+              const ptsNeeded = nextLocked.unlockRequirements?.pointsRequired || 0;
+              const currentPts = gamificationState.summary.totalCombinedPoints;
+              const pct = Math.min(100, Math.round((currentPts / (ptsNeeded || 1)) * 100));
+
+              return (
+                <div className="sm:text-right min-w-[180px]">
+                  <div className="flex items-center justify-between sm:justify-end gap-2 text-[10px] font-bold">
+                    <span className="text-[var(--foreground)] opacity-70">Next: {nextLocked.title}</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-mono">
+                      {currentPts} / {ptsNeeded} pts ({pct}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-slate-200 dark:bg-black/40 h-2 rounded-full mt-1.5 overflow-hidden border border-slate-300 dark:border-white/10">
+                    <div
+                      className="bg-gradient-to-r from-amber-500 to-indigo-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
       {/* ─── Category Filter Header & Right-Side Stats Option ─── */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar">
         {/* Left: Category Filters */}
@@ -176,23 +282,25 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
                     key={game.id}
                     className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--muted)]/60 border border-[var(--border)]"
                   >
-                    <div className="flex items-center gap-2">
-                      <img src={game.iconPath} alt={game.title} className="w-6 h-6 object-contain" />
-                      <div>
-                        <h4 className="text-xs font-bold text-[var(--foreground)]">{game.title}</h4>
-                        <p className="text-[10px] text-[var(--foreground)] opacity-70 flex items-center gap-1.5 font-bold">
-                          <span className="text-emerald-400 flex items-center gap-0.5" title={`${st.wins} Wins`}><Trophy size={10} />{st.wins}<span className="hidden sm:inline">W</span></span>
-                          <span className="text-rose-400 flex items-center gap-0.5" title={`${st.losses} Losses`}><XCircle size={10} />{st.losses}<span className="hidden sm:inline">L</span></span>
-                          <span className="text-amber-400 flex items-center gap-0.5" title={`${st.ties} Ties`}><Handshake size={10} />{st.ties}<span className="hidden sm:inline">T</span></span>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <img src={game.iconPath} alt={game.title} className="w-7 h-7 object-contain flex-shrink-0" />
+                      <div className="min-w-0">
+                        <h4 className="text-xs font-bold text-[var(--foreground)] truncate">{game.title}</h4>
+                        <p className="text-[10px] text-[var(--foreground)] opacity-70 flex items-center gap-2 font-bold mt-0.5">
+                          <span className="text-emerald-400 flex items-center gap-0.5" title={`${st.wins} Wins`}><Trophy size={10} />{st.wins}W</span>
+                          <span className="text-rose-400 flex items-center gap-0.5" title={`${st.losses} Losses`}><XCircle size={10} />{st.losses}L</span>
+                          <span className="text-amber-400 flex items-center gap-0.5" title={`${st.ties} Ties`}><Handshake size={10} />{st.ties}T</span>
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => onSelectGame(game.id)}
-                      className="px-2 py-1 rounded-lg bg-[var(--accent)] text-white text-[10px] font-bold hover:opacity-90 transition cursor-pointer"
-                    >
-                      Play
-                    </button>
+                    <div className="flex flex-col items-end flex-shrink-0 pl-2">
+                      <span className="text-[11px] font-black text-[var(--foreground)]">
+                        {st.total}
+                      </span>
+                      <span className="text-[9px] font-semibold text-[var(--foreground)] opacity-40 uppercase tracking-wider">
+                        {st.total === 1 ? "match" : "matches"}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -207,44 +315,111 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
           const isSelected = selectedGameId !== null && selectedGameId === game.id;
           const stats = getStatsForGame(game.id);
 
+          const gameProg = gamificationState?.games.find((p) => p.gameId === game.id);
+          const isUnlocked = gameProg ? gameProg.isUnlocked : true;
+          const currentLvl = gameProg?.currentLevel || 1;
+          const pointsNeeded = gameProg?.unlockRequirements?.pointsRequired || 0;
+          const pairPoints = gamificationState?.summary?.totalCombinedPoints || 0;
+          const timeSec = gameProg?.currentLevelConfig?.timeSec || 30;
+
           return (
             <motion.div
               key={game.id}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelectGame(game.id)}
-              className={`relative flex flex-col justify-between p-3.5 rounded-2xl border transition-all cursor-pointer shadow-md overflow-hidden ${isSelected
-                  ? "bg-gradient-to-br from-[var(--card)] via-[var(--accent)]/10 to-[var(--card)] border-[var(--accent)] shadow-lg shadow-[var(--accent)]/20"
-                  : "bg-[var(--card)] border-[var(--border)] opacity-85 hover:opacity-100 hover:border-[var(--accent)]/40"
-                }`}
+              whileHover={{ scale: isUnlocked ? 1.02 : 1 }}
+              whileTap={{ scale: isUnlocked ? 0.98 : 1 }}
+              onClick={() => {
+                if (isUnlocked) {
+                  onSelectGame(game.id);
+                }
+              }}
+              className={`relative flex flex-col justify-between p-3.5 rounded-2xl border transition-all cursor-pointer shadow-md overflow-hidden ${
+                !isUnlocked
+                  ? "bg-[var(--card)] border-[var(--border)] opacity-80 cursor-not-allowed"
+                  : isSelected
+                  ? "bg-gradient-to-br from-[var(--card)] via-[var(--accent)]/10 to-[var(--card)] border-[var(--accent)] ring-1 ring-[var(--accent)]/40 shadow-lg shadow-[var(--accent)]/20"
+                  : "bg-[var(--card)] border-[var(--border)] opacity-85 hover:opacity-100 hover:border-[var(--accent)]/40 hover:shadow-md"
+              }`}
             >
               {/* Active Glow border line */}
               {isSelected && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500" />
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 via-[var(--accent)] to-cyan-400 z-20" />
+              )}
+
+              {/* Locked Overlay */}
+              {!isUnlocked && (
+                <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-4 text-center rounded-2xl select-none">
+                  <div className="w-10 h-10 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 mb-2 shadow-lg">
+                    <Lock size={18} />
+                  </div>
+                  <h4 className="text-xs font-black text-white uppercase tracking-wider">Locked Game</h4>
+                  <p className="text-[11px] text-slate-300 mt-1 font-semibold">
+                    Requires <span className="text-amber-400 font-bold">{pointsNeeded} Pair Points</span>
+                  </p>
+                  {gameProg?.unlockRequirements?.requiredPreviousGames?.length ? (
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      Prereq:{" "}
+                      {gameProg.unlockRequirements.requiredPreviousGames
+                        .map((r) => `${r.gameId} (${r.minWins} wins)`)
+                        .join(", ")}
+                    </p>
+                  ) : null}
+                  <div className="w-full bg-white/10 h-1.5 rounded-full mt-2.5 overflow-hidden max-w-[140px]">
+                    <div
+                      className="bg-amber-500 h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.round((pairPoints / (pointsNeeded || 1)) * 100)
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-slate-400 mt-1 font-mono">
+                    {pairPoints} / {pointsNeeded} pts
+                  </span>
+                </div>
               )}
 
               {/* Game Icon & Header */}
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-3">
+              <div className="flex items-start justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
                   <div
-                    className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${game.badgeColor} p-2 flex items-center justify-center shadow-md overflow-hidden flex-shrink-0`}
+                    className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${game.badgeColor} p-2 flex items-center justify-center shadow-md overflow-hidden flex-shrink-0`}
                   >
                     <img src={game.iconPath} alt={game.title} className="w-full h-full object-contain filter drop-shadow-sm" />
                   </div>
-                  <div>
-                    <h3 className="text-sm font-extrabold text-[var(--foreground)] flex items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-extrabold text-[var(--foreground)] truncate leading-tight" title={game.title}>
                       {game.title}
-                      {isSelected && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)] text-white font-bold">
-                          Selected
-                        </span>
-                      )}
                     </h3>
-                    <p className="text-[11px] text-[var(--foreground)] opacity-60 font-medium">
+                    <p className="text-[11px] text-[var(--foreground)] opacity-60 font-medium truncate mt-0.5" title={game.subtitle}>
                       {game.subtitle}
                     </p>
                   </div>
                 </div>
+
+                {/* Level / Status Badge */}
+                {isUnlocked ? (
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-2">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 font-bold border border-amber-500/40 flex items-center gap-1 shadow-xs whitespace-nowrap">
+                      <Star size={10} className="fill-amber-400 text-amber-400" />
+                      Lvl {currentLvl}
+                    </span>
+                    {isSelected ? (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 flex items-center gap-0.5 whitespace-nowrap">
+                        <Check size={9} className="stroke-[3]" /> Active
+                      </span>
+                    ) : (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-[var(--muted)] text-[var(--foreground)] opacity-60 border border-[var(--border)] font-mono whitespace-nowrap">
+                        {timeSec}s timer
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30 whitespace-nowrap flex-shrink-0">
+                    <Lock size={10} /> Locked
+                  </span>
+                )}
               </div>
 
               {/* Description */}
@@ -271,17 +446,37 @@ export const GameSelector: React.FC<GameSelectorProps> = ({
               {/* Action Button */}
               <button
                 type="button"
+                disabled={!isUnlocked}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onSelectGame(game.id);
+                  if (isUnlocked) {
+                    onSelectGame(game.id);
+                  }
                 }}
-                className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${isSelected
-                    ? "bg-gradient-to-r from-[var(--accent)] to-cyan-500 text-white"
+                className={`w-full mt-2.5 py-1.5 px-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow ${
+                  !isUnlocked
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    : isSelected
+                    ? "bg-gradient-to-r from-emerald-500 to-[var(--accent)] text-white shadow-md shadow-[var(--accent)]/20"
                     : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--accent)] hover:text-white"
-                  }`}
+                }`}
               >
-                <Play size={12} fill="currentColor" />
-                <span>{isSelected ? "Selected Game" : "Play"}</span>
+                {!isUnlocked ? (
+                  <>
+                    <Lock size={12} />
+                    <span>Locked ({pointsNeeded} pts)</span>
+                  </>
+                ) : isSelected ? (
+                  <>
+                    <Check size={13} className="stroke-[3]" />
+                    <span>Selected Game</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={12} fill="currentColor" />
+                    <span>Play</span>
+                  </>
+                )}
               </button>
             </motion.div>
           );

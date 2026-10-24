@@ -6,7 +6,8 @@ import { useAtom } from "jotai";
 import { userIdAtom, friendsAtom } from "../states/States";
 import { TogetherRoom, TicTacToeState, TicTacToeComment } from "../states/togetherTypes";
 import { getSocket } from "../hooks/useSocket";
-import { RotateCcw, Trophy, Sparkles, Users, Circle, XCircle, Handshake, LogOut } from "lucide-react";
+import { RotateCcw, Trophy, Sparkles, Users, Circle, XCircle, Handshake, LogOut, Clock } from "lucide-react";
+import { useRoundTimer } from "../hooks/useRoundTimer";
 
 interface TicTacToeBoardProps {
   room: TogetherRoom;
@@ -51,6 +52,8 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
     ties: 0,
     total: 0,
   };
+
+  const { timeLeft, isLowTime } = useRoundTimer(room);
 
   // Helper to resolve player info
   const getPlayerInfo = (pid: string | null | undefined) => {
@@ -117,9 +120,24 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
               <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
                 Tic-Tac-Toe
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
-                {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "3x3 Match"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                  {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "3x3 Match"}
+                </p>
+                {status === "playing" && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black border transition-all ${
+                      isLowTime
+                        ? "bg-rose-500 text-white border-rose-400 animate-pulse shadow-xs"
+                        : "bg-amber-400/10 text-amber-400 border-amber-400/30"
+                    }`}
+                    title="Turn Timer"
+                  >
+                    <Clock size={10} />
+                    <span>{timeLeft}s</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
