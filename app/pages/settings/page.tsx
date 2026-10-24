@@ -15,6 +15,8 @@ import {
   Check,
   RotateCcw,
   Palette,
+  Loader2,
+  Pencil,
 } from "lucide-react";
 import Image from "next/image";
 import { useAtom } from "jotai";
@@ -22,7 +24,14 @@ import { useAuth } from "../../context/AuthContext";
 import ChangePasswordForm from "../../components/ChangePasswordForm";
 import { isMobilePWA, hashPin } from "../../components/AppLockWrapper";
 import { showToast } from "../../components/Toast";
-import { updateAvailableAtom, animatedBgEnabledAtom, animatedBgTextAtom, animatedBgTextColorAtom } from "../../states/States";
+import {
+  updateAvailableAtom,
+  animatedBgEnabledAtom,
+  animatedBgTextAtom,
+  animatedBgTextColorAtom,
+  userAtom,
+} from "../../states/States";
+import { getApiUrl } from "../../utils/apiUrl";
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
@@ -42,6 +51,60 @@ export default function SettingsPage() {
   const [animatedBgTextColor, setAnimatedBgTextColor] = useAtom(animatedBgTextColorAtom);
   const [bgDraftText, setBgDraftText] = useState("");
   const [bgDraftTextColor, setBgDraftTextColor] = useState("");
+  const [, setUser] = useAtom(userAtom);
+  const [displayName, setDisplayName] = useState(user?.name || user?.username || "");
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  useEffect(() => {
+    if (user?.name || user?.username) {
+      setDisplayName(user?.name || user?.username || "");
+    }
+  }, [user?.name, user?.username]);
+
+  const handleSaveDisplayName = async () => {
+    const trimmed = displayName.trim();
+    if (!trimmed) {
+      showToast("Display name cannot be empty", "warning");
+      return;
+    }
+    if (trimmed.length > 50) {
+      showToast("Display name cannot exceed 50 characters", "warning");
+      return;
+    }
+    if (trimmed === (user?.name || user?.username)) {
+      showToast("No changes to save", "info");
+      return;
+    }
+
+    setIsSavingName(true);
+    try {
+      const token = localStorage.getItem("chatAppToken");
+      const res = await fetch(`${getApiUrl()}/api/users/updateProfile`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: trimmed }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Failed to update name (${res.status})`);
+      }
+
+      const data = await res.json();
+      const updatedUser = data.user || { ...user, name: trimmed };
+      setUser(updatedUser);
+      localStorage.setItem("chatAppUser", JSON.stringify(updatedUser));
+      showToast("Display name updated successfully!", "success");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error updating display name";
+      showToast(msg, "error");
+    } finally {
+      setIsSavingName(false);
+    }
+  };
 
   const handleToggleAnimatedBg = () => {
     const next = !animatedBgEnabled;
@@ -391,33 +454,85 @@ export default function SettingsPage() {
         {/* Profile Section */}
         <section>
           <h3 className="text-lg font-bold mb-3">Profile</h3>
-          <div className="flex items-center gap-4 bg-[var(--card)] rounded-xl p-4">
+          <div className="flex items-center gap-4 bg-[var(--card)] rounded-xl p-4 border border-[var(--border)]">
             {isImageNotFound(user?.profilePic) || imageError ? (
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-tr from-[var(--primary)] to-[var(--accent)] text-white font-bold text-xl border-2 border-[var(--accent)] shadow-inner">
-                {getInitials(user?.username)}
+              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-tr from-[var(--primary)] to-[var(--accent)] text-white font-bold text-xl border-2 border-[var(--accent)] shadow-inner flex-shrink-0">
+                {getInitials(user?.name || user?.username)}
               </div>
             ) : (
               <Image
                 src={user?.profilePic || "/user.jpg"}
                 alt="profile"
-                className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent)]"
+                className="w-16 h-16 rounded-full object-cover border-2 border-[var(--accent)] flex-shrink-0"
                 onError={() => setImageError(true)}
                 width={64}
                 height={64}
               />
             )}
-            <div className="flex flex-col">
-              <span className="text-xl font-semibold">{user?.username}</span>
-              <span className="text-[var(--foreground)]/35 text-sm">
+            <div className="flex flex-col min-w-0">
+              <span className="text-xl font-semibold truncate">{user?.name || user?.username}</span>
+              <span className="text-[var(--foreground)]/50 text-sm truncate">
                 {user?.email}
               </span>
             </div>
           </div>
+
+          {/* Editable Display Name Field */}
+          <div className="mt-3 bg-[var(--card)] rounded-xl p-4 border border-[var(--border)] space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-[var(--foreground)]/70 uppercase tracking-wider flex items-center gap-1.5">
+                <Pencil size={13} className="text-[var(--accent)]" />
+                <span>Display Name</span>
+              </label>
+              <span className="text-[11px] text-[var(--foreground)]/40 font-mono">
+                {displayName.length}/50
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveDisplayName();
+                }}
+                placeholder="Enter your display name..."
+                maxLength={50}
+                className="w-full bg-[var(--input)] border border-[var(--border)] focus:border-[var(--accent)] outline-none h-10 rounded-lg px-3.5 text-sm text-[var(--foreground)] transition shadow-2xs placeholder:text-[var(--foreground)]/40"
+              />
+              <button
+                onClick={handleSaveDisplayName}
+                disabled={isSavingName || displayName.trim() === (user?.name || user?.username) || !displayName.trim()}
+                className={`px-4 h-10 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer flex-shrink-0 ${
+                  displayName.trim() !== (user?.name || user?.username) && displayName.trim().length > 0
+                    ? "bg-[var(--accent)] hover:opacity-90 text-white shadow-xs"
+                    : "bg-[var(--accent)]/15 text-[var(--foreground)]/40 cursor-not-allowed border border-[var(--border)]"
+                }`}
+                title="Save display name"
+              >
+                {isSavingName ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Save Name</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-[11px] text-[var(--foreground)]/50">
+              This name is visible to all your contacts in chat and search.
+            </p>
+          </div>
+
           <button
             className="mt-3 px-4 py-2 cursor-pointer bg-[var(--accent)] hover:bg-[var(--accent)]/35 text-[var(--background)] hover:text-[var(--foreground)] border border-[var(--foreground)] hover:border-[var(--accent)] rounded-md text-sm font-medium transition"
             onClick={() => (window.location.href = "/pages/profilePage")}
           >
-            Edit Profile
+            Edit Profile (Avatar & Status)
           </button>
         </section>
 

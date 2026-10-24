@@ -116,7 +116,7 @@ const FindUser = () => {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by name or @username..."
+          placeholder="Search friends by name..."
           className="w-full bg-[var(--input)] border border-[var(--border)] focus:border-[var(--accent)] outline-none h-10 rounded-full px-4 text-sm text-[var(--foreground)] transition shadow-2xs placeholder:text-[var(--foreground)]/40"
         />
         {searchQuery && (
@@ -160,9 +160,6 @@ const FindUser = () => {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate text-[var(--foreground)]">
                       {user?.name || user?.username}
-                    </p>
-                    <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
-                      @{user?.username}
                     </p>
                   </div>
                 </div>

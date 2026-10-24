@@ -49,9 +49,6 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
                 <p className="text-sm font-semibold text-[var(--foreground)] truncate">
                   {friend?.name || friend?.username}
                 </p>
-                <p className="text-xs text-[var(--foreground)]/50 font-mono">
-                  @{friend?.username}
-                </p>
               </div>
             </div>
           ))}

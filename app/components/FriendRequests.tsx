@@ -179,9 +179,6 @@ const FriendRequests = () => {
                       <p className="text-sm font-semibold truncate text-[var(--foreground)]">
                         {req?.name || req?.username}
                       </p>
-                      <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
-                        @{req?.username}
-                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 flex-shrink-0">
@@ -228,9 +225,6 @@ const FriendRequests = () => {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold truncate text-[var(--foreground)]">
                         {req?.name || req?.username}
-                      </p>
-                      <p className="text-[11px] font-mono text-[var(--foreground)]/50 truncate">
-                        @{req?.username}
                       </p>
                       <span className="text-[11px] text-amber-500 font-medium flex items-center gap-1 mt-0.5">
                         <span>⏳</span> Pending response
