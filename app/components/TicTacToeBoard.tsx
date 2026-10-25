@@ -46,7 +46,7 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
   const playerSymbol = userId === players.X ? "X" : userId === players.O ? "O" : null;
   const isMyTurn = status === "playing" && playerSymbol && currentTurn === playerSymbol;
 
-  const sessionStats = (userId && (room.sessionStats?.[`tictactoe_${userId}`] || room.sessionStats?.[userId])) || {
+  const sessionStats = (userId && room.sessionStats?.[`tictactoe_${userId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -106,18 +106,18 @@ export default function TicTacToeBoard({ room, onLeave }: TicTacToeBoardProps) {
     <div className="flex flex-col items-center w-full max-w-sm sm:max-w-md mx-auto select-none gap-3">
       {/* ─── Top Scoreboard & Logo ─── */}
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img
               src="/game-icons/tictactoe.png"
               alt="Tic-Tac-Toe"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-cyan-500/10 border border-cyan-500/30"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-cyan-500/10 border border-cyan-500/30 flex-shrink-0"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
             />
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider truncate">
                 Tic-Tac-Toe
               </h2>
               <div className="flex items-center gap-2">

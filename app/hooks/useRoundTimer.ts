@@ -7,6 +7,8 @@ export function useRoundTimer(room?: TogetherRoom | null): {
   timeLeft: number;
   totalTimeSec: number;
   isLowTime: boolean;
+  isRoundOff: boolean;
+  isWaitingOrSetup: boolean;
 } {
   const [timeLeft, setTimeLeft] = useState<number>(30);
 
@@ -26,9 +28,26 @@ export function useRoundTimer(room?: TogetherRoom | null): {
     (room?.state as any)?.levelConfig?.timeSec ||
     (room?.gameId === "rps" ? 15 : room?.gameId === "memory" ? 25 : 30);
 
+  const isRoundOff = Boolean(
+    sub?.status === "finished" ||
+    sub?.status === "round_ended" ||
+    sub?.winner ||
+    sub?.isDraw ||
+    sub?.roundResult
+  );
+
+  const isWaitingOrSetup = Boolean(
+    sub?.status === "waiting" || sub?.status === "setup"
+  );
+
   useEffect(() => {
     if (!room || room.type !== "game") {
       setTimeLeft(30);
+      return;
+    }
+
+    if (isWaitingOrSetup) {
+      setTimeLeft(totalTimeSec);
       return;
     }
 
@@ -45,6 +64,18 @@ export function useRoundTimer(room?: TogetherRoom | null): {
       (room as any)?.createdAt ||
       Date.now();
 
+    // If round has ended, freeze/stop the timer and do not start interval
+    if (isRoundOff) {
+      const endTs =
+        sub?.roundEndedAt ||
+        sub?.endedAt ||
+        Date.now();
+      const elapsed = Math.floor((endTs - startTs) / 1000);
+      const remaining = Math.max(0, totalTimeSec - Math.max(0, elapsed));
+      setTimeLeft(remaining);
+      return;
+    }
+
     const calcTime = () => {
       const elapsed = Math.floor((Date.now() - startTs) / 1000);
       const remaining = Math.max(0, totalTimeSec - elapsed);
@@ -57,6 +88,14 @@ export function useRoundTimer(room?: TogetherRoom | null): {
   }, [
     room?.gameId,
     totalTimeSec,
+    isRoundOff,
+    isWaitingOrSetup,
+    sub?.status,
+    sub?.winner,
+    sub?.isDraw,
+    sub?.roundResult,
+    sub?.roundEndedAt,
+    sub?.endedAt,
     sub?.turnStartedAt,
     sub?.roundStartedAt,
     sub?.currentTurn,
@@ -69,6 +108,8 @@ export function useRoundTimer(room?: TogetherRoom | null): {
   return {
     timeLeft,
     totalTimeSec,
-    isLowTime: timeLeft > 0 && timeLeft <= 5,
+    isLowTime: !isRoundOff && !isWaitingOrSetup && timeLeft > 0 && timeLeft <= 5,
+    isRoundOff,
+    isWaitingOrSetup,
   };
 }

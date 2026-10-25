@@ -39,7 +39,7 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
   const playerSymbol = currentUserId === players.R ? "R" : currentUserId === players.Y ? "Y" : null;
   const isMyTurn = status === "playing" && currentTurn === playerSymbol;
 
-  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`connect4_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
+  const sessionStats: GameStats = (currentUserId && room.sessionStats?.[`connect4_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -74,18 +74,18 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
     <div className="w-full flex flex-col items-center gap-3 max-w-xl sm:max-w-2xl mx-auto p-2">
       {/* ─── Top Header & Stats Bar ─── */}
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img
               src="/game-icons/connect4.png"
               alt="Connect 4"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-amber-500/10 border border-amber-500/30"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-amber-500/10 border border-amber-500/30 flex-shrink-0"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
             />
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider truncate">
                 Connect 4
               </h2>
               <div className="flex items-center gap-2">

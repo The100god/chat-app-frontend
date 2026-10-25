@@ -217,6 +217,11 @@ const TogetherWorkspace: React.FC = () => {
     setShowCreateModal(true);
   };
 
+  const handleCancelCreateModal = () => {
+    setShowCreateModal(false);
+    setSelectedGameId(null);
+  };
+
   const handleConfirmCreate = (inviteFriend: boolean) => {
     const targetUserId = inviteFriend && selectedFriendId ? selectedFriendId : undefined;
     const gameOrActId = (pendingRoomType === "game" || pendingRoomType === "activity")
@@ -224,6 +229,7 @@ const TogetherWorkspace: React.FC = () => {
       : (pendingRoomType === "quiz" ? "quiz" : undefined);
     createRoom(pendingRoomType, gameOrActId, targetUserId);
     setShowCreateModal(false);
+    setSelectedGameId(null);
   };
 
   const handleJoinRoom = () => {
@@ -525,11 +531,17 @@ const TogetherWorkspace: React.FC = () => {
                     partnerId={partnerId}
                     partnerName={partnerName}
                     gamificationState={gamificationState}
+                    friends={selectableFriends}
+                    onSelectPartner={(pId) => setSelectedFriendId(pId)}
                     onSelectGame={(gameId) => {
+                      if (!gameId || gameId === selectedGameId) {
+                        setSelectedGameId(null);
+                        return;
+                      }
                       setSelectedGameId(gameId);
                       setPendingRoomType("game");
-                      if (friends.length > 0) {
-                        setSelectedFriendId(friends[0].friendId);
+                      if (selectableFriends.length > 0) {
+                        setSelectedFriendId(selectableFriends[0].friendId);
                         setShowCreateModal(true);
                       } else {
                         createRoom("game", gameId);
@@ -571,7 +583,7 @@ const TogetherWorkspace: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowCreateModal(false)}
+            onClick={handleCancelCreateModal}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -699,7 +711,7 @@ const TogetherWorkspace: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={handleCancelCreateModal}
                   className="w-full py-1 text-xs text-[var(--foreground)] opacity-50 hover:opacity-80 transition-opacity cursor-pointer mt-0.5"
                 >
                   Cancel

@@ -179,7 +179,7 @@ export const CatchMyPartnerBoard: React.FC<CatchMyPartnerBoardProps> = ({
   const partnerId = participants.find((id) => id !== currentUserId) || "";
 
   // Session Stats calculation
-  const stats = room.sessionStats?.[currentUserId] || {
+  const stats = (currentUserId && room.sessionStats?.[`catchpartner_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
