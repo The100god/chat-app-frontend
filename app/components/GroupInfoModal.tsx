@@ -452,7 +452,12 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
                                 width={32}
                                 height={32}
                               />
-                              <span className="text-sm font-semibold">{fnd.username}</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold">{fnd.name || fnd.username}</span>
+                                {fnd.name && fnd.name !== fnd.username && (
+                                  <span className="text-[10px] font-mono text-[var(--foreground)]/50">@{fnd.username}</span>
+                                )}
+                              </div>
                             </div>
                             <button
                               onClick={() => handleAddMember(fnd.friendId)}
@@ -494,15 +499,15 @@ const GroupInfoModal: React.FC<GroupInfoModalProps> = ({ isOpen, onClose }) => {
                           />
                           <div className="flex flex-col">
                             <span className="text-sm font-bold flex items-center gap-1.5">
-                              {member.username}
+                              {member.name || member.username}
                               {isCurrentUser && (
                                 <span className="text-[10px] font-medium bg-[var(--accent)]/10 text-[var(--accent)] py-0.5 px-1.5 rounded-md">
                                   You
                                 </span>
                               )}
                             </span>
-                            <span className="text-xs text-[var(--foreground)]/60 line-clamp-1">
-                              {member.about || "No status details."}
+                            <span className="text-[11px] font-mono text-[var(--foreground)]/50">
+                              @{member.username}
                             </span>
                           </div>
                         </div>

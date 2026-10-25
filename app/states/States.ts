@@ -12,6 +12,7 @@ export interface Message {
   | {
     _id: string;
     username: string;
+    name?: string;
     profilePic: string;
   }
   | string;
@@ -24,6 +25,7 @@ export interface Message {
   seenBy?: {
     _id: string;
     username: string;
+    name?: string;
     profilePic: string;
   }[];
   deletedFor?: (string | { _id: string })[];
@@ -38,7 +40,9 @@ export interface FloatingEmoji {
 }
 
 export interface User {
+  _id?: string;
   username: string;
+  name?: string;
   email: string;
   profilePic: string;
   about: string;
@@ -47,12 +51,14 @@ export interface User {
 export interface Friend {
   friendId: string;
   username: string;
+  name?: string;
   profilePic: string;
   unreadMessagesCount: number;
 }
 
 export const userAtom = atom<User>({
-  username: "User-X",
+  username: "user_x",
+  name: "User X",
   email: "user@example.com",
   profilePic: "/user.jpg",
   about: "Hey there! I'm using Chugli.",

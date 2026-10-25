@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, RotateCcw, LogOut, Users, XCircle, Handshake, Gamepad2 } from "lucide-react";
+import { Sparkles, Trophy, RotateCcw, LogOut, Users, XCircle, Handshake, Gamepad2, Clock } from "lucide-react";
 import { Connect4State, GameStats, TogetherRoom } from "../../states/togetherTypes";
+import { useRoundTimer } from "../../hooks/useRoundTimer";
 
 interface Connect4BoardProps {
   room: TogetherRoom;
@@ -38,12 +39,14 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
   const playerSymbol = currentUserId === players.R ? "R" : currentUserId === players.Y ? "Y" : null;
   const isMyTurn = status === "playing" && currentTurn === playerSymbol;
 
-  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`connect4_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
+  const sessionStats: GameStats = (currentUserId && room.sessionStats?.[`connect4_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
     total: 0,
   };
+
+  const { timeLeft, isLowTime } = useRoundTimer(room);
 
   const handleDropToken = (colIndex: number) => {
     if (!isMyTurn) return;
@@ -71,23 +74,38 @@ export const Connect4Board: React.FC<Connect4BoardProps> = ({
     <div className="w-full flex flex-col items-center gap-3 max-w-xl sm:max-w-2xl mx-auto p-2">
       {/* ─── Top Header & Stats Bar ─── */}
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img
               src="/game-icons/connect4.png"
               alt="Connect 4"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-amber-500/10 border border-amber-500/30"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-amber-500/10 border border-amber-500/30 flex-shrink-0"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
             />
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider truncate">
                 Connect 4
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
-                {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "4-in-a-Row Duel"}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                  {status === "playing" ? (isMyTurn ? "Your Turn!" : "Partner's Turn") : "4-in-a-Row Duel"}
+                </p>
+                {status === "playing" && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black border transition-all ${
+                      isLowTime
+                        ? "bg-rose-500 text-white border-rose-400 animate-pulse shadow-xs"
+                        : "bg-amber-400/10 text-amber-400 border-amber-400/30"
+                    }`}
+                    title="Turn Timer"
+                  >
+                    <Clock size={10} />
+                    <span>{timeLeft}s</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

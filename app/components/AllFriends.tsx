@@ -6,6 +6,7 @@ import Image from "next/image";
 interface Friend {
   friendId: string;
   username: string;
+  name?: string;
   profilePic: string;
 }
 
@@ -35,10 +36,10 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
           {friends.map((friend) => (
             <div
               key={friend?.friendId}
-              className="flex items-center space-x-3 bg-[var(--card)] hover:bg-[var(--muted)] border border-[var(--border)] rounded-xl p-3 transition"
+              className="flex items-center space-x-3 bg-[var(--card)] hover:bg-[var(--accent)]/10 border border-[var(--border)] hover:border-[var(--accent)]/40 rounded-xl p-3 transition"
             >
               <Image
-                src={friend?.profilePic || "/default-profile-pic.jpg"}
+                src={friend?.profilePic || "/user.jpg"}
                 alt={friend?.username}
                 className="w-11 h-11 rounded-full border border-[var(--border)] object-cover shadow-2xs flex-shrink-0"
                 width={44}
@@ -46,9 +47,8 @@ const AllFriends: React.FC<AllFriendsListProps> = ({ friends, loading }) => {
               />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-[var(--foreground)] truncate">
-                  {friend?.username}
+                  {friend?.name || friend?.username}
                 </p>
-                <p className="text-xs text-[var(--foreground)]/50">Available</p>
               </div>
             </div>
           ))}

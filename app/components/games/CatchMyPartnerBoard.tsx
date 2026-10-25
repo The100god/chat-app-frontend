@@ -179,7 +179,7 @@ export const CatchMyPartnerBoard: React.FC<CatchMyPartnerBoardProps> = ({
   const partnerId = participants.find((id) => id !== currentUserId) || "";
 
   // Session Stats calculation
-  const stats = room.sessionStats?.[currentUserId] || {
+  const stats = (currentUserId && room.sessionStats?.[`catchpartner_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -602,11 +602,18 @@ export const CatchMyPartnerBoard: React.FC<CatchMyPartnerBoardProps> = ({
             <Trophy size={16} />
           </div>
           <div>
-            <span className="text-xs font-bold text-[var(--foreground)] block">
-              Pakdam Pakdai
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-[var(--foreground)] block">
+                Pakdam Pakdai
+              </span>
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                Lvl {Number((room.state as any)?.currentLevel || 1)}
+              </span>
+            </div>
             <span className="text-[10px] text-[var(--foreground)] opacity-60">
-              Live Arena
+              {(room.state as any)?.levelConfig?.courtyardLayout?.preset
+                ? `Courtyard: ${String((room.state as any).levelConfig.courtyardLayout.preset).replace(/_/g, " ")}`
+                : "Live Arena"}
             </span>
           </div>
         </div>

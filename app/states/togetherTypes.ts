@@ -288,3 +288,107 @@ export interface TogetherInvite {
   hostProfilePic?: string;
   createdAt: number;
 }
+
+// ─── Gamification Types ───
+
+export interface PairGameProgressItem {
+  gameId: string;
+  title: string;
+  category: string;
+  icon: string;
+  description?: string;
+  isStarter: boolean;
+  order: number;
+  isUnlocked: boolean;
+  unlockedAt?: string | null;
+  currentLevel: number;
+  highestLevelAchieved: number;
+  maximumLevel: number;
+  combinedPoints: number;
+  combinedWins: number;
+  combinedPlays: number;
+  pairStats?: {
+    myWins: number;
+    partnerWins: number;
+    ties: number;
+    totalPlays: number;
+  };
+  userWins?: Record<string, number>;
+  ties?: number;
+  lastPlayedAt?: string | null;
+  unlockRequirements: {
+    pointsRequired: number;
+    requiredPreviousGames: {
+      gameId: string;
+      minWins: number;
+      minPlays: number;
+    }[];
+  };
+  currentLevelConfig?: {
+    level: number;
+    title: string;
+    timeSec: number;
+    gridConfig: any;
+    courtyardLayout?: any;
+    rewards: {
+      participationPoints: number;
+      winBonusPoints: number;
+    };
+  };
+}
+
+export interface PairGamificationSummary {
+  totalCombinedPoints: number;
+  totalCombinedWins: number;
+  totalCombinedPlays: number;
+  myTotalWins?: number;
+  partnerTotalWins?: number;
+  totalTies?: number;
+  userWins?: Record<string, number>;
+  totalWins?: number;
+  totalPlays?: number;
+  totalPoints?: number;
+  unlockedGamesCount: number;
+  currentStreak: number;
+  highestStreak: number;
+  lastPlayedAt?: string | null;
+}
+
+export interface PairGamificationState {
+  pairId: string;
+  memberUserIds: string[];
+  summary: PairGamificationSummary;
+  games: PairGameProgressItem[];
+}
+
+export interface GamificationRewardItem {
+  userId: string;
+  participation: number;
+  winBonus: number;
+  isWinner: boolean;
+  totalEarned: number;
+}
+
+export interface GamificationResultPayload {
+  success: boolean;
+  matchId: string;
+  pairId: string;
+  gameId: string;
+  rewards: Record<string, GamificationRewardItem>;
+  totalMatchPoints: number;
+  levelInfo: {
+    previousLevel: number;
+    currentLevel: number;
+    leveledUp: boolean;
+    maximumLevel: number;
+  };
+  pairTotals: {
+    totalCombinedPoints: number;
+    totalCombinedWins: number;
+    totalCombinedPlays: number;
+  };
+  newlyUnlockedGames: {
+    gameId: string;
+    title: string;
+  }[];
+}

@@ -2,8 +2,9 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Trophy, RotateCcw, LogOut, XCircle, Handshake } from "lucide-react";
+import { Sparkles, Trophy, RotateCcw, LogOut, XCircle, Handshake, Clock } from "lucide-react";
 import { RPSState, GameStats, TogetherRoom } from "../../states/togetherTypes";
+import { useRoundTimer } from "../../hooks/useRoundTimer";
 
 interface RockPaperScissorsBoardProps {
   room: TogetherRoom;
@@ -28,25 +29,27 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
   } = rpsState;
 
   const participants = room.participants || [];
-  const partnerId = participants.find((id) => id !== currentUserId) || "Partner";
+  const partnerId = participants.find((id) => id !== currentUserId) || "";
 
   const myChoice = playerChoices[currentUserId];
-  const partnerChoice = playerChoices[partnerId];
+  const partnerChoice = partnerId ? playerChoices[partnerId] : null;
   const hasMyChoice = !!myChoice;
   const hasPartnerChoice = !!partnerChoice;
 
   const myScore = scores[currentUserId] || 0;
-  const partnerScore = scores[partnerId] || 0;
+  const partnerScore = partnerId ? scores[partnerId] || 0 : 0;
 
-  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`rps_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
+  const sessionStats: GameStats = (currentUserId && room.sessionStats?.[`rps_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
     total: 0,
   };
 
+  const { timeLeft, isLowTime } = useRoundTimer(room);
+
   const handleSelectChoice = (choice: "rock" | "paper" | "scissors") => {
-    if (status === "round_ended") return;
+    if (status === "round_ended" || status === "waiting" || !partnerId) return;
     onEmit("together:rps:choice", { roomId: room.roomId, choice });
   };
 
@@ -69,23 +72,36 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
     <div className="w-full flex flex-col items-center gap-3 max-w-xl sm:max-w-2xl mx-auto p-2">
       {/* ─── Top Scoreboard & Stats ─── */}
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img
               src="/game-icons/rps.png"
               alt="Rock Paper Scissors"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-rose-500/10 border border-rose-500/30"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-rose-500/10 border border-rose-500/30 flex-shrink-0"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
             />
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider truncate">
                 Rock Paper Scissors
               </h2>
-              <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
-                Round {round}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">
+                  Round {round}
+                </p>
+                <span
+                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-mono font-black border transition-all ${
+                    isLowTime
+                      ? "bg-rose-500 text-white border-rose-400 animate-pulse shadow-xs"
+                      : "bg-amber-400/10 text-amber-400 border-amber-400/30"
+                  }`}
+                  title="Round Timer"
+                >
+                  <Clock size={10} />
+                  <span>{timeLeft}s</span>
+                </span>
+              </div>
             </div>
           </div>
 
@@ -178,6 +194,21 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
           </div>
         </div>
 
+        {/* Turn Guidance Prompt */}
+        <div className="w-full py-1.5 px-3 rounded-xl bg-[var(--muted)] border border-[var(--border)] text-center text-xs font-bold">
+          {status === "round_ended" ? (
+            <span className="opacity-70">Round completed! Click Next Round to play again.</span>
+          ) : status === "waiting" || !partnerId ? (
+            <span className="text-amber-400">⏳ Waiting for partner to join the room...</span>
+          ) : hasMyChoice && !hasPartnerChoice ? (
+            <span className="text-cyan-400">🔒 Move submitted ({myChoice})! Waiting for partner...</span>
+          ) : !hasMyChoice && hasPartnerChoice ? (
+            <span className="text-purple-400">⚡ Partner has locked their move! Choose yours below:</span>
+          ) : (
+            <span className="text-[var(--foreground)]">👉 Select Rock, Paper, or Scissors!</span>
+          )}
+        </div>
+
         {/* Round Result Banner */}
         <AnimatePresence>
           {status === "round_ended" && roundResult && (
@@ -214,17 +245,26 @@ export const RockPaperScissorsBoard: React.FC<RockPaperScissorsBoardProps> = ({
             { id: "rock", label: "Rock", icon: "✊", color: "hover:border-cyan-400" },
             { id: "paper", label: "Paper", icon: "🤚", color: "hover:border-emerald-400" },
             { id: "scissors", label: "Scissors", icon: "✌️", color: "hover:border-rose-400" },
-          ].map((btn) => (
-            <button
-              key={btn.id}
-              onClick={() => handleSelectChoice(btn.id as any)}
-              className={`flex-1 py-3 px-2 rounded-2xl bg-[var(--card)] border border-[var(--border)] ${btn.color} shadow-md flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${myChoice === btn.id ? "ring-2 ring-[var(--accent)] bg-[var(--accent)]/10" : ""
-                }`}
-            >
-              <span className="text-2xl">{btn.icon}</span>
-              <span className="text-[11px] font-bold text-[var(--foreground)]">{btn.label}</span>
-            </button>
-          ))}
+          ].map((btn) => {
+            const isSelected = myChoice === btn.id;
+            const isWaitingPartner = status === "waiting" || !partnerId;
+            return (
+              <button
+                key={btn.id}
+                disabled={isWaitingPartner}
+                onClick={() => handleSelectChoice(btn.id as any)}
+                className={`flex-1 py-3 px-2 rounded-2xl bg-[var(--card)] border border-[var(--border)] ${btn.color} shadow-md flex flex-col items-center justify-center gap-1 transition cursor-pointer active:scale-95 ${
+                  isSelected ? "ring-2 ring-cyan-400 bg-cyan-500/10 border-cyan-400" : ""
+                } ${isWaitingPartner ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
+                <span className="text-2xl">{btn.icon}</span>
+                <span className="text-[11px] font-bold text-[var(--foreground)]">{btn.label}</span>
+                {isSelected && (
+                  <span className="text-[9px] font-black text-cyan-400">Locked In</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
 

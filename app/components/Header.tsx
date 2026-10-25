@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import { useSystemConfig } from "../context/ConfigContext";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -57,6 +58,7 @@ const Header: React.FC = () => {
   const router = useRouter();
   const [showLeft, setShowLeft] = useAtom(responsiveDeviceAtom);
   const [activeWorkspace, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
+  const { isFeatureEnabled } = useSystemConfig();
 
   const isHomeActive = findFriendWithChat && !findFriend && !friendsRequests && !allFriends && !groupChatOpen;
   const isFindFriendsActive = findFriend;
@@ -178,9 +180,9 @@ const Header: React.FC = () => {
   const isMobileChatOpen = activeWorkspace === "chat" && !showLeft;
 
   return (
-    <header className={`w-full bg-[var(--background)] text-[var(--foreground)] py-2.5 px-3 sm:px-6 shadow-sm border-b border-[var(--border)] transition-colors ${isMobileChatOpen ? "hidden lg:block" : "block"}`}>
-      {/* Desktop Header Bar (WhatsApp Web style) */}
-      <div className="hidden lg:flex w-full max-w-7xl px-4 m-auto h-16 rounded-2xl items-center justify-between bg-[var(--card)] border border-[var(--border)] shadow-sm transition-all duration-300">
+    <header className={`w-full bg-[var(--background)]/80 backdrop-blur-md text-[var(--foreground)] py-2.5 px-3 sm:px-6 border-b border-[var(--border)]/30 transition-colors ${isMobileChatOpen ? "hidden lg:block" : "block"}`}>
+      {/* Desktop Header Bar (Glass Card style) */}
+      <div className="hidden lg:flex w-full max-w-7xl px-4 m-auto h-16 rounded-2xl items-center justify-between bg-white/80 dark:bg-white/[0.03] backdrop-blur-xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm dark:shadow-2xl transition-all duration-300">
         {/* Left Section: Profile + Logo + Workspace Toggle */}
         <div className="flex items-center space-x-4">
           <Link href="/pages/profilePage" className="relative group">
@@ -210,7 +212,7 @@ const Header: React.FC = () => {
           </div>
 
           {/* Workspace Switcher Pill */}
-          <div className="flex items-center bg-[var(--muted)] rounded-full p-1 border border-[var(--border)] ml-2">
+          <div className="flex items-center bg-slate-100/90 dark:bg-black/35 backdrop-blur-md rounded-full p-1 border border-slate-200/80 dark:border-white/[0.08] ml-2">
             <button
               onClick={() => handleWorkspaceSwitch("chat")}
               aria-label="Switch to Chat workspace"
@@ -218,13 +220,13 @@ const Header: React.FC = () => {
               className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer z-10 ${
                 activeWorkspace === "chat"
                   ? "text-white"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               {activeWorkspace === "chat" && (
                 <motion.div
                   layoutId="workspace-pill"
-                  className="absolute inset-0 bg-[var(--accent)] rounded-full"
+                  className="absolute inset-0 bg-[var(--accent)] rounded-full shadow-md"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
@@ -238,32 +240,34 @@ const Header: React.FC = () => {
               </div>
               <span className="relative z-10">Chat</span>
             </button>
-            <button
-              onClick={() => handleWorkspaceSwitch("together")}
-              aria-label="Switch to Together workspace"
-              title="Together Workspace"
-              className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer z-10 ${
-                activeWorkspace === "together"
-                  ? "text-white"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
-              }`}
-            >
-              {activeWorkspace === "together" && (
-                <motion.div
-                  layoutId="workspace-pill"
-                  className="absolute inset-0 bg-[var(--accent)] rounded-full"
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
-                />
-              )}
-              <Gamepad2 size={14} className="relative z-10" />
-              <span className="relative z-10">Together</span>
-            </button>
+            {isFeatureEnabled("feature_together_hub") && (
+              <button
+                onClick={() => handleWorkspaceSwitch("together")}
+                aria-label="Switch to Together workspace"
+                title="Together Workspace"
+                className={`relative flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer z-10 ${
+                  activeWorkspace === "together"
+                    ? "text-white"
+                    : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
+                }`}
+              >
+                {activeWorkspace === "together" && (
+                  <motion.div
+                    layoutId="workspace-pill"
+                    className="absolute inset-0 bg-[var(--accent)] rounded-full shadow-md"
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  />
+                )}
+                <Gamepad2 size={14} className="relative z-10" />
+                <span className="relative z-10">Together</span>
+              </button>
+            )}
           </div>
         </div>
 
         {/* Center Section: WhatsApp style Filter Tabs */}
         {activeWorkspace === "chat" && (
-          <div className="flex items-center bg-[var(--muted)]/60 p-1 rounded-full border border-[var(--border)] gap-1">
+          <div className="flex items-center bg-slate-100/90 dark:bg-black/35 backdrop-blur-md p-1 rounded-full border border-slate-200/80 dark:border-white/[0.08] gap-1">
             <button
               onClick={() =>
                 handleNav(() => {
@@ -277,7 +281,7 @@ const Header: React.FC = () => {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 isHomeActive
                   ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)]"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               <FaHome size={14} />
@@ -308,7 +312,7 @@ const Header: React.FC = () => {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 isFindFriendsActive
                   ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)]"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               <FaSearch size={14} />
@@ -328,7 +332,7 @@ const Header: React.FC = () => {
               className={`flex relative items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 isRequestsActive
                   ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)]"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               <FaBell size={14} />
@@ -349,43 +353,45 @@ const Header: React.FC = () => {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 isFriendsActive
                   ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)]"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               <FaUserFriends size={14} />
               <span>Friends ({friendCount})</span>
             </button>
 
-            <button
-              onClick={() =>
-                handleNav(() => {
-                  setGroupChatOpen(true);
-                  setFindFriend(false);
-                  setFindFriendWithChat(false);
-                  setFriendsRequests(false);
-                  setAllFriends(false);
-                })
-              }
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                isGroupsActive
-                  ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100 hover:bg-[var(--card)]"
-              }`}
-            >
-              <FaUsers size={14} />
-              <span>Groups</span>
-              {groupUnreadTotal > 0 && (
-                <span
-                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    isGroupsActive
-                      ? "bg-white text-[var(--accent)]"
-                      : "bg-[var(--accent)] text-white"
-                  }`}
-                >
-                  {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
-                </span>
-              )}
-            </button>
+            {isFeatureEnabled("feature_group_chat") && (
+              <button
+                onClick={() =>
+                  handleNav(() => {
+                    setGroupChatOpen(true);
+                    setFindFriend(false);
+                    setFindFriendWithChat(false);
+                    setFriendsRequests(false);
+                    setAllFriends(false);
+                  })
+                }
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  isGroupsActive
+                    ? "bg-[var(--accent)] text-white shadow-sm font-semibold"
+                    : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
+                }`}
+              >
+                <FaUsers size={14} />
+                <span>Groups</span>
+                {groupUnreadTotal > 0 && (
+                  <span
+                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isGroupsActive
+                        ? "bg-white text-[var(--accent)]"
+                        : "bg-[var(--accent)] text-white"
+                    }`}
+                  >
+                    {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         )}
 
@@ -425,10 +431,10 @@ const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Mobile Header (WhatsApp Mobile Top Bar & Tab Strip) */}
-      <div className="lg:hidden flex flex-col bg-[var(--card)] rounded-2xl border border-[var(--border)] shadow-xs overflow-hidden">
+      {/* Mobile Header (Glass Card Top Bar & Tab Strip) */}
+      <div className="lg:hidden flex flex-col bg-white/80 dark:bg-white/[0.03] backdrop-blur-xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] shadow-sm dark:shadow-2xl overflow-hidden">
         {/* Top App Bar */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--border)]/50">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200/70 dark:border-white/[0.06]">
           <div className="flex items-center space-x-2.5">
             <Link href="/pages/profilePage" className="relative">
               <Image
@@ -460,7 +466,7 @@ const Header: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* Quick Workspace Switcher for Mobile Header */}
-            <div className="flex items-center bg-[var(--muted)] rounded-full p-0.5 border border-[var(--border)]">
+            <div className="flex items-center bg-slate-100/90 dark:bg-black/35 backdrop-blur-md rounded-full p-0.5 border border-slate-200/80 dark:border-white/[0.08]">
               <button
                 onClick={() => handleWorkspaceSwitch("chat")}
                 title="Chat Workspace"
@@ -475,15 +481,17 @@ const Header: React.FC = () => {
                   </span>
                 )}
               </button>
-              <button
-                onClick={() => handleWorkspaceSwitch("together")}
-                title="Together Workspace"
-                className={`p-1 rounded-full transition-all cursor-pointer ${
-                  activeWorkspace === "together" ? "bg-[var(--accent)] text-white shadow-xs" : "text-[var(--foreground)] opacity-60"
-                }`}
-              >
-                <Gamepad2 size={14} />
-              </button>
+              {isFeatureEnabled("feature_together_hub") && (
+                <button
+                  onClick={() => handleWorkspaceSwitch("together")}
+                  title="Together Workspace"
+                  className={`p-1 rounded-full transition-all cursor-pointer ${
+                    activeWorkspace === "together" ? "bg-[var(--accent)] text-white shadow-xs" : "text-[var(--foreground)] opacity-60"
+                  }`}
+                >
+                  <Gamepad2 size={14} />
+                </button>
+              )}
             </div>
 
             <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-[var(--foreground)] cursor-pointer" title="Menu">
@@ -494,7 +502,7 @@ const Header: React.FC = () => {
 
         {/* WhatsApp Mobile Tab Navigation Strip */}
         {activeWorkspace === "chat" && (
-          <div ref={mobileNavRef} className="flex items-center overflow-x-auto no-scrollbar px-2 py-1.5 bg-[var(--muted)]/40 border-t border-[var(--border)]/30 gap-1">
+          <div ref={mobileNavRef} className="flex items-center overflow-x-auto no-scrollbar px-2 py-1.5 bg-slate-100/70 dark:bg-black/35 backdrop-blur-md border-t border-slate-200/60 dark:border-white/[0.06] gap-1">
             <button
               onClick={(e) =>
                 handleNav(() => {
@@ -509,7 +517,7 @@ const Header: React.FC = () => {
               className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isHomeActive
                   ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               <span>Chats</span>
@@ -540,7 +548,7 @@ const Header: React.FC = () => {
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isFindFriendsActive
                   ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               Find
@@ -560,7 +568,7 @@ const Header: React.FC = () => {
               className={`relative px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isRequestsActive
                   ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               Requests
@@ -581,42 +589,44 @@ const Header: React.FC = () => {
               className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                 isFriendsActive
                   ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
+                  : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
               }`}
             >
               Friends ({friendCount})
             </button>
 
-            <button
-              onClick={(e) =>
-                handleNav(() => {
-                  setGroupChatOpen(true);
-                  setFindFriendWithChat(false);
-                  setFindFriend(false);
-                  setFriendsRequests(false);
-                  setAllFriends(false);
-                  setShowLeft(true);
-                }, e)
-              }
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
-                isGroupsActive
-                  ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
-                  : "text-[var(--foreground)] opacity-70 hover:opacity-100"
-              }`}
-            >
-              Groups
-              {groupUnreadTotal > 0 && (
-                <span
-                  className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                    isGroupsActive
-                      ? "bg-white text-[var(--accent)]"
-                      : "bg-[var(--accent)] text-white"
-                  }`}
-                >
-                  {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
-                </span>
-              )}
-            </button>
+            {isFeatureEnabled("feature_group_chat") && (
+              <button
+                onClick={(e) =>
+                  handleNav(() => {
+                    setGroupChatOpen(true);
+                    setFindFriendWithChat(false);
+                    setFindFriend(false);
+                    setFriendsRequests(false);
+                    setAllFriends(false);
+                    setShowLeft(true);
+                  }, e)
+                }
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
+                  isGroupsActive
+                    ? "bg-[var(--accent)] text-white font-semibold shadow-xs"
+                    : "text-[var(--foreground)] opacity-75 hover:opacity-100 hover:text-[var(--accent)] hover:bg-[var(--accent)]/12"
+                }`}
+              >
+                Groups
+                {groupUnreadTotal > 0 && (
+                  <span
+                    className={`ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                      isGroupsActive
+                        ? "bg-white text-[var(--accent)]"
+                        : "bg-[var(--accent)] text-white"
+                    }`}
+                  >
+                    {groupUnreadTotal > 99 ? "99+" : groupUnreadTotal}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -641,13 +651,13 @@ const Header: React.FC = () => {
               exit={{ opacity: 0, scale: 0.9, y: -10 }}
               transition={{ duration: 0.15, ease: "easeOut" }}
               style={{ transformOrigin: "top right" }}
-              className="fixed top-14 right-3 z-50 w-56 bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-2xl p-2 shadow-2xl flex flex-col space-y-1 select-none"
+              className="fixed top-14 right-3 z-50 w-56 bg-slate-900/90 dark:bg-slate-900/95 backdrop-blur-2xl text-[var(--foreground)] border border-white/10 rounded-2xl p-2 shadow-2xl flex flex-col space-y-1 select-none"
             >
               {/* User Profile Quick Item */}
               <Link
                 href="/pages/profilePage"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2.5 p-2 rounded-xl bg-[var(--muted)]/40 hover:bg-[var(--muted)] border border-[var(--border)]/40 transition cursor-pointer"
+                className="flex items-center gap-2.5 p-2 rounded-xl bg-white/5 hover:bg-[var(--accent)]/15 border border-white/10 transition cursor-pointer"
               >
                 <Image
                   src={profilePic || "/user.jpg"}
@@ -658,9 +668,11 @@ const Header: React.FC = () => {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="text-xs font-bold text-[var(--foreground)] truncate">
-                    {user.username || "Profile"}
+                    {user.name || user.username || "Profile"}
                   </p>
-                  <p className="text-[10px] text-[var(--accent)] font-medium">View Profile</p>
+                  <p className="text-[10px] text-[var(--accent)] font-mono truncate">
+                    {user.username ? `@${user.username}` : "View Profile"}
+                  </p>
                 </div>
               </Link>
 
@@ -687,7 +699,7 @@ const Header: React.FC = () => {
                   setMenuOpen(false);
                   setShowLeft(true);
                 }}
-                className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[var(--foreground)] hover:bg-[var(--muted)] transition text-xs font-medium"
+                className="flex items-center justify-between w-full px-3 py-2.5 rounded-xl text-[var(--foreground)] hover:bg-[var(--accent)]/15 transition text-xs font-medium"
               >
                 <div className="flex items-center space-x-2.5">
                   <FaCog className="text-[var(--foreground)] opacity-70" size={15} />

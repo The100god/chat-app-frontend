@@ -99,7 +99,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
                   onClick={() => handleSelectFriend(friend)}
                   className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${isSelected
                     ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
-                    : "hover:bg-[var(--muted)]"
+                    : "hover:bg-[var(--accent)]/10 hover:border-l-2 hover:border-l-[var(--accent)]/50"
                     }`}
                 >
                   {/* WhatsApp Profile Avatar */}
@@ -123,16 +123,16 @@ const FriendsList: React.FC<FriendsListProps> = ({ loading }) => {
                           : "font-medium text-[var(--foreground)]"
                           }`}
                       >
-                        {isSelf ? "You" + ' : ' + friend.username : friend.username}
+                        {isSelf ? `You (${friend.name || friend.username})` : (friend.name || friend.username)}
                       </p>
                     </div>
 
                     <div className="flex items-center justify-between text-xs text-[var(--foreground)]/60">
                       <p className="truncate text-xs opacity-75 max-w-[180px]">
                         {hasUnread ? (
-                          <span className="text-[var(--accent)] font-semibold">New message</span>
+                          <span className="text-[var(--accent)] font-semibold">New Chugli</span>
                         ) : (
-                          "Tap to chat"
+                          "Tap to Chugli"
                         )}
                       </p>
 

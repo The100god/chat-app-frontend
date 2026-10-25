@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
+import { ConfigProvider } from "./context/ConfigContext";
 import Header from "./components/Header";
 
 import AppLockWrapper from "./components/AppLockWrapper";
@@ -47,17 +48,19 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden h-dvh`}
       >
         <AuthProvider>
-          <AppLockWrapper>
-            <AnimatedEmojiBackground />
-            <UnreadBadgeManager />
-            <Header />
-            <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
-              {children}
-            </main>
-            <Footer />
-            <ToastContainer />
-            <TogetherInviteToast />
-          </AppLockWrapper>
+          <ConfigProvider>
+            <AppLockWrapper>
+              <AnimatedEmojiBackground />
+              <UnreadBadgeManager />
+              <Header />
+              <main className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+                {children}
+              </main>
+              <Footer />
+              <ToastContainer />
+              <TogetherInviteToast />
+            </AppLockWrapper>
+          </ConfigProvider>
         </AuthProvider>
       </body>
     </html>

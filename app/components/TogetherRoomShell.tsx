@@ -21,7 +21,9 @@ import {
   Heart,
   ArrowRightLeft,
   MessageSquare,
+  Clock,
 } from "lucide-react";
+import { useRoundTimer } from "../hooks/useRoundTimer";
 
 import TicTacToeBoard from "./TicTacToeBoard";
 import { RockPaperScissorsBoard } from "./games/RockPaperScissorsBoard";
@@ -35,6 +37,8 @@ import { WatchBoard } from "./watch/WatchBoard";
 import { ListenBoard } from "./music/ListenBoard";
 import { GameSelector } from "./games/GameSelector";
 import { TogetherChatBox, TogetherComment } from "./TogetherChatBox";
+import { useGamification } from "../hooks/useGamification";
+import { GameResultModal } from "./games/GameResultModal";
 
 import { getGameDefinition } from "./games/registry";
 
@@ -61,6 +65,10 @@ export const TogetherRoomShell: React.FC = () => {
   const [isChangingGame, setIsChangingGame] = useState(false);
   const topShellRef = useRef<HTMLDivElement | null>(null);
 
+  const partnerId = room?.participants?.find((id) => id !== userId);
+  const { gamificationState, lastResult, showResultModal, dismissResultModal } = useGamification(partnerId);
+  const { timeLeft, isLowTime, isRoundOff } = useRoundTimer(room);
+
   // When room, game, activity, movie, or song starts/changes, automatically scroll to the top board
   useEffect(() => {
     if (topShellRef.current) {
@@ -74,7 +82,8 @@ export const TogetherRoomShell: React.FC = () => {
 
   if (!room) return null;
 
-  const gameDef = room.gameId ? getGameDefinition(room.gameId) : undefined;
+  const activeGameId = room.gameId || (room.state as any)?.gameId || (room.state as any)?.subType;
+  const gameDef = activeGameId ? getGameDefinition(activeGameId) : undefined;
   const config = typeConfig[room.type] || typeConfig.game;
 
   const handleCopyRoomId = async () => {
@@ -160,18 +169,37 @@ export const TogetherRoomShell: React.FC = () => {
     >
       {/* Compact Room Header */}
       <div
-        className="w-full rounded-2xl px-4 py-3 text-white flex items-center justify-between gap-2 shadow-lg"
+        className="w-full rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 text-white flex items-center justify-between gap-1.5 sm:gap-2 shadow-lg flex-wrap sm:flex-nowrap"
         style={{ backgroundColor: config.color }}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-1">
           {gameDef ? (
-            <img src={gameDef.iconPath} alt={gameDef.title} className="w-7 h-7 object-contain flex-shrink-0" />
+            <img src={gameDef.iconPath} alt={gameDef.title} className="w-6 h-6 sm:w-7 sm:h-7 object-contain flex-shrink-0" />
           ) : (
-            <span className="text-xl flex-shrink-0">{config.emoji}</span>
+            <span className="text-lg sm:text-xl flex-shrink-0">{config.emoji}</span>
           )}
-          <h2 className="text-sm sm:text-base font-bold truncate">
+          <h2 className="text-xs sm:text-base font-bold truncate flex-shrink min-w-0">
             {gameDef ? gameDef.title : config.label}
           </h2>
+
+          {room.type === "game" && gameDef && (
+            <div className="flex items-center gap-1 sm:gap-1.5 flex-shrink-0">
+              <span className="px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-black bg-black/25 text-amber-300 border border-amber-300/30 whitespace-nowrap hidden xs:inline">
+                Lvl {Number((room.state as any)?.currentLevel || 1)}
+              </span>
+              <span
+                className={`flex items-center gap-1 px-2 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-mono font-black border transition-all whitespace-nowrap shadow-xs ${
+                  isLowTime
+                    ? "bg-rose-500 text-white border-rose-300 animate-pulse shadow-md shadow-rose-500/50"
+                    : "bg-black/35 text-amber-300 border-amber-400/40"
+                }`}
+                title={isRoundOff ? "Round Ended" : "Round Timer"}
+              >
+                <Clock size={11} className={isLowTime ? "text-white" : "text-amber-300"} />
+                <span>{room.participants.length < 2 ? "Waiting..." : isRoundOff ? "Round Over" : `${timeLeft}s`}</span>
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -276,7 +304,11 @@ export const TogetherRoomShell: React.FC = () => {
                     selectedGameId={room.gameId as TogetherGameId | null}
                     userStats={room.sessionStats}
                     currentUserId={userId || undefined}
+                    partnerId={partnerId}
+                    partnerName={partnerId ? getParticipantName(partnerId) : "Partner"}
+                    gamificationState={gamificationState}
                     onSelectGame={(newGameId) => {
+                      if (!newGameId) return;
                       switchGame(newGameId);
                       setIsChangingGame(false);
                     }}
@@ -489,6 +521,13 @@ export const TogetherRoomShell: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Gamification Match Result & Level-Up Modal */}
+      <GameResultModal
+        isOpen={showResultModal}
+        result={lastResult}
+        currentUserId={userId || ""}
+        onClose={dismissResultModal}
+      />
     </motion.div>
   );
 };

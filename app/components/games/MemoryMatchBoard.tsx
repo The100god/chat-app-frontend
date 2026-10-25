@@ -39,7 +39,7 @@ export const MemoryMatchBoard: React.FC<MemoryMatchBoardProps> = ({
   const myScore = scores[currentUserId] || 0;
   const partnerScore = scores[partnerId] || 0;
 
-  const sessionStats: GameStats = (currentUserId && (room.sessionStats?.[`memory_${currentUserId}`] || room.sessionStats?.[currentUserId])) || {
+  const sessionStats: GameStats = (currentUserId && room.sessionStats?.[`memory_${currentUserId}`]) || {
     wins: 0,
     losses: 0,
     ties: 0,
@@ -77,18 +77,18 @@ export const MemoryMatchBoard: React.FC<MemoryMatchBoardProps> = ({
     <div className="w-full flex flex-col items-center gap-3 max-w-xl sm:max-w-2xl mx-auto p-2">
       {/* ─── Header & Stats Bar ─── */}
       <div className="w-full bg-[var(--card)] border border-[var(--border)] rounded-2xl p-3 shadow-lg flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <img
               src="/game-icons/memory.png"
               alt="Memory Match"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-purple-500/10 border border-purple-500/30"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-lg p-0.5 bg-purple-500/10 border border-purple-500/30 flex-shrink-0"
               onError={(e) => {
                 (e.currentTarget as HTMLElement).style.display = "none";
               }}
             />
-            <div>
-              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-xs font-black text-[var(--foreground)] uppercase tracking-wider truncate">
                 Memory Match
               </h2>
               <p className="text-[10px] text-[var(--foreground)] opacity-60 font-bold">

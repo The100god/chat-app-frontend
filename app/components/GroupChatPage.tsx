@@ -20,6 +20,7 @@ import Image from "next/image";
 export interface GroupMember {
   _id: string;
   username: string;
+  name?: string;
   profilePic: string;
   about?: string;
   email?: string;
@@ -262,7 +263,7 @@ const GroupChatPage = () => {
                   className={`flex items-center px-3 py-3 rounded-xl cursor-pointer transition-all duration-150 relative ${
                     isSelected
                       ? "bg-[var(--accent)]/15 border-l-4 border-l-[var(--accent)] text-[var(--foreground)]"
-                      : "hover:bg-[var(--muted)]"
+                      : "hover:bg-[var(--accent)]/10 hover:border-l-2 hover:border-l-[var(--accent)]/50"
                   }`}
                   onClick={() => {
                     setSelectedFriend(null);

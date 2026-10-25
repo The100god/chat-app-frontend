@@ -103,6 +103,7 @@ const sections: SectionInfo[] = [
 ];
 
 import { GameSelector } from "./games/GameSelector";
+import { useGamification } from "../hooks/useGamification";
 
 const roomSectionMap: Record<TogetherRoomType, TogetherSection> = {
   watch: "watch",
@@ -130,6 +131,11 @@ const TogetherWorkspace: React.FC = () => {
   const selectableFriends = friends.filter(
     (f) => String(f.friendId) !== String(userId) && String((f as any)._id || "") !== String(userId)
   );
+  const primaryPartner = selectableFriends.find((f) => f.friendId === selectedFriendId) || selectableFriends[0] || friends[0];
+  const partnerId = primaryPartner?.friendId;
+  const partnerName = primaryPartner?.username;
+  const { gamificationState } = useGamification(partnerId);
+
   const [isAppLocked] = useAtom(isAppLockedAtom);
   const setPendingInvite = useSetAtom(pendingTogetherInviteAtom);
   const { room, invites, dismissInvite, declineInvite, createRoom, joinRoom } = useTogetherRoom();
@@ -211,6 +217,11 @@ const TogetherWorkspace: React.FC = () => {
     setShowCreateModal(true);
   };
 
+  const handleCancelCreateModal = () => {
+    setShowCreateModal(false);
+    setSelectedGameId(null);
+  };
+
   const handleConfirmCreate = (inviteFriend: boolean) => {
     const targetUserId = inviteFriend && selectedFriendId ? selectedFriendId : undefined;
     const gameOrActId = (pendingRoomType === "game" || pendingRoomType === "activity")
@@ -218,6 +229,7 @@ const TogetherWorkspace: React.FC = () => {
       : (pendingRoomType === "quiz" ? "quiz" : undefined);
     createRoom(pendingRoomType, gameOrActId, targetUserId);
     setShowCreateModal(false);
+    setSelectedGameId(null);
   };
 
   const handleJoinRoom = () => {
@@ -516,11 +528,20 @@ const TogetherWorkspace: React.FC = () => {
                     selectedGameId={selectedGameId}
                     userStats={(room as TogetherRoom | null)?.sessionStats}
                     currentUserId={userId || undefined}
+                    partnerId={partnerId}
+                    partnerName={partnerName}
+                    gamificationState={gamificationState}
+                    friends={selectableFriends}
+                    onSelectPartner={(pId) => setSelectedFriendId(pId)}
                     onSelectGame={(gameId) => {
+                      if (!gameId || gameId === selectedGameId) {
+                        setSelectedGameId(null);
+                        return;
+                      }
                       setSelectedGameId(gameId);
                       setPendingRoomType("game");
-                      if (friends.length > 0) {
-                        setSelectedFriendId(friends[0].friendId);
+                      if (selectableFriends.length > 0) {
+                        setSelectedFriendId(selectableFriends[0].friendId);
                         setShowCreateModal(true);
                       } else {
                         createRoom("game", gameId);
@@ -562,7 +583,7 @@ const TogetherWorkspace: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowCreateModal(false)}
+            onClick={handleCancelCreateModal}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -642,9 +663,16 @@ const TogetherWorkspace: React.FC = () => {
                               {friend.username.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-xs font-semibold flex-1 truncate">
-                            {friend.username}
-                          </span>
+                          <div className="flex flex-col text-left flex-1 min-w-0">
+                            <span className="text-xs font-semibold truncate">
+                              {friend.name || friend.username}
+                            </span>
+                            {friend.name && friend.name !== friend.username && (
+                              <span className="text-[10px] text-[var(--foreground)]/50 font-mono truncate">
+                                @{friend.username}
+                              </span>
+                            )}
+                          </div>
                           {isSelected && (
                             <UserCheck size={15} className="text-[var(--accent)] flex-shrink-0" />
                           )}
@@ -683,7 +711,7 @@ const TogetherWorkspace: React.FC = () => {
                 </button>
 
                 <button
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={handleCancelCreateModal}
                   className="w-full py-1 text-xs text-[var(--foreground)] opacity-50 hover:opacity-80 transition-opacity cursor-pointer mt-0.5"
                 >
                   Cancel

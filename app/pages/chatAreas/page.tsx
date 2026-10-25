@@ -11,6 +11,7 @@ import {
   userIdAtom,
   disappearDurationAtom,
   responsiveDeviceAtom,
+  activeWorkspaceAtom,
 } from "../../states/States";
 import Image from "next/image";
 import MediaViewerModal from "../../components/MediaViewerModal";
@@ -18,6 +19,7 @@ import EmojiPicker from "../../components/EmojiPicker";
 import VoiceRecorder from "../../components/VoiceRecorder";
 import GroupInfoModal from "../../components/GroupInfoModal";
 import { showToast } from "../../components/Toast";
+import { useSystemConfig } from "../../context/ConfigContext";
 import {
   X,
   Timer,
@@ -33,10 +35,12 @@ import {
   Mic,
   Smile,
   MessageSquare,
+  Trophy,
 } from "lucide-react";
 import AnimatedEmojiBackground from "../../components/AnimatedEmojiBackground";
 import ScaleTN from "../../components/ScaleTN";
 import { motion, AnimatePresence } from "framer-motion";
+import { useGamification } from "../../hooks/useGamification";
 
 interface Message {
   _id?: string;
@@ -121,6 +125,7 @@ export interface Friend {
 }
 
 export default function ChatArea() {
+  const { isFeatureEnabled } = useSystemConfig();
   // const userId = localStorage.getItem("userId")
   //   ? localStorage.getItem("userId")
   //   : null;
@@ -174,6 +179,8 @@ export default function ChatArea() {
   const [showDisappearSubmenu, setShowDisappearSubmenu] = useState(false);
   const settingsDropdownRef = useRef<HTMLDivElement | null>(null);
   const [, setShowLeft] = useAtom(responsiveDeviceAtom);
+  const [, setActiveWorkspace] = useAtom(activeWorkspaceAtom);
+  const { gamificationState } = useGamification(selectedFriend?.friendId);
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
   const recordIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -194,7 +201,7 @@ export default function ChatArea() {
     onConfirm: () => { },
   });
   const username =
-    selectedFriend?.username ||
+    (selectedFriend?.name || selectedFriend?.username) ||
     selectedGroup?.groupName ||
     "Select a friend to chat";
 
@@ -1206,30 +1213,55 @@ export default function ChatArea() {
               </div>
 
               <div className="min-w-0 flex flex-col justify-center">
-                <h2 className="text-sm font-bold text-[var(--foreground)] truncate max-w-[150px] sm:max-w-[280px] leading-tight">
-                  {username}
+                <h2 className="text-sm font-bold text-[var(--foreground)] truncate max-w-[170px] sm:max-w-[320px] leading-tight">
+                  {selectedGroup ? selectedGroup.groupName : (selectedFriend?.name || selectedFriend?.username || username)}
                 </h2>
-                <p className="text-[11px] text-[var(--foreground)]/60 truncate font-medium">
-                  {isTyping ? (
-                    <span className="text-[var(--accent)] font-semibold animate-pulse">Chugli...</span>
-                  ) : selectedGroup ? (
-                    "Tap for group info"
-                  ) : (
-                    "online"
-                  )}
-                </p>
+                {selectedFriend ? (
+                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--foreground)]/60 truncate font-medium mt-0.5 leading-tight">
+                    <span className="font-mono text-[var(--foreground)]/75">@{selectedFriend.username}</span>
+                    <span className="opacity-40">•</span>
+                    {isTyping ? (
+                      <span className="text-[var(--accent)] font-semibold animate-pulse">Chugli...</span>
+                    ) : (
+                      <span className="text-emerald-500 font-medium">online</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-[var(--foreground)]/60 truncate font-medium mt-0.5 leading-tight">
+                    {isTyping ? (
+                      <span className="text-[var(--accent)] font-semibold animate-pulse">Chugli...</span>
+                    ) : selectedGroup ? (
+                      "Tap for group info"
+                    ) : (
+                      "online"
+                    )}
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Right: Disappearing Badge + Settings */}
+          {/* Right: Together Points + Disappearing Badge + Settings */}
           <div className="flex items-center gap-2">
-            {selectedFriend && disappearDuration > 0 && (
+            {selectedFriend && gamificationState && (
+              <button
+                type="button"
+                onClick={() => setActiveWorkspace("together")}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/15 via-purple-500/15 to-indigo-500/15 border border-amber-500/30 text-amber-400 hover:border-amber-500/50 hover:bg-amber-500/25 transition cursor-pointer shadow-xs text-xs font-bold"
+                title="Together Points with Partner"
+              >
+                <Trophy size={13} className="text-amber-400" />
+                <span className="font-mono font-black">{gamificationState.summary.totalCombinedPoints}</span>
+                <span className="text-[10px] opacity-75 font-medium hidden sm:inline">pts</span>
+              </button>
+            )}
+
+            {/* {selectedFriend && disappearDuration > 0 && (
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30 font-semibold flex items-center gap-1">
                 <Timer size={10} />
                 {disappearDuration}h
               </span>
-            )}
+            )} */}
 
             <div className="relative" ref={settingsDropdownRef}>
               <button
@@ -1424,7 +1456,12 @@ export default function ChatArea() {
                     {/* Sender Name in Group Chat */}
                     {isGroupChat && !isSentByUser && typeof msg.sender === "object" && (
                       <p className={`text-xs font-bold mb-1 ${colors[idx % colors.length]}`}>
-                        {msg.sender.username}
+                        {msg.sender.name || msg.sender.username}
+                        {msg.sender.name && msg.sender.name !== msg.sender.username && (
+                          <span className="text-[10px] font-normal opacity-70 ml-1 font-mono">
+                            @{msg.sender.username}
+                          </span>
+                        )}
                       </p>
                     )}
 
@@ -1513,11 +1550,10 @@ export default function ChatArea() {
                     {/* Border between Media and Text content */}
                     {msg.media && msg.media.length > 0 && msg.content && msg.content.trim() && (
                       <div
-                        className={`w-full my-2.5 border-t-[1.5px] ${
-                          isSentByUser
+                        className={`w-full my-2.5 border-t-[1.5px] ${isSentByUser
                             ? "border-white/45 dark:border-white/45 border-black/25"
                             : "border-black/20 dark:border-white/35"
-                        }`}
+                          }`}
                       />
                     )}
 
@@ -1658,154 +1694,163 @@ export default function ChatArea() {
 
       {/* WhatsApp Input Bar */}
       {!loadingMessages && (selectedFriend || selectedGroup) && (
-        <div className="bg-[var(--card)] border-t border-[var(--border)] px-2.5 py-2 flex items-center relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
-          <input
-            ref={fileInputRef}
-            type="file"
-            name="media"
-            aria-label="Upload media"
-            multiple
-            accept="image/*,video/*,audio/*"
-            onChange={handleFileSelect}
-            className="hidden"
-            id="upload"
-          />
+        ((selectedFriend && !isFeatureEnabled("feature_chat_1on1")) ||
+          (selectedGroup && !isFeatureEnabled("feature_group_chat"))) ? (
+          <div className="bg-[var(--card)] border-t border-[var(--border)] px-4 py-3 flex items-center justify-center text-xs font-semibold text-amber-500 bg-amber-500/10">
+            ⚠️ {selectedGroup ? "Group chatting is temporarily paused by the administrator." : "Direct 1-on-1 chatting is temporarily paused by the administrator."}
+          </div>
+        ) : (
+          <div className="bg-[var(--card)] border-t border-[var(--border)] px-2.5 py-2 flex items-center relative z-20 flex-shrink-0 shadow-xs lg:mb-[1rem] xl:mb-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="media"
+              aria-label="Upload media"
+              multiple
+              accept="image/*,video/*,audio/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="upload"
+            />
 
-          {isRecordingVoice ? (
-            <div className="flex-1 flex items-center justify-between py-0.5">
-              <button
-                type="button"
-                onClick={cancelVoiceRecording}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-red-500/12 hover:bg-red-500/20 text-[#ef4444] transition cursor-pointer"
-                title="Cancel recording"
-              >
-                <Trash2 size={18} className="text-[#ef4444]" />
-                <span className="text-[13px] font-semibold text-[#ef4444]">Cancel</span>
-              </button>
-
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse" />
-                <span className="text-[15px] font-bold tabular-nums text-[var(--foreground)]">
-                  {Math.floor(recordDuration / 60)}:{recordDuration % 60 < 10 ? "0" : ""}{recordDuration % 60}
-                </span>
-                <span className="text-xs font-medium text-[var(--foreground)]/60">
-                  Recording Chugli...
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => stopVoiceRecording(true)}
-                className="w-10 h-10 rounded-full bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white flex items-center justify-center cursor-pointer shadow-xs transition"
-                title="Send voice note"
-              >
-                <Send size={18} className="text-white" />
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* Image Picker Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
-                title="Attach Media"
-              >
-                <ImageIcon size={22} />
-              </button>
-
-              {/* Mic / Audio Record Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEmoji(false);
-                  startVoiceRecording();
-                }}
-                className="p-2 rounded-full hover:bg-[var(--muted)] text-[var(--foreground)]/60 hover:text-[var(--foreground)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
-                title="Record Voice Note"
-              >
-                <Mic size={22} />
-              </button>
-
-              {/* Emoji Picker toggle button */}
-              <div className="relative flex items-center">
+            {isRecordingVoice ? (
+              <div className="flex-1 flex items-center justify-between py-0.5">
                 <button
                   type="button"
-                  onClick={() => setShowEmoji((prev) => !prev)}
-                  className={`p-2 rounded-full hover:bg-[var(--muted)] transition cursor-pointer flex items-center justify-center flex-shrink-0 ${
-                    showEmoji
-                      ? "text-[var(--accent)]"
-                      : "text-[var(--foreground)]/60 hover:text-[var(--foreground)]"
-                  }`}
-                  title="Choose Emoji"
+                  onClick={cancelVoiceRecording}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-red-500/12 hover:bg-red-500/20 text-[#ef4444] transition cursor-pointer"
+                  title="Cancel recording"
                 >
-                  <Smile size={22} />
+                  <Trash2 size={18} className="text-[#ef4444]" />
+                  <span className="text-[13px] font-semibold text-[#ef4444]">Cancel</span>
                 </button>
-                {showEmoji && (
-                  <EmojiPicker
-                    onEmojiClick={(emoji) => {
-                      setMessageInput((prev) => prev + emoji);
-                    }}
-                  />
-                )}
-              </div>
 
-              {/* Textarea Input */}
-              <div className="flex-1 min-w-0 bg-[var(--input)] border border-[var(--border)] focus-within:border-[var(--accent)] rounded-[22px] px-3.5 py-1.5 mx-1 transition flex items-center">
-                <textarea
-                  ref={textareaRef}
-                  value={messageInput}
-                  onChange={handleInputChange}
-                  onFocus={() => {
-                    setShowEmoji(false);
-                    if (typeof window !== "undefined") {
-                      window.scrollTo(0, 0);
-                      setTimeout(() => {
-                        if (chatContainerRef.current) {
-                          chatContainerRef.current.scrollTo({
-                            top: chatContainerRef.current.scrollHeight,
-                            behavior: "smooth",
-                          });
-                        }
-                      }, 100);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      sendMessage();
-                    }
-                  }}
-                  className="w-full bg-transparent text-[var(--foreground)] outline-none resize-none text-[15px] leading-5 placeholder:text-[var(--foreground)]/40 max-h-[100px] custom-scrollbar overflow-y-auto block py-0.5"
-                  placeholder={selectedGroup ? "Type a group message..." : "Type a message..."}
-                  rows={1}
-                />
-              </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] animate-pulse" />
+                  <span className="text-[15px] font-bold tabular-nums text-[var(--foreground)]">
+                    {Math.floor(recordDuration / 60)}:{recordDuration % 60 < 10 ? "0" : ""}{recordDuration % 60}
+                  </span>
+                  <span className="text-xs font-medium text-[var(--foreground)]/60">
+                    Recording Chugli...
+                  </span>
+                </div>
 
-              {/* Send Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEmoji(false);
-                  sendMessage();
-                }}
-                disabled={(!messageInput.trim() && mediaFiles.length === 0) || loadingMessages}
-                className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${
-                  !messageInput.trim() && mediaFiles.length === 0 && !loadingMessages
-                    ? "bg-[var(--accent)] opacity-50 cursor-not-allowed text-white"
-                    : "bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white cursor-pointer"
-                }`}
-                title="Send Message"
-              >
-                {loadingMessages ? (
-                  <Loader2 size={18} className="animate-spin text-white" />
-                ) : (
+                <button
+                  type="button"
+                  onClick={() => stopVoiceRecording(true)}
+                  className="w-10 h-10 rounded-full bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white flex items-center justify-center cursor-pointer shadow-xs transition"
+                  title="Send voice note"
+                >
                   <Send size={18} className="text-white" />
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Image Picker Button */}
+                {isFeatureEnabled("feature_media_sharing") && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 rounded-full hover:bg-[var(--accent)]/15 text-[var(--foreground)]/60 hover:text-[var(--accent)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                    title="Attach Media"
+                  >
+                    <ImageIcon size={22} />
+                  </button>
                 )}
-              </button>
-            </>
-          )}
-        </div>
+
+                {/* Mic / Audio Record Button */}
+                {isFeatureEnabled("feature_voice_notes") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmoji(false);
+                      startVoiceRecording();
+                    }}
+                    className="p-2 rounded-full hover:bg-[var(--accent)]/15 text-[var(--foreground)]/60 hover:text-[var(--accent)] transition cursor-pointer flex items-center justify-center flex-shrink-0"
+                    title="Record Voice Note"
+                  >
+                    <Mic size={22} />
+                  </button>
+                )}
+
+                {/* Emoji Picker toggle button */}
+                <div className="relative flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmoji((prev) => !prev)}
+                    className={`p-2 rounded-full hover:bg-[var(--accent)]/15 transition cursor-pointer flex items-center justify-center flex-shrink-0 ${showEmoji
+                        ? "text-[var(--accent)]"
+                        : "text-[var(--foreground)]/60 hover:text-[var(--accent)]"
+                      }`}
+                    title="Choose Emoji"
+                  >
+                    <Smile size={22} />
+                  </button>
+                  {showEmoji && (
+                    <EmojiPicker
+                      onEmojiClick={(emoji) => {
+                        setMessageInput((prev) => prev + emoji);
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* Textarea Input */}
+                <div className="flex-1 min-w-0 bg-[var(--input)] border border-[var(--border)] focus-within:border-[var(--accent)] rounded-[22px] px-3.5 py-1.5 mx-1 transition flex items-center">
+                  <textarea
+                    ref={textareaRef}
+                    value={messageInput}
+                    onChange={handleInputChange}
+                    onFocus={() => {
+                      setShowEmoji(false);
+                      if (typeof window !== "undefined") {
+                        window.scrollTo(0, 0);
+                        setTimeout(() => {
+                          if (chatContainerRef.current) {
+                            chatContainerRef.current.scrollTo({
+                              top: chatContainerRef.current.scrollHeight,
+                              behavior: "smooth",
+                            });
+                          }
+                        }, 100);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessage();
+                      }
+                    }}
+                    className="w-full bg-transparent text-[var(--foreground)] outline-none resize-none text-[15px] leading-5 placeholder:text-[var(--foreground)]/40 max-h-[100px] custom-scrollbar overflow-y-auto block py-0.5"
+                    placeholder={selectedGroup ? "Type a group message..." : "Type a message..."}
+                    rows={1}
+                  />
+                </div>
+
+                {/* Send Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEmoji(false);
+                    sendMessage();
+                  }}
+                  disabled={(!messageInput.trim() && mediaFiles.length === 0) || loadingMessages}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-all shadow-xs ${!messageInput.trim() && mediaFiles.length === 0 && !loadingMessages
+                      ? "bg-[var(--accent)] opacity-50 cursor-not-allowed text-white"
+                      : "bg-[var(--accent)] hover:opacity-90 active:scale-95 text-white cursor-pointer"
+                    }`}
+                  title="Send Message"
+                >
+                  {loadingMessages ? (
+                    <Loader2 size={18} className="animate-spin text-white" />
+                  ) : (
+                    <Send size={18} className="text-white" />
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+        )
       )}
 
       {/* Empty State when no conversation is selected */}

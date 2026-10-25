@@ -1,4 +1,7 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, [data-theme="aurora"], [data-theme="aurora"] *, .dark, .dark *));
+
 /* @tailwind base; */
 /* @tailwind components; */
 @tailwind utilities;
@@ -149,6 +152,35 @@ textarea,
     0 0 9px rgba(252, 251, 244, 0.3),
     0 0 21px rgba(249, 248, 243, 0.2);
   transition: box-shadow 0.5s ease-in-out;
+}
+
+/* ---------- Glass Effects ---------- */
+.glass-header {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="dark"] .glass-header,
+[data-theme="aurora"] .glass-header {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-pill {
+  background: rgba(241, 245, 249, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+[data-theme="dark"] .glass-pill,
+[data-theme="aurora"] .glass-pill {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* ---------- Shimmer Loading ---------- */
